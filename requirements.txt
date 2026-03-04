@@ -1,0 +1,30 @@
+# Core Framework
+streamlit
+streamlit-option-menu
+
+# Astronomical Calculations
+pyswisseph
+ephem
+
+# Market Data
+yfinance
+pandas-datareader
+
+# Data Analysis
+pandas
+numpy
+scipy
+statsmodels
+
+# Visualization
+plotly
+matplotlib
+seaborn
+
+# Utilities
+python-dateutil
+pytz
+requests
+
+# Database
+sqlalchemy
