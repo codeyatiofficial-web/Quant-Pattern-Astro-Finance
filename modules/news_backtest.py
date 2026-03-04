@@ -2,7 +2,7 @@
 News Sentiment Backtest & Market Forecast Engine for Astro-Finance.
 Provides:
   1. Historical sentiment backtesting using price-action sentiment proxy
-  2. 2-week market forecast combining sentiment, events, seasonality, and astro
+  2. 1-month (22-trading-day) market forecast combining sentiment, events, seasonality, and astro
   3. News-impact correlation across configurable periods
 """
 
@@ -221,16 +221,22 @@ class NewsBacktestEngine:
 
     def generate_forecast(self, symbol: str = "^NSEI", market: str = "NSE") -> Dict:
         """
-        Generate a 2-week (10 trading day) forward market forecast.
-        Combines: current sentiment, upcoming events, seasonality, and momentum.
-        Now integrates upcoming economic events for event-aware forecasting.
+        Generate a 1-month (22 trading-day) forward market forecast.
+        Combines: current sentiment, upcoming events, seasonality, momentum, and Nakshatra.
         """
         # Import events engine for integration
         from modules.economic_events import EconomicEventsEngine
         events_engine = EconomicEventsEngine()
 
+        # Try to import nakshatra analyzer for day-level astro data
+        try:
+            from modules.analysis_engine import NakshatraAnalyzer
+            nak_analyzer = NakshatraAnalyzer()
+        except Exception:
+            nak_analyzer = None
+
         # Fetch recent data for current state analysis
-        df = self._fetch_market_data(symbol, 90)
+        df = self._fetch_market_data(symbol, 120)
         if df.empty:
             return {"error": "Could not fetch market data for forecasting."}
 
@@ -260,9 +266,9 @@ class NewsBacktestEngine:
         recent_low = float(df['Low'].tail(20).min())
         current_price = float(latest['Close'])
 
-        # Get upcoming events for the next 14 days
-        upcoming_events = events_engine.get_upcoming_events(days_ahead=16)
-        all_events_in_window = events_engine.get_events_in_window(days_ahead=16)
+        # Get upcoming events for the next 35 days (covers 1 month)
+        upcoming_events = events_engine.get_upcoming_events(days_ahead=36)
+        all_events_in_window = events_engine.get_events_in_window(days_ahead=36)
 
         # Build date -> events map
         event_date_map = {}
@@ -278,7 +284,7 @@ class NewsBacktestEngine:
         trading_day = 0
         day_offset = 1
 
-        while trading_day < 10:
+        while trading_day < 22:  # ~1 calendar month of trading days
             forecast_date = today + timedelta(days=day_offset)
             # Skip weekends
             if forecast_date.weekday() >= 5:
@@ -375,8 +381,8 @@ class NewsBacktestEngine:
                         signals.append(f"Event: {ev['sub_event']} (high vol expected)")
                         scores.append(0)
 
-            # Decay confidence for further-out days
-            decay = max(0.4, 1.0 - (trading_day * 0.06))
+            # Decay confidence for further-out days (gentler slope for 22-day window)
+            decay = max(0.35, 1.0 - (trading_day * 0.03))
             avg_score = (sum(scores) / len(scores)) * decay if scores else 0
 
             # Determine bias
@@ -389,6 +395,17 @@ class NewsBacktestEngine:
 
             confidence = min(85, max(25, int(abs(avg_score) * 100 + 30)))
 
+            # Nakshatra for this date
+            nak_name = None
+            nak_planet = None
+            if nak_analyzer is not None:
+                try:
+                    nak_info = nak_analyzer.generate_insight_for_date(forecast_date)
+                    nak_name = nak_info.get('current_nakshatra')
+                    nak_planet = nak_info.get('ruling_planet')
+                except Exception:
+                    pass
+
             day_forecast = {
                 "date": date_str,
                 "day_name": forecast_date.strftime("%A"),
@@ -397,7 +414,12 @@ class NewsBacktestEngine:
                 "confidence": confidence,
                 "drivers": signals[:4],  # top 4 drivers
                 "score": round(avg_score, 3),
+                "week": (trading_day // 5) + 1,
             }
+            if nak_name:
+                day_forecast["nakshatra"] = nak_name
+            if nak_planet:
+                day_forecast["ruling_planet"] = nak_planet
             if event_labels:
                 day_forecast["events"] = event_labels
 
@@ -406,15 +428,15 @@ class NewsBacktestEngine:
             trading_day += 1
             day_offset += 1
 
-        # Overall 2-week outlook
+        # Overall 1-month outlook
         bullish_days = sum(1 for f in forecasts if f['bias'] == 'Bullish')
         bearish_days = sum(1 for f in forecasts if f['bias'] == 'Bearish')
         neutral_days = sum(1 for f in forecasts if f['bias'] == 'Neutral')
         avg_confidence = sum(f['confidence'] for f in forecasts) / len(forecasts) if forecasts else 0
 
-        if bullish_days > bearish_days + 2:
+        if bullish_days > bearish_days + 4:
             overall_bias = "Bullish"
-        elif bearish_days > bullish_days + 2:
+        elif bearish_days > bullish_days + 4:
             overall_bias = "Bearish"
         else:
             overall_bias = "Neutral"

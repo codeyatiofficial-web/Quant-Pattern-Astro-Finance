@@ -436,6 +436,7 @@ class NakshatraAnalyzer:
             "ruling_planet": current["ruling_planet"],
             "planet": planet,
             "planet_longitude": current.get("planet_longitude_tropical", current.get("moon_longitude_tropical")),
+            "moon_longitude": current.get("planet_longitude_sidereal", current.get("moon_longitude_sidereal")),
             "financial_traits": current["financial_traits"],
             "favorable_for": current["favorable_for"],
             "unfavorable_for": current["unfavorable_for"],

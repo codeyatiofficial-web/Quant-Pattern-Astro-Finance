@@ -549,7 +549,7 @@ def run_sentiment_backtest(req: SentimentBacktestRequest):
 
 @app.get("/api/sentiment/forecast")
 def get_market_forecast(symbol: str = "^NSEI", market: str = "NSE"):
-    """Generate a 2-week market forecast combining sentiment, events, seasonality, and astro."""
+    """Generate a 1-month (22 trading-day) market forecast combining sentiment, events, seasonality, Nakshatra, and astro."""
     try:
         res = news_backtest.generate_forecast(symbol=symbol, market=market)
         if "error" in res:
