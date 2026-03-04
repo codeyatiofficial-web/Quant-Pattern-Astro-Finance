@@ -8,6 +8,7 @@ import TechnicalAnalysis from '@/components/TechnicalAnalysis';
 import AstroCorrelation from '@/components/AstroCorrelation';
 import SentimentVix from '@/components/SentimentVix';
 import EconomicEvents from '@/components/EconomicEvents';
+import DerivativesDashboard from '@/components/DerivativesDashboard';
 
 export default function AstroFinanceApp() {
   const [page, setPage] = useState<Page>('dashboard');
@@ -47,7 +48,7 @@ export default function AstroFinanceApp() {
     <>
       <Navigation activePage={page} onNavigate={setPage} />
 
-      <main className="pt-20 pb-10 px-4 max-w-[1400px] mx-auto min-h-screen">
+      <main className="pt-24 pb-10 px-4 max-w-[1400px] mx-auto min-h-screen">
         {isProcessingAuth && (
           <div className="flex flex-col items-center justify-center p-10 bg-[var(--bg-card)] rounded-xl border border-[var(--border-subtle)] mb-8 shadow-lg">
             <div className="spinner mb-4 w-8 h-8 border-4"></div>
@@ -69,6 +70,7 @@ export default function AstroFinanceApp() {
         {page === 'correlation' && <AstroCorrelation />}
         {page === 'sentiment' && <SentimentVix />}
         {page === 'events' && <EconomicEvents />}
+        {page === 'derivatives' && <DerivativesDashboard />}
       </main>
     </>
   );

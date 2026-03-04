@@ -9,6 +9,7 @@ import pytz
 from typing import Optional, List
 import os
 import ephem
+from functools import lru_cache
 
 from modules.nakshatra_database import get_nakshatra_by_number
 
@@ -53,6 +54,113 @@ PLANET_MAP = {
 }
 
 
+# ── Module-level LRU-cached computation helpers ──────────────────────────────
+# These are pure functions keyed on hashable primitives so the same date+planet
+# never recomputes swisseph or ephem calls within a process lifetime.
+
+@lru_cache(maxsize=4096)
+def _calc_nakshatra_cached(year: int, month: int, day: int,
+                           hour: int, minute: int, utc_offset_hours: float,
+                           planet: str) -> dict:
+    """Core ephemeris calculation, cached by date/time/planet."""
+    import pytz
+    utc_time = datetime(year, month, day, hour, minute, 0, tzinfo=pytz.UTC)
+
+    jd = swe.julday(year, month, day,
+                    hour + minute / 60.0)
+
+    planet_id = PLANET_MAP.get(planet, swe.MOON)
+    planet_data = swe.calc_ut(jd, planet_id, swe.FLG_SWIEPH)
+    planet_longitude_tropical = planet_data[0][0]
+
+    if planet == "Ketu":
+        planet_data = swe.calc_ut(jd, swe.MEAN_NODE, swe.FLG_SWIEPH)
+        planet_longitude_tropical = (planet_data[0][0] + 180.0) % 360.0
+
+    sun_data = swe.calc_ut(jd, swe.SUN, swe.FLG_SWIEPH)
+    sun_longitude_tropical = sun_data[0][0]
+
+    ayanamsa = swe.get_ayanamsa_ut(jd)
+
+    planet_longitude_sidereal = planet_longitude_tropical - ayanamsa
+    if planet_longitude_sidereal < 0:
+        planet_longitude_sidereal += 360.0
+
+    moon_data_tithi = swe.calc_ut(jd, swe.MOON, swe.FLG_SWIEPH)
+    moon_longitude_tropical_tithi = moon_data_tithi[0][0]
+
+    sun_longitude_sidereal = (sun_longitude_tropical - ayanamsa) % 360.0
+    moon_longitude_sidereal_tithi = (moon_longitude_tropical_tithi - ayanamsa) % 360.0
+
+    yoga_sum = (moon_longitude_sidereal_tithi + sun_longitude_sidereal) % 360.0
+    yoga_number = min(int(yoga_sum / (360.0 / 27.0)) + 1, 27)
+    yoga_name = YOGA_NAMES[yoga_number - 1]
+
+    long_diff = moon_longitude_tropical_tithi - sun_longitude_tropical
+    if long_diff < 0:
+        long_diff += 360.0
+    tithi_number = min(int(long_diff / 12.0) + 1, 30)
+    tithi_name = TITHI_NAMES[tithi_number - 1]
+    paksha = "Shukla Paksha" if tithi_number <= 15 else "Krishna Paksha"
+
+    nakshatra_span = 360.0 / 27.0
+    nakshatra_number = min(int(planet_longitude_sidereal / nakshatra_span) + 1, 27)
+    position_in_nakshatra = planet_longitude_sidereal % nakshatra_span
+    pada = min(int(position_in_nakshatra / (nakshatra_span / 4)) + 1, 4)
+
+    return dict(
+        jd=jd,
+        nakshatra_number=nakshatra_number,
+        pada=pada,
+        position_in_nakshatra=position_in_nakshatra,
+        planet_longitude_tropical=planet_longitude_tropical,
+        planet_longitude_sidereal=planet_longitude_sidereal,
+        moon_longitude_tropical=moon_longitude_tropical_tithi,
+        sun_longitude_tropical=sun_longitude_tropical,
+        ayanamsa=ayanamsa,
+        tithi_number=tithi_number,
+        tithi_name=tithi_name,
+        paksha=paksha,
+        yoga_number=yoga_number,
+        yoga_name=yoga_name,
+    )
+
+
+@lru_cache(maxsize=4096)
+def _is_rising_cached(date_iso: str, tz_key: str, planet_name: str,
+                      lat: str, lon: str) -> bool:
+    """Cached ephem rise check, keyed by date string."""
+    import ephem, pytz
+    tz = pytz.timezone(tz_key)
+    date = datetime.fromisoformat(date_iso)
+    ephem_map = {
+        "Moon": ephem.Moon, "Sun": ephem.Sun, "Mercury": ephem.Mercury,
+        "Venus": ephem.Venus, "Mars": ephem.Mars,
+        "Jupiter": ephem.Jupiter, "Saturn": ephem.Saturn,
+    }
+    if planet_name not in ephem_map:
+        return False
+    observer = ephem.Observer()
+    observer.lat = lat
+    observer.lon = lon
+    observer.elevation = 14
+    utc_start = tz.localize(date.replace(hour=0, minute=0, second=0,
+                                         microsecond=0)).astimezone(pytz.UTC)
+    observer.date = utc_start.strftime("%Y/%m/%d %H:%M:%S")
+    planet_obj = ephem_map[planet_name]()
+    planet_obj.compute(observer)
+    try:
+        next_rising = (observer.next_rising(planet_obj).datetime()
+                       .replace(tzinfo=pytz.UTC).astimezone(tz))
+        if next_rising.date() != date.date():
+            return False
+        market_open = next_rising.replace(hour=9, minute=15, second=0, microsecond=0)
+        market_close = next_rising.replace(hour=15, minute=30, second=0, microsecond=0)
+        return market_open <= next_rising <= market_close
+    except Exception:
+        return False
+
+
 class MoonCalculator:
     """Calculate Moon's Nakshatra position using Swiss Ephemeris."""
 
@@ -62,137 +170,48 @@ class MoonCalculator:
 
     def calculate_nakshatra(self, date_time: datetime, timezone=IST, planet: str = "Moon") -> dict:
         """
-        Calculate Moon's Nakshatra for given date/time.
-
-        Args:
-            date_time: datetime object (can be naive or aware)
-            timezone: pytz timezone object (default: IST)
-
-        Returns:
-            dict with nakshatra_number, name, pada, longitudes, ayanamsa, etc.
+        Calculate Nakshatra for given date/time. Results are LRU-cached.
         """
-        # Localize if naive datetime
         if date_time.tzinfo is None:
             date_time = timezone.localize(date_time)
 
-        # Convert to UTC for Swiss Ephemeris
         utc_time = date_time.astimezone(pytz.UTC)
 
-        # Calculate Julian Day
-        jd = swe.julday(
-            utc_time.year,
-            utc_time.month,
-            utc_time.day,
-            utc_time.hour + utc_time.minute / 60.0 + utc_time.second / 3600.0
+        raw = _calc_nakshatra_cached(
+            utc_time.year, utc_time.month, utc_time.day,
+            utc_time.hour, utc_time.minute,
+            utc_time.utcoffset().total_seconds() / 3600.0,
+            planet,
         )
 
-        # Calculate Planet's tropical longitude
-        planet_id = PLANET_MAP.get(planet, swe.MOON)
-        planet_data = swe.calc_ut(jd, planet_id, swe.FLG_SWIEPH)
-        planet_longitude_tropical = planet_data[0][0]  # 0-360 degrees
-        
-        # Ketu is exactly 180 degrees opposite Rahu
-        if planet == "Ketu":
-            planet_data = swe.calc_ut(jd, swe.MEAN_NODE, swe.FLG_SWIEPH)
-            planet_longitude_tropical = (planet_data[0][0] + 180.0) % 360.0
+        nakshatra_info = get_nakshatra_by_number(raw['nakshatra_number'])
 
-        # Calculate Sun's tropical longitude
-        sun_data = swe.calc_ut(jd, swe.SUN, swe.FLG_SWIEPH)
-        sun_longitude_tropical = sun_data[0][0]
-
-        # Get Ayanamsa (precession correction)
-        ayanamsa = swe.get_ayanamsa_ut(jd)
-        
-        # Calculate sidereal (Vedic) longitude for the target planet (used for Nakshatra calculation)
-        planet_longitude_sidereal = planet_longitude_tropical - ayanamsa
-        if planet_longitude_sidereal < 0:
-            planet_longitude_sidereal += 360.0
-            
-        # For Tithi and Yoga, we ALWAYS need the Moon specifically
-        moon_data_tithi = swe.calc_ut(jd, swe.MOON, swe.FLG_SWIEPH)
-        moon_longitude_tropical_tithi = moon_data_tithi[0][0]
-        
-        sun_longitude_sidereal = (sun_longitude_tropical - ayanamsa) % 360.0
-        moon_longitude_sidereal_tithi = (moon_longitude_tropical_tithi - ayanamsa) % 360.0
-
-        # Calculate Nitya Yoga
-        yoga_sum = (moon_longitude_sidereal_tithi + sun_longitude_sidereal) % 360.0
-        yoga_number = int(yoga_sum / (360.0 / 27.0)) + 1
-        if yoga_number > 27:
-            yoga_number = 27
-            
-        yoga_name = YOGA_NAMES[yoga_number - 1]
-
-        # Calculate Tithi (Lunar Day)
-        # Difference between Moon and Sun (0-360)
-        long_diff = moon_longitude_tropical_tithi - sun_longitude_tropical
-        if long_diff < 0:
-            long_diff += 360.0
-            
-        tithi_number = int(long_diff / 12.0) + 1
-        if tithi_number > 30:
-            tithi_number = 30
-            
-        tithi_name = TITHI_NAMES[tithi_number - 1]
-        paksha = "Shukla Paksha" if tithi_number <= 15 else "Krishna Paksha"
-
-        # Each Nakshatra spans 13°20' = 13.333... degrees
-        nakshatra_span = 360.0 / 27.0
-
-        # Calculate Nakshatra number (1-27)
-        nakshatra_number = int(planet_longitude_sidereal / nakshatra_span) + 1
-        if nakshatra_number > 27:
-            nakshatra_number = 27
-
-        # Position within the Nakshatra (0 to 13.33 degrees)
-        position_in_nakshatra = planet_longitude_sidereal % nakshatra_span
-
-        # Calculate Pada (quarter) - each Nakshatra has 4 padas
-        pada = int(position_in_nakshatra / (nakshatra_span / 4)) + 1
-        if pada > 4:
-            pada = 4
-
-        # Get Nakshatra details from database
-        nakshatra_info = get_nakshatra_by_number(nakshatra_number)
-
-        result = {
+        return {
             "date_time": date_time.isoformat(),
             "date_time_utc": utc_time.isoformat(),
-            "julian_day": jd,
-
-            # Nakshatra details
-            "nakshatra_number": nakshatra_number,
+            "julian_day": raw['jd'],
+            "nakshatra_number": raw['nakshatra_number'],
             "nakshatra_name": nakshatra_info["name_english"],
             "nakshatra_sanskrit": nakshatra_info["name_sanskrit"],
-            "pada": pada,
-
-            # Astronomical positions
+            "pada": raw['pada'],
             "planet": planet,
-            "planet_longitude_tropical": round(planet_longitude_tropical, 6),
-            "planet_longitude_sidereal": round(planet_longitude_sidereal, 6),
-            "moon_longitude_tropical": round(moon_longitude_tropical_tithi, 6),
-            "sun_longitude_tropical": round(sun_longitude_tropical, 6),
-            "position_in_nakshatra_degrees": round(position_in_nakshatra, 6),
-            "ayanamsa": round(ayanamsa, 6),
-
-            # Tithi Details
-            "tithi_number": tithi_number,
-            "tithi_name": tithi_name,
-            "paksha": paksha,
-            
-            # Yoga Details
-            "yoga_number": yoga_number,
-            "yoga_name": yoga_name,
-
-            # Astrological details
+            "planet_longitude_tropical": round(raw['planet_longitude_tropical'], 6),
+            "planet_longitude_sidereal": round(raw['planet_longitude_sidereal'], 6),
+            "moon_longitude_tropical": round(raw['moon_longitude_tropical'], 6),
+            "sun_longitude_tropical": round(raw['sun_longitude_tropical'], 6),
+            "position_in_nakshatra_degrees": round(raw['position_in_nakshatra'], 6),
+            "ayanamsa": round(raw['ayanamsa'], 6),
+            "tithi_number": raw['tithi_number'],
+            "tithi_name": raw['tithi_name'],
+            "paksha": raw['paksha'],
+            "yoga_number": raw['yoga_number'],
+            "yoga_name": raw['yoga_name'],
             "ruling_planet": nakshatra_info["ruling_planet"],
             "ruling_deity": nakshatra_info["ruling_deity"],
             "element": nakshatra_info["element"],
             "gana": nakshatra_info["gana"],
             "rashi_name": nakshatra_info["constellation"],
             "western_star": nakshatra_info["star_name_western"],
-
-            # Financial characteristics
             "financial_traits": nakshatra_info["financial_traits"],
             "favorable_for": nakshatra_info["favorable_for"],
             "unfavorable_for": nakshatra_info["unfavorable_for"],
@@ -200,8 +219,6 @@ class MoonCalculator:
             "lucky_colors": nakshatra_info["lucky_colors"],
             "lucky_numbers": nakshatra_info["lucky_numbers"],
         }
-
-        return result
 
     def calculate_range(self, start_date: datetime, end_date: datetime,
                         time_of_day: str = "09:15", timezone=IST) -> list:
@@ -403,50 +420,18 @@ class MoonCalculator:
             "planet_set": set_time
         }
 
-    def is_planet_rising_during_market_hours(self, date: datetime, timezone=IST, planet_name: str = "Moon", open_hour=9, open_minute=15, close_hour=15, close_minute=30, lat: str = '18.9220', lon: str = '72.8277') -> bool:
+    def is_planet_rising_during_market_hours(self, date: datetime, timezone=IST,
+                                              planet_name: str = "Moon",
+                                              open_hour=9, open_minute=15,
+                                              close_hour=15, close_minute=30,
+                                              lat: str = '18.9220',
+                                              lon: str = '72.8277') -> bool:
         """
-        Check if a given planet is risen/visible during market trading hours.
-        Returns True if the planet is in the sky for at least part of the trading session.
+        Check if a given planet rises during market trading hours. LRU-cached.
         """
-        observer = ephem.Observer()
-        observer.lat = lat
-        observer.lon = lon
-        observer.elevation = 14
-        
-        # We need the rise for the specific day, so start from midnight
-        utc_start = timezone.localize(date.replace(hour=0, minute=0, second=0)).astimezone(pytz.UTC)
-        observer.date = utc_start.strftime("%Y/%m/%d %H:%M:%S")
-        
-        ephem_map = {
-            "Moon": ephem.Moon,
-            "Sun": ephem.Sun,
-            "Mercury": ephem.Mercury,
-            "Venus": ephem.Venus,
-            "Mars": ephem.Mars,
-            "Jupiter": ephem.Jupiter,
-            "Saturn": ephem.Saturn
-        }
-        
-        if planet_name not in ephem_map:
-            return False
-            
-        planet_obj = ephem_map[planet_name]()
-        planet_obj.compute(observer)
-        
-        try:
-            next_rising = observer.next_rising(planet_obj).datetime().replace(tzinfo=pytz.UTC).astimezone(timezone)
-            
-            # Check if event is strictly on the requested date
-            if next_rising.date() != date.date():
-                return False
-                
-            # Check if time is between 09:15 and 15:30
-            market_open = next_rising.replace(hour=9, minute=15, second=0, microsecond=0)
-            market_close = next_rising.replace(hour=15, minute=30, second=0, microsecond=0)
-            
-            return market_open <= next_rising <= market_close
-        except Exception:
-            return False
+        tz_key = timezone.zone if hasattr(timezone, 'zone') else str(timezone)
+        date_iso = date.strftime("%Y-%m-%d")
+        return _is_rising_cached(date_iso, tz_key, planet_name, lat, lon)
     def get_yoga_bounds(self, date_time: datetime, timezone=IST) -> dict:
         """
         Calculate the exact start and end times of the Nitya Yoga active at the given time.

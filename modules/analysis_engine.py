@@ -10,6 +10,7 @@ from scipy import stats
 from datetime import datetime, timedelta
 import pytz
 from typing import Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from modules.moon_calculator import MoonCalculator
 from modules.market_data import MarketDataFetcher
@@ -66,28 +67,25 @@ class NakshatraAnalyzer:
         if market_df.empty:
             return pd.DataFrame()
 
-        # Calculate Nakshatra for each trading day (at market local open)
-        nakshatra_records = []
-        for _, row in market_df.iterrows():
-            trade_date = row['date']
+        def _process_row(row_dict):
+            trade_date = row_dict['date']
             if isinstance(trade_date, str):
                 trade_date = pd.to_datetime(trade_date)
-
             dt = trade_date.replace(hour=op_h, minute=op_m, second=0)
             try:
                 nak_data = self.moon_calc.calculate_nakshatra(dt, tz, planet=planet)
                 market_hours_rise = self.moon_calc.is_planet_rising_during_market_hours(
                     trade_date, tz, planet_name=planet, lat=str(lat), lon=str(lon)
                 )
-                
-                nakshatra_records.append({
+                return {
                     'date': trade_date,
                     'planet': planet,
                     'nakshatra_number': nak_data['nakshatra_number'],
                     'nakshatra_name': nak_data['nakshatra_name'],
                     'nakshatra_sanskrit': nak_data['nakshatra_sanskrit'],
                     'pada': nak_data['pada'],
-                    'planet_longitude_sidereal': nak_data.get('planet_longitude_sidereal', nak_data.get('moon_longitude_sidereal')),
+                    'planet_longitude_sidereal': nak_data.get('planet_longitude_sidereal',
+                                                               nak_data.get('moon_longitude_sidereal')),
                     'tithi_number': nak_data['tithi_number'],
                     'tithi_name': nak_data['tithi_name'],
                     'paksha': nak_data['paksha'],
@@ -96,10 +94,15 @@ class NakshatraAnalyzer:
                     'gana': nak_data['gana'],
                     'historical_market_tendency': nak_data['historical_market_tendency'],
                     'planet_rise_market_hours': market_hours_rise,
-                })
+                }
             except Exception as e:
                 print(f"Error calculating nakshatra for {trade_date}: {e}")
-                continue
+                return None
+
+        row_dicts = market_df.to_dict('records')
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(_process_row, row_dicts))
+        nakshatra_records = [r for r in results if r is not None]
 
         nak_df = pd.DataFrame(nakshatra_records)
 

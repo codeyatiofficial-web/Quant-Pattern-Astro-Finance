@@ -40,6 +40,10 @@ export default function SentimentVix() {
     const [btPeriod, setBtPeriod] = useState('5y');
     const [alignData, setAlignData] = useState<any>(null);
     const [alignLoading, setAlignLoading] = useState(false);
+    const [alignSymbol, setAlignSymbol] = useState('^NSEI');
+    const [alignPeriod, setAlignPeriod] = useState('5y');
+    const [alignEvent, setAlignEvent] = useState('High Speed');
+    const [alignPlanet, setAlignPlanet] = useState('Mercury');
 
     const fetchLive = async () => {
         setLiveLoading(true);
@@ -71,7 +75,19 @@ export default function SentimentVix() {
 
     const fetchAlignment = async () => {
         setAlignLoading(true);
-        try { const r = await fetch(`${API}/api/sentiment/astro-alignment`); setAlignData(await r.json()); } catch { }
+        try {
+            const r = await fetch(`${API}/api/sentiment/astro-backtest`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: alignSymbol,
+                    period: alignPeriod,
+                    event_type: alignEvent,
+                    planet: alignPlanet,
+                    market: GLOBAL_SYMBOLS.includes(alignSymbol) ? 'NASDAQ' : 'NSE'
+                }),
+            });
+            setAlignData(await r.json());
+        } catch { }
         setAlignLoading(false);
     };
 
@@ -374,51 +390,117 @@ export default function SentimentVix() {
             {/* ── ASTRO ALIGNMENT ── */}
             {sub === 'alignment' && (
                 <div>
-                    <button className="btn-primary" onClick={fetchAlignment} disabled={alignLoading} style={{ marginBottom: 16 }}>
-                        {alignLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Analyzing…</> : '🌌 Analyze Astro-News Alignment'}
-                    </button>
-                    {alignData && (
-                        <div className="grid-2">
-                            <div className="glass-card" style={{ padding: 24 }}>
-                                <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>Active Astro States</h3>
-                                {alignData.active_astro_states?.retrograde_planets?.length > 0 && (
-                                    <div style={{ marginBottom: 12 }}>
-                                        <div className="form-label" style={{ marginBottom: 6 }}>Retrograde Planets</div>
-                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                            {alignData.active_astro_states.retrograde_planets.map((p: string) => (
-                                                <span key={p} className="badge badge-bearish">{p} ℞</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                {alignData.active_astro_states?.yogas?.length > 0 && (
-                                    <div>
-                                        <div className="form-label" style={{ marginBottom: 6 }}>Active Yogas</div>
-                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                            {alignData.active_astro_states.yogas.map((y: string) => (
-                                                <span key={y} className="badge badge-neutral">{y.replace(/_/g, ' ')}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                {!alignData.active_astro_states?.retrograde_planets?.length && !alignData.active_astro_states?.yogas?.length && (
-                                    <div className="alert-info">✅ No major adverse astro states active today.</div>
-                                )}
+                    <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                        <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Astro-Sentiment Matrix</h3>
+                        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Find out if planetary events improve or invert standard news sentiment accuracy.</p>
+
+                        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 16, alignItems: 'flex-end' }}>
+                            <div>
+                                <label className="form-label">Symbol</label>
+                                <select className="form-select" value={alignSymbol} onChange={e => setAlignSymbol(e.target.value)} style={{ width: 180 }}>
+                                    <optgroup label="🇮🇳 India — NSE">{NSE_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
+                                    <optgroup label="🌍 Global / US">{GLOBAL_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
+                                </select>
                             </div>
-                            <div className="glass-card" style={{ padding: 24 }}>
-                                <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>News–Astro Alignment Score</h3>
-                                {alignData.alignment_score !== undefined && (
-                                    <div style={{ marginBottom: 14 }}>
-                                        <div className="form-label">Score</div>
-                                        <div className="num" style={{
-                                            fontSize: 30, fontWeight: 800,
-                                            color: alignData.alignment_score > 0 ? 'var(--accent-green)' : 'var(--accent-red)'
-                                        }}>
-                                            {alignData.alignment_score > 0 ? '+' : ''}{alignData.alignment_score?.toFixed(3)}
+                            <div>
+                                <label className="form-label">Period</label>
+                                <select className="form-select" value={alignPeriod} onChange={e => setAlignPeriod(e.target.value)} style={{ width: 100 }}>
+                                    {['1y', '3y', '5y', '10y'].map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="form-label">Planet</label>
+                                <select className="form-select" value={alignPlanet} onChange={e => setAlignPlanet(e.target.value)} style={{ width: 130 }}>
+                                    {['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Rahu', 'Ketu'].map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="form-label">Astro Event</label>
+                                <select className="form-select" value={alignEvent} onChange={e => setAlignEvent(e.target.value)} style={{ width: 200 }}>
+                                    <optgroup label="Motion & States">
+                                        {['Retrograde', 'Direct', 'High Speed', 'Exalted', 'Debilitated', 'Own House'].map(e => <option key={e} value={e}>{e}</option>)}
+                                    </optgroup>
+                                    <optgroup label="Major Yogas">
+                                        {[
+                                            'Gajakesari_Yoga', 'Guru_Chandal_Yoga', 'Vish_Yoga', 'Angarak_Yoga',
+                                            'Budh_Aditya_Yoga', 'Shasha_Yoga', 'Amavasya_Defect', 'Purnima_Yoga',
+                                            'Solar_Eclipse', 'Lunar_Eclipse', 'Kaal_Sarp_Dosh'
+                                        ].map(e => <option key={e} value={e}>{e.replace(/_/g, ' ')}</option>)}
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <button className="btn-primary" onClick={fetchAlignment} disabled={alignLoading}>
+                                {alignLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Computing Matrix…</> : '✨ Correlate'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {alignData?.matrix && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                            {/* OVERALL LIFT */}
+                            <div className="glass-card" style={{ padding: 24, display: 'flex', gap: 40, alignItems: 'center' }}>
+                                <div>
+                                    <div className="form-label">Astro Impact Lift</div>
+                                    <div className="gradient-text" style={{ fontSize: 32, fontWeight: 800 }}>
+                                        {alignData.lift > 0 ? '+' : ''}{alignData.lift ?? 0}%
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 30, borderLeft: '1px solid var(--border-subtle)', paddingLeft: 40 }}>
+                                    <div>
+                                        <div className="form-label">Baseline Win Rate</div>
+                                        <div className="num" style={{ fontSize: 20, fontWeight: 700 }}>{alignData.baseline_winrate ?? 0}%</div>
+                                    </div>
+                                    <div>
+                                        <div className="form-label">Win Rate when {alignData.event_type.replace(/_/g, ' ')} active</div>
+                                        <div className="num" style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent-gold)' }}>{alignData.astro_winrate ?? 0}%</div>
+                                    </div>
+                                    <div>
+                                        <div className="form-label">Astro Active Days</div>
+                                        <div className="num" style={{ fontSize: 20, fontWeight: 700 }}>{alignData.astro_active_days} <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>/ {alignData.total_trading_days}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SENTIMENT MATRIX */}
+                            <div className="grid-3" style={{ gap: 16 }}>
+                                {alignData.matrix.map((row: any) => (
+                                    <div key={row.sentiment} className="glass-card" style={{ padding: 20 }}>
+                                        <div style={{ marginBottom: 16 }}>
+                                            <BiasChip bias={row.sentiment} />
+                                        </div>
+
+                                        <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+                                                    <th style={{ paddingBottom: 8, fontWeight: 600 }}>Condition</th>
+                                                    <th style={{ paddingBottom: 8, fontWeight: 600 }}>Win Rate</th>
+                                                    <th style={{ paddingBottom: 8, fontWeight: 600 }}>Avg Ret</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td style={{ paddingTop: 12, color: 'var(--text-primary)', fontWeight: 500 }}>All Days</td>
+                                                    <td style={{ paddingTop: 12, fontWeight: 700 }} className="num">{row.combined.win_rate ?? '—'}%</td>
+                                                    <td style={{ paddingTop: 12 }} className="num">{row.combined.avg_return != null ? `${row.combined.avg_return > 0 ? '+' : ''}${row.combined.avg_return.toFixed(2)}%` : '—'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td style={{ paddingTop: 8, color: 'var(--accent-gold)', fontWeight: 600 }}>+ Astro Event</td>
+                                                    <td style={{ paddingTop: 8, color: 'var(--accent-gold)', fontWeight: 800 }} className="num">{row.with_astro.win_rate ?? '—'}%</td>
+                                                    <td style={{ paddingTop: 8, color: 'var(--accent-gold)' }} className="num">{row.with_astro.avg_return != null ? `${row.with_astro.avg_return > 0 ? '+' : ''}${row.with_astro.avg_return.toFixed(2)}%` : '—'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td style={{ paddingTop: 8, color: 'var(--text-muted)' }}>No Astro</td>
+                                                    <td style={{ paddingTop: 8 }} className="num">{row.without_astro.win_rate ?? '—'}%</td>
+                                                    <td style={{ paddingTop: 8 }} className="num">{row.without_astro.avg_return != null ? `${row.without_astro.avg_return > 0 ? '+' : ''}${row.without_astro.avg_return.toFixed(2)}%` : '—'}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                        <div style={{ marginTop: 14, fontSize: 11, color: 'var(--text-muted)' }}>
+                                            {row.with_astro.count} signals with astro vs {row.without_astro.count} without
                                         </div>
                                     </div>
-                                )}
-                                {alignData.interpretation && <div className="insight-box" style={{ fontSize: 13, lineHeight: 1.7 }}>{alignData.interpretation}</div>}
+                                ))}
                             </div>
                         </div>
                     )}

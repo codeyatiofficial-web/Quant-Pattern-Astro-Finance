@@ -219,6 +219,160 @@ class NewsBacktestEngine:
             "current_state": current_state,
         }
 
+    def backtest_sentiment_astro(
+        self,
+        symbol: str = "^NSEI",
+        period: str = "5y",
+        market: str = "NSE",
+        event_type: str = "Gajakesari_Yoga",
+        planet: str = "Multiple",
+        years: int = 5,
+    ) -> Dict:
+        """
+        Combined Sentiment + Astro backtest.
+        Answers: "Does this yoga/planetary state IMPROVE sentiment signal accuracy?"
+        Cross-tabulates (sentiment_signal x astro_active) with win rates, avg returns.
+        """
+        from modules.astro_correlation import AstroCorrelationEngine, PLANET_MAP
+
+        days = PERIOD_MAP.get(period, 365 * years)
+        raw_df = self._fetch_market_data(symbol, days)
+        if raw_df.empty:
+            return {"error": "No market data available for this symbol/period."}
+
+        raw_df = self._compute_sentiment_proxy(raw_df)
+        if len(raw_df) < 30:
+            return {"error": "Insufficient data for backtesting."}
+
+        cutoff = datetime.now() - timedelta(days=days)
+        raw_df = raw_df[raw_df.index >= cutoff].copy()
+        raw_df["next_day_return"] = raw_df["daily_return"].shift(-1)
+        raw_df = raw_df.dropna(subset=["next_day_return", "sentiment_score"])
+
+        # Build a date-indexed work df for astro engine (needs 'date' column)
+        work_df = raw_df.copy().reset_index()
+        work_df = work_df.rename(columns={work_df.columns[0]: "date"})
+        work_df["date"] = pd.to_datetime(work_df["date"]).dt.tz_localize(None)
+        work_df["daily_return"] = work_df.get("daily_return", work_df.get("Close", 0))
+
+        # Determine yoga vs planetary event
+        _YOGA_EVENTS = [
+            "Angarak_Yoga", "Guru_Chandal_Yoga", "Shasha_Yoga", "Amavasya_Defect",
+            "Kaal_Sarp_Dosh", "Solar_Eclipse", "Lunar_Eclipse", "Budh_Aditya_Yoga",
+            "Gajakesari_Yoga", "Gajakesari_Kendra", "Vish_Yoga", "Yama_Yoga",
+            "Bhrigu_Mangal_Yoga", "Clash_Of_Gurus", "Chandra_Mangal_Yoga",
+            "Shukra_Guru_Yoga", "Surya_Mangal_Yoga", "Surya_Shani_Yoga",
+            "Chandra_Shani_Yoga", "Guru_Mangal_Yoga", "Budh_Shani_Yoga",
+            "Rahu_Ketu_Axis_Sun", "Rahu_Ketu_Axis_Moon", "Rahu_Ketu_Axis_Mars",
+            "Chandal_Venus", "Mangal_Rahu", "Shani_Rahu", "Shani_Ketu", "Guru_Ketu",
+            "Malavya_Yoga", "Ruchaka_Yoga", "Hamsa_Yoga", "Bhadra_Yoga",
+            "Neech_Bhang_Raj_Yoga", "Purnima_Yoga", "Paksha_Sandi",
+            "Grahan_Yoga", "Sarp_Dosh", "Paap_Kartari_Moon", "Multiple_Retrograde",
+            "Mercury_Combust", "Venus_Combust", "Mars_Combust",
+            "Jupiter_Combust", "Saturn_Combust",
+        ]
+        is_yoga = event_type in _YOGA_EVENTS
+        planets_needed = list(PLANET_MAP.keys()) if is_yoga else [planet]
+
+        # Attach planetary/yoga states
+        try:
+            astro_engine = AstroCorrelationEngine()
+            work_df = astro_engine.attach_planetary_states(work_df, planets_needed, calculate_yogas=is_yoga)
+        except Exception as e:
+            return {"error": f"Astro calculation failed: {e}"}
+
+        # Build event mask
+        if is_yoga:
+            if event_type not in work_df.columns:
+                return {"error": f"Could not compute yoga: {event_type}"}
+            astro_mask = work_df[event_type].values
+        else:
+            # Planet motion events
+            motion_col = f"{planet}_Retrograde"
+            speed_col  = f"{planet}_Speed"
+            rashi_col  = f"{planet}_Rashi"
+            if event_type.lower() == "retrograde":
+                astro_mask = work_df.get(motion_col, pd.Series([False]*len(work_df))).values
+            elif event_type.lower() == "direct":
+                astro_mask = ~work_df.get(motion_col, pd.Series([False]*len(work_df))).values
+            elif event_type.lower() == "high speed":
+                thresh = work_df[speed_col].quantile(0.8) if speed_col in work_df else 0
+                astro_mask = (work_df.get(speed_col, pd.Series([0]*len(work_df))) > thresh).values
+            elif event_type.lower() == "exalted":
+                from modules.astro_correlation import EXALTATION_MAP
+                r = EXALTATION_MAP.get(planet)
+                astro_mask = (work_df.get(rashi_col, pd.Series([0]*len(work_df))) == r).values if r else [False]*len(work_df)
+            elif event_type.lower() == "debilitated":
+                from modules.astro_correlation import DEBILITATION_MAP
+                r = DEBILITATION_MAP.get(planet)
+                astro_mask = (work_df.get(rashi_col, pd.Series([0]*len(work_df))) == r).values if r else [False]*len(work_df)
+            elif event_type.lower() == "own house":
+                from modules.astro_correlation import OWN_HOUSE_MAP
+                rs = OWN_HOUSE_MAP.get(planet, [])
+                astro_mask = work_df.get(rashi_col, pd.Series([0]*len(work_df))).isin(rs).values
+            else:
+                astro_mask = [False] * len(work_df)
+
+        raw_df = raw_df.reset_index(drop=True)
+        raw_df["astro_active"] = list(astro_mask)
+
+        # ── Cross-tabulation ─────────────────────────────────────────────────
+        def _stats(subset, label):
+            if len(subset) == 0:
+                return {"label": label, "count": 0, "win_rate": None, "avg_return": None}
+            wins = int((subset["next_day_return"] > 0).sum())
+            return {
+                "label": label,
+                "count": int(len(subset)),
+                "win_rate": round(wins / len(subset) * 100, 1),
+                "avg_return": round(float(subset["next_day_return"].mean()), 3),
+                "max_gain": round(float(subset["next_day_return"].max()), 3),
+                "max_loss": round(float(subset["next_day_return"].min()), 3),
+            }
+
+        sentiments = ["Bullish", "Bearish", "Neutral"]
+        matrix = []
+        combos = []
+        for sent in sentiments:
+            sent_df = raw_df[raw_df["sentiment_label"] == sent]
+            with_astro    = sent_df[sent_df["astro_active"] == True]
+            without_astro = sent_df[sent_df["astro_active"] == False]
+            row = {
+                "sentiment": sent,
+                "with_astro":    _stats(with_astro,    f"{sent} + Astro Active"),
+                "without_astro": _stats(without_astro, f"{sent} + No Astro"),
+                "combined":      _stats(sent_df,       f"{sent} (all)"),
+            }
+            matrix.append(row)
+            if len(with_astro) >= 5:
+                combos.append({**row["with_astro"], "sentiment": sent, "astro_active": True})
+            if len(without_astro) >= 5:
+                combos.append({**row["without_astro"], "sentiment": sent, "astro_active": False})
+
+        combos = sorted([c for c in combos if c.get("win_rate") is not None],
+                        key=lambda x: x["win_rate"], reverse=True)
+
+        astro_days   = raw_df[raw_df["astro_active"] == True]
+        non_astro    = raw_df[raw_df["astro_active"] == False]
+        astro_wr     = round((astro_days["next_day_return"] > 0).mean() * 100, 1) if len(astro_days) > 0 else None
+        baseline_wr  = round((non_astro["next_day_return"] > 0).mean() * 100, 1) if len(non_astro) > 0 else None
+        lift         = round(astro_wr - baseline_wr, 1) if (astro_wr and baseline_wr) else None
+
+        return {
+            "symbol": symbol,
+            "period": period,
+            "event_type": event_type,
+            "planet": planet,
+            "total_trading_days": int(len(raw_df)),
+            "astro_active_days": int(len(astro_days)),
+            "astro_winrate": astro_wr,
+            "baseline_winrate": baseline_wr,
+            "lift": lift,
+            "matrix": matrix,
+            "ranked_combos": combos,
+            "best_combo": combos[0] if combos else None,
+        }
+
     def generate_forecast(self, symbol: str = "^NSEI", market: str = "NSE") -> Dict:
         """
         Generate a 1-month (22 trading-day) forward market forecast.

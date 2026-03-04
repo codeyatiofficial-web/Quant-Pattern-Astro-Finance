@@ -23,6 +23,9 @@ from modules.kite_client import KiteDataClient
 from modules.news_sentiment import NewsSentimentEngine
 from modules.economic_events import EconomicEventsEngine
 from modules.news_backtest import NewsBacktestEngine
+from modules.derivatives_engine import DerivativesEngine
+from modules.options_strategy import recommend_strategies, build_strategy_payoff, STRATEGIES
+from modules.options_backtest import backtest_strategy, backtest_all_strategies
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,7 @@ kite_client = KiteDataClient()
 sentiment_engine = NewsSentimentEngine()
 events_engine = EconomicEventsEngine()
 news_backtest = NewsBacktestEngine()
+derivatives_engine = DerivativesEngine()
 
 class AnalysisRequest(BaseModel):
     symbol: str
@@ -89,6 +93,14 @@ class SentimentBacktestRequest(BaseModel):
     symbol: str = "^NSEI"
     period: str = "max"
     market: str = "NSE"
+
+class SentimentAstroBacktestRequest(BaseModel):
+    symbol: str = "^NSEI"
+    period: str = "5y"
+    market: str = "NSE"
+    event_type: str = "Gajakesari_Yoga"
+    planet: str = "Multiple"
+    years: int = 5
 
 class EventCategoryBacktestRequest(BaseModel):
     sub_event: str
@@ -547,6 +559,28 @@ def run_sentiment_backtest(req: SentimentBacktestRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/sentiment/astro-backtest")
+def run_sentiment_astro_backtest(req: SentimentAstroBacktestRequest):
+    """Run combined Sentiment + Astrological event backtest to find out if astrology improves sentiment accuracy."""
+    try:
+        res = news_backtest.backtest_sentiment_astro(
+            symbol=req.symbol,
+            period=req.period,
+            market=req.market,
+            event_type=req.event_type,
+            planet=req.planet,
+            years=req.years
+        )
+        if "error" in res:
+            raise HTTPException(status_code=400, detail=res["error"])
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/sentiment/forecast")
 def get_market_forecast(symbol: str = "^NSEI", market: str = "NSE"):
     """Generate a 1-month (22 trading-day) market forecast combining sentiment, events, seasonality, Nakshatra, and astro."""
@@ -561,3 +595,171 @@ def get_market_forecast(symbol: str = "^NSEI", market: str = "NSE"):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
+# Derivatives & Options Strategy Endpoints
+# ---------------------------------------------------------------------------
+
+class StrategyRecommendRequest(BaseModel):
+    forecast: str = "NEUTRAL"
+    confidence: float = 60.0
+    avg_iv: float = 16.0
+    pcr: float = 1.0
+    risk_appetite: str = "moderate"
+    fii_net: float = 0.0
+    capital: float = 100000.0
+
+class StrategyBacktestRequest(BaseModel):
+    strategy_key: str
+    years: int = 3
+    holding_days: int = 20
+
+@app.get("/api/derivatives/snapshot")
+def get_derivatives_snapshot(symbol: str = "NIFTY"):
+    """Full derivatives market snapshot: chain, PCR, Max Pain, VIX, FII/DII, forecast."""
+    try:
+        return derivatives_engine.get_market_snapshot(symbol)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/derivatives/fii-dii")
+def get_fii_dii(days: int = 30):
+    """FII/DII flow data."""
+    try:
+        return derivatives_engine.get_fii_dii_summary(days)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/derivatives/strategies")
+def get_all_strategies():
+    """List all available options strategies."""
+    return {"strategies": STRATEGIES}
+
+@app.post("/api/derivatives/recommend")
+def recommend_strategy(req: StrategyRecommendRequest):
+    """Recommend top strategies based on current conditions."""
+    try:
+        # Fetch live data to get real spot and option chain
+        snapshot = derivatives_engine.get_market_snapshot()
+        spot = snapshot.get("spot", 0)
+        chain = snapshot.get("options_chain", [])
+        
+        recs = recommend_strategies(
+            forecast=req.forecast,
+            confidence=req.confidence,
+            avg_iv=req.avg_iv,
+            pcr=req.pcr,
+            spot=spot,
+            chain=chain,
+            risk_appetite=req.risk_appetite,
+            fii_net=req.fii_net,
+            capital=req.capital,
+        )
+        return {"recommendations": recs}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/derivatives/payoff")
+def get_strategy_payoff(payload: dict):
+    """Get payoff profile for a strategy."""
+    try:
+        snapshot = derivatives_engine.get_market_snapshot()
+        payoff = build_strategy_payoff(
+            strategy_key=payload.get("strategy_key", "bull_call_spread"),
+            spot=snapshot["spot"],
+            chain=snapshot["options_chain"],
+            days_to_expiry=snapshot["days_to_expiry"],
+        )
+        return payoff
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/derivatives/backtest")
+def run_strategy_backtest(req: StrategyBacktestRequest):
+    """Backtest a specific strategy."""
+    try:
+        res = backtest_strategy(req.strategy_key, req.years, req.holding_days)
+        if "error" in res:
+            raise HTTPException(status_code=400, detail=res["error"])
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/derivatives/backtest-all")
+def run_all_backtests(years: int = 3):
+    """Backtest all major strategies and compare."""
+    try:
+        return {"results": backtest_all_strategies(years)}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/derivatives/alerts")
+def get_derivatives_alerts():
+    """Get real-time derivatives alerts (FII/DII thresholds, PCR extremes, Max Pain shifts)."""
+    try:
+        snapshot = derivatives_engine.get_market_snapshot()
+        alerts = []
+        # FII alert
+        fii_data = snapshot["fii_dii_30d"]
+        if fii_data:
+            latest_fii = fii_data[-1]["fii_net"]
+            if latest_fii < -2000:
+                alerts.append({"type": "warning", "category": "FII/DII",
+                    "message": f"⚠️ FII sold ₹{abs(latest_fii):,.0f} Cr today — heavy selling pressure",
+                    "action": "Consider protective put or reduce long exposure"})
+            elif latest_fii > 2000:
+                alerts.append({"type": "bullish", "category": "FII/DII",
+                    "message": f"🟢 FII bought ₹{latest_fii:,.0f} Cr today — strong institutional support",
+                    "action": "Bullish strategies favorable"})
+        # PCR alert
+        pcr = snapshot["pcr"]
+        if pcr > 1.5:
+            alerts.append({"type": "extreme", "category": "PCR",
+                "message": f"🔴 PCR at {pcr:.2f} — extreme bearish sentiment, contrarian buy signal",
+                "action": "Watch for reversal, consider bull call spread"})
+        elif pcr < 0.7:
+            alerts.append({"type": "extreme", "category": "PCR",
+                "message": f"🟡 PCR at {pcr:.2f} — extreme bullish euphoria, downside risk",
+                "action": "Consider hedging with protective puts"})
+        # VIX alert
+        vix = snapshot["vix"]["current"]
+        if vix > 25:
+            alerts.append({"type": "warning", "category": "VIX",
+                "message": f"🔴 India VIX at {vix:.1f} — elevated fear, high volatility",
+                "action": "Premium selling strategies (iron condor) may be profitable"})
+        elif vix < 12:
+            alerts.append({"type": "info", "category": "VIX",
+                "message": f"🟢 India VIX at {vix:.1f} — very low, complacency risk",
+                "action": "Buy long straddle before possible vol spike"})
+        # Max Pain vs Spot
+        mp_gap = (snapshot["max_pain"] - snapshot["spot"]) / snapshot["spot"] * 100
+        if abs(mp_gap) > 2:
+            direction = "above" if mp_gap > 0 else "below"
+            alerts.append({"type": "info", "category": "Max Pain",
+                "message": f"📊 Max Pain {snapshot['max_pain']:,.0f} is {abs(mp_gap):.1f}% {direction} spot",
+                "action": f"Expect gravitational pull {'upward' if mp_gap > 0 else 'downward'} near expiry"})
+        if not alerts:
+            alerts.append({"type": "info", "category": "General",
+                "message": "✅ All derivatives indicators within normal range",
+                "action": "No immediate action required"})
+        return {"alerts": alerts, "snapshot_summary": {
+            "spot": snapshot["spot"], "pcr": pcr, "max_pain": snapshot["max_pain"],
+            "vix": snapshot["vix"]["current"], "forecast": snapshot["forecast"]["forecast"]
+        }}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+

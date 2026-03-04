@@ -732,3 +732,35 @@
     box-shadow: var(--shadow-card);
   }
 }
+
+/* ── Nav Responsive Layout (outside @layer for proper specificity) ── */
+.nav-desktop-tabs {
+  display: block;
+  padding-bottom: 8px;
+}
+
+.nav-desktop-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-mobile-actions {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .nav-desktop-tabs {
+    display: none !important;
+  }
+
+  .nav-desktop-actions {
+    display: none !important;
+  }
+
+  .nav-mobile-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+  }
+}
