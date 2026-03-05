@@ -213,23 +213,31 @@ def kite_callback_post(payload: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/forecast/monthly")
-def get_monthly_forecast():
+def get_monthly_forecast(target_date: str = None, market: str = "NSE"):
     """
-    Elite-only: Composite 1-Month Market Forecast.
-    Combines Astro signals, Technical trends, Options Chain, and News Sentiment
-    into a weighted score and directional forecast.
+    Elite-only: Date-Wise Comprehensive 1-Month Market Forecast.
+    Combines Astro signals, Technical trends, Options Chain, Macro Events, and Seasonality.
     """
-    from datetime import timedelta
-    from dateutil.relativedelta import relativedelta
+    from datetime import datetime
     import math
 
+    if target_date:
+        try:
+            anchor_dt = datetime.strptime(target_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    else:
+        anchor_dt = datetime.now()
+        
+    now = datetime.now()
+    is_historical = (now - anchor_dt).days > 3
+    
     signals = []
-    score = 0.0  # -12 = very bearish, +12 = very bullish
+    score = 0.0  
 
     # ── 1. ASTRO SIGNAL (weight: 3) ──────────────────────────────────────────
     try:
-        # Project 30 days into the future
-        upcoming_astro = analyzer.predict_upcoming_market(days=30)
+        upcoming_astro = analyzer.predict_upcoming_market(start_date=anchor_dt, days=30, market=market)
         bull_days = sum(1 for d in upcoming_astro if d.get("historical_tendency") == "Bullish")
         bear_days = sum(1 for d in upcoming_astro if d.get("historical_tendency") == "Bearish")
         
@@ -237,28 +245,27 @@ def get_monthly_forecast():
         if bull_days > bear_days + 4:
             astro_score += 3.0
             signals.append({"category": "Astro", "icon": "🔮", "direction": "bullish",
-                            "text": f"Next 30 days favors bulls ({bull_days} Bull vs {bear_days} Bear nakshatras)"})
+                            "text": f"Next 30 days from {anchor_dt.strftime('%d %b')} favors bulls ({bull_days} vs {bear_days} Bearish)"})
         elif bear_days > bull_days + 4:
             astro_score -= 3.0
             signals.append({"category": "Astro", "icon": "🔮", "direction": "bearish",
-                            "text": f"Next 30 days favors bears ({bear_days} Bear vs {bull_days} Bull nakshatras)"})
+                            "text": f"Next 30 days from {anchor_dt.strftime('%d %b')} favors bears ({bear_days} vs {bull_days} Bullish)"})
         else:
             signals.append({"category": "Astro", "icon": "🔮", "direction": "neutral",
-                            "text": f"Balanced planetary transit month ({bull_days} Bull vs {bear_days} Bear)"})
+                            "text": f"Balanced planetary transits for the upcoming month"})
 
-        # Today's Yoga bonus
-        today_astro = analyzer.generate_today_insight()
+        today_astro = analyzer.generate_insight_for_date(anchor_dt, market=market)
         yoga_name = today_astro.get("yoga_name", "")
         bullish_yogas = ["Gajakesari", "Raja", "Amala", "Dhana", "Saraswati"]
         bearish_yogas = ["Shula", "Visha", "Daridra", "Kemadruma"]
         if any(y.lower() in yoga_name.lower() for y in bullish_yogas):
             astro_score += 1.0
             signals.append({"category": "Astro", "icon": "⭐", "direction": "bullish",
-                            "text": f"{yoga_name} yoga active today — auspicious trigger"})
+                            "text": f"{yoga_name} active on {anchor_dt.strftime('%d %b')} — auspicious trigger"})
         elif any(y.lower() in yoga_name.lower() for y in bearish_yogas):
             astro_score -= 1.0
             signals.append({"category": "Astro", "icon": "⚠️", "direction": "bearish",
-                            "text": f"{yoga_name} yoga active today — short-term resistance"})
+                            "text": f"{yoga_name} active on {anchor_dt.strftime('%d %b')} — short-term resistance"})
                             
         score += astro_score
     except Exception as e:
@@ -268,44 +275,55 @@ def get_monthly_forecast():
     try:
         from modules.economic_events import EconomicEventsAnalyzer
         events_engine = EconomicEventsAnalyzer()
-        events = events_engine.get_upcoming_events(days_ahead=30)
+        events = events_engine.get_upcoming_events(days_ahead=30) if not is_historical else []
         
-        bullish_events = sum(1 for e in events if e.get("expected_bias") == "Bullish")
-        bearish_events = sum(1 for e in events if e.get("expected_bias") == "Bearish")
-        
-        if bullish_events > bearish_events:
-            score += 2.0
-            signals.append({"category": "Events", "icon": "🗓️", "direction": "bullish",
-                            "text": f"{bullish_events} positive macro events upcoming (e.g. rate cuts or earnings)"})
-        elif bearish_events > bullish_events:
-            score -= 2.0
-            signals.append({"category": "Events", "icon": "🗓️", "direction": "bearish",
-                            "text": f"{bearish_events} negative macro events upcoming (e.g. rate hikes or inflation)"})
-        elif len(events) > 0:
-            signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral",
-                            "text": f"{len(events)} mixed macro events scheduled in the next 30 days"})
+        if not is_historical:
+            bullish_events = sum(1 for e in events if e.get("expected_bias") == "Bullish")
+            bearish_events = sum(1 for e in events if e.get("expected_bias") == "Bearish")
+            
+            if bullish_events > bearish_events:
+                score += 2.0
+                signals.append({"category": "Events", "icon": "🗓️", "direction": "bullish", "text": f"{bullish_events} positive macro events upcoming"})
+            elif bearish_events > bullish_events:
+                score -= 2.0
+                signals.append({"category": "Events", "icon": "🗓️", "direction": "bearish", "text": f"{bearish_events} negative macro events upcoming"})
+            elif len(events) > 0:
+                signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral", "text": f"{len(events)} mixed macro events scheduled"})
+            else:
+                signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral", "text": "Quiet macroeconomic calendar for the next month"})
         else:
-            signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral",
-                            "text": "Quiet macroeconomic calendar for the next month"})
+            signals.append({"category": "Events", "icon": "🗓️", "direction": "historical", "text": "Historical macro events N/A"})
     except Exception as e:
         logger.warning(f"Forecast: events signal failed: {e}")
 
     # ── 3. TECHNICAL SIGNAL (weight: 3) ──────────────────────────────────────
     try:
         import yfinance as yf
-        ticker = yf.Ticker("^NSEI")
-        hist = ticker.history(period="1y")
-        if not hist.empty and len(hist) >= 200:
+        import pandas as pd
+        ticker_sym = "^NSEI" if market.upper() == "NSE" else "^IXIC"
+        
+        from dateutil.relativedelta import relativedelta
+        start_date_tech = anchor_dt - relativedelta(years=1)
+        end_date_tech = anchor_dt + relativedelta(days=1)
+        
+        hist = yf.Ticker(ticker_sym).history(start=start_date_tech.strftime("%Y-%m-%d"), end=end_date_tech.strftime("%Y-%m-%d"))
+        
+        if not hist.empty and len(hist) >= 100:
             close = hist["Close"]
             current = close.iloc[-1]
             ma50 = close.rolling(50).mean().iloc[-1]
             ma200 = close.rolling(200).mean().iloc[-1]
             
-            # RSI
             delta = close.diff()
             gain = delta.clip(lower=0).rolling(14).mean().iloc[-1]
             loss = (-delta.clip(upper=0)).rolling(14).mean().iloc[-1]
             rsi = 100 - (100 / (1 + gain / loss)) if loss != 0 else 50
+            
+            tr = pd.concat([hist['High'] - hist['Low'], 
+                            abs(hist['High'] - hist['Close'].shift()), 
+                            abs(hist['Low'] - hist['Close'].shift())], axis=1).max(axis=1)
+            atr = tr.rolling(14).mean().iloc[-1]
+            atr_pct = (atr / current) * 100
 
             tech_score = 0
             tech_notes = []
@@ -314,14 +332,19 @@ def get_monthly_forecast():
             else: tech_score -= 1
             
             if ma50 > ma200: 
-                tech_score += 1; tech_notes.append("Golden Cross (50DMA > 200DMA)")
+                tech_score += 1; tech_notes.append("Golden Cross")
             else: 
-                tech_score -= 1; tech_notes.append("Death Cross (50DMA < 200DMA)")
+                tech_score -= 1; tech_notes.append("Death Cross")
                 
             if rsi < 30: 
-                tech_score += 1; tech_notes.append("RSI deeply oversold")
+                tech_score += 1; tech_notes.append("Oversold RSI")
             elif rsi > 70: 
-                tech_score -= 1; tech_notes.append("RSI heavily overbought")
+                tech_score -= 1; tech_notes.append("Overbought RSI")
+                
+            if atr_pct > 2.0:
+                tech_notes.append(f"High Volatility Regime ({atr_pct:.1f}% ATR)")
+            else:
+                tech_notes.append(f"Low Volatility ({atr_pct:.1f}% ATR)")
 
             score += tech_score
             direction = "bullish" if tech_score > 0 else ("bearish" if tech_score < 0 else "neutral")
@@ -332,44 +355,81 @@ def get_monthly_forecast():
 
     # ── 4. OPTIONS CHAIN SIGNAL (weight: 2) ──────────────────────────────────
     try:
-        snap = derivatives_engine.get_market_snapshot("NIFTY")
-        pcr = snap.get("pcr", 1.0)
-        vix = snap.get("vix", {}).get("current", 15) if isinstance(snap.get("vix"), dict) else snap.get("vix", 15)
+        if is_historical:
+             signals.append({"category": "Options", "icon": "⛓️", "direction": "historical", "text": "Historical Options Chain N/A"})
+        else:
+            snap = derivatives_engine.get_market_snapshot("NIFTY" if market == "NSE" else "NASDAQ")
+            pcr = snap.get("pcr", 1.0)
+            vix = snap.get("vix", {}).get("current", 15) if isinstance(snap.get("vix"), dict) else snap.get("vix", 15)
 
-        opt_score = 0
-        if pcr > 1.3:
-            opt_score += 2; signals.append({"category": "Options", "icon": "⛓️", "direction": "bullish",
-                                            "text": f"PCR {pcr:.2f} — high put accumulation, strong support"})
-        elif pcr < 0.7:
-            opt_score -= 2; signals.append({"category": "Options", "icon": "⛓️", "direction": "bearish",
-                                            "text": f"PCR {pcr:.2f} — heavy call writing, tight resistance"})
-        
-        if vix > 22:
-            opt_score -= 1
-            if opt_score < 0: signals.append({"category": "Options", "icon": "🌡️", "direction": "bearish", "text": f"VIX {vix:.1f} — high volatility panic"})
-        elif vix < 14:
-            opt_score += 1
-            if opt_score > 0 and len(signals) < 5: signals.append({"category": "Options", "icon": "🌡️", "direction": "bullish", "text": f"VIX {vix:.1f} — low volatility complacency"})
+            opt_score = 0
+            if pcr > 1.3:
+                opt_score += 2; signals.append({"category": "Options", "icon": "⛓️", "direction": "bullish", "text": f"PCR {pcr:.2f} — high put accumulation support"})
+            elif pcr < 0.7:
+                opt_score -= 2; signals.append({"category": "Options", "icon": "⛓️", "direction": "bearish", "text": f"PCR {pcr:.2f} — heavy call writing resistance"})
             
-        if opt_score == 0:
-            signals.append({"category": "Options", "icon": "⛓️", "direction": "neutral",
-                            "text": f"Options chain balanced (PCR {pcr:.1f}, VIX {vix:.1f})"})
-        score += opt_score
+            if vix > 22:
+                opt_score -= 1
+                if opt_score < 0: signals.append({"category": "Options", "icon": "🌡️", "direction": "bearish", "text": f"VIX {vix:.1f} — high volatility panic"})
+            elif vix < 14:
+                opt_score += 1
+                if opt_score > 0 and len(signals) < 5: signals.append({"category": "Options", "icon": "🌡️", "direction": "bullish", "text": f"VIX {vix:.1f} — complacency"})
+                
+            if opt_score == 0:
+                signals.append({"category": "Options", "icon": "⛓️", "direction": "neutral", "text": f"Options chain balanced (PCR {pcr:.1f}, VIX {vix:.1f})"})
+            score += opt_score
     except Exception as e:
         logger.warning(f"Forecast: options signal failed: {e}")
 
-    # ── 5. NEWS SENTIMENT SIGNAL (weight: 2) ─────────────────────────────────
+    # ── 5. NEW: INSTITUTIONAL FII/DII SIGNAL (weight: 1) ───────────────────────
     try:
-        sent = sentiment_engine.get_sentiment_forecast("^NSEI", "NSE")
-        sentiment_text = sent.get("overall_sentiment", "Neutral")
-        if sentiment_text == "Bullish":
-            score += 2; signals.append({"category": "Sentiment", "icon": "📰", "direction": "bullish",
-                                        "text": "News & macro sentiment broadly positive for Indian markets"})
-        elif sentiment_text == "Bearish":
-            score -= 2; signals.append({"category": "Sentiment", "icon": "📰", "direction": "bearish",
-                                        "text": "News & macro sentiment broadly negative — caution warranted"})
+        from modules.institutional_data import fetch_fii_dii_data
+        inst_data = fetch_fii_dii_data(anchor_dt)
+        if inst_data:
+            sentiment_inst = inst_data.get("sentiment", "Neutral")
+            fii_val = inst_data.get("fii_net_cr", 0)
+            dii_val = inst_data.get("dii_net_cr", 0)
+            
+            if sentiment_inst == "Bullish":
+                score += 1.0
+                signals.append({"category": "Institutional", "icon": "🏦", "direction": "bullish", "text": f"FII Net Buyers ({fii_val:+.0f} Cr) · DII ({dii_val:+.0f} Cr)"})
+            elif sentiment_inst == "Bearish":
+                score -= 1.0
+                signals.append({"category": "Institutional", "icon": "🏦", "direction": "bearish", "text": f"FII Net Sellers ({fii_val:+.0f} Cr) · DII ({dii_val:+.0f} Cr)"})
+            else:
+                signals.append({"category": "Institutional", "icon": "🏦", "direction": "neutral", "text": f"Mixed FII/DII Institutional Flows"})
+        elif is_historical:
+            signals.append({"category": "Institutional", "icon": "🏦", "direction": "historical", "text": "Historical FII/DII Data N/A for exact date"})
     except Exception as e:
-        logger.warning(f"Forecast: sentiment signal failed: {e}")
+        logger.warning(f"Forecast: Institutional signal failed: {e}")
+
+    # ── 6. NEW: SEASONALITY SIGNAL (weight: 1) ──────────────────────────────────
+    try:
+        month_idx = anchor_dt.month
+        seasonality_map = {
+            1: ("Neutral", "January effect consolidation"),
+            2: ("Neutral", "Pre/Post budget volatility"),
+            3: ("Mildly Bearish", "Financial year end profit booking"),
+            4: ("Bullish", "New financial year allocations"),
+            5: ("Neutral", "Sell in May and go away context"),
+            6: ("Mildly Bullish", "Pre-monsoon positioning"),
+            7: ("Bullish", "Q1 Earnings momentum"),
+            8: ("Neutral", "Mid-year consolidation"),
+            9: ("Bearish", "Historically the weakest month globally"),
+            10: ("Mildly Bullish", "Festival season demand"),
+            11: ("Bullish", "Pre-rally positioning"),
+            12: ("Bullish", "Santa Claus rally")
+        }
+        seas_bias, seas_reason = seasonality_map.get(month_idx, ("Neutral", "Neutral Setup"))
+        
+        if "Bullish" in seas_bias:
+            score += 1.0
+            signals.append({"category": "Seasonality", "icon": "📅", "direction": "bullish", "text": f"{anchor_dt.strftime('%B')} — {seas_reason}"})
+        elif "Bearish" in seas_bias:
+            score -= 1.0
+            signals.append({"category": "Seasonality", "icon": "📅", "direction": "bearish", "text": f"{anchor_dt.strftime('%B')} — {seas_reason}"})
+    except Exception as e:
+        logger.warning(f"Forecast: Seasonality signal failed: {e}")
 
     # ── COMPOSITE RESULT ─────────────────────────────────────────────────────
     max_possible = 12.0
@@ -378,7 +438,7 @@ def get_monthly_forecast():
 
     if score >= 4:
         verdict, verdict_color, verdict_emoji = "BULLISH", "#4ade80", "📈"
-        summary = "Multiple converging signals point to upward momentum over the next month. Look for buying opportunities on dips."
+        summary = "Multiple converging signals point to upward momentum over the next month. Look for buying opportunities."
     elif score >= 1:
         verdict, verdict_color, verdict_emoji = "MILDLY BULLISH", "#86efac", "↗️"
         summary = "Moderate bullish bias with mixed sub-signals. Selective buying in strong sectors advised."
@@ -392,8 +452,13 @@ def get_monthly_forecast():
         verdict, verdict_color, verdict_emoji = "NEUTRAL", "#fbbf24", "↔️"
         summary = "No clear directional bias. Markets may consolidate. Wait for a breakout before taking large positions."
 
-    # Exact calendar month projection
-    target_date = (datetime.now() + relativedelta(months=1)).strftime("%d %b %Y")
+    try:
+        from modules.holidays_engine import holidays_engine
+        target_final_date = holidays_engine.calculate_1_month_target(anchor_dt, market)
+        target_date_str = target_final_date.strftime("%d %b %Y")
+    except Exception:
+        from dateutil.relativedelta import relativedelta
+        target_date_str = (anchor_dt + relativedelta(months=1)).strftime("%d %b %Y")
 
     return {
         "verdict": verdict,
@@ -403,9 +468,11 @@ def get_monthly_forecast():
         "normalized_score": normalized,
         "confidence": int(confidence),
         "summary": summary,
-        "target_date": target_date,
+        "target_date": target_date_str,
         "signals": signals,
         "generated_at": datetime.now().isoformat(),
+        "anchor_date": anchor_dt.strftime("%d %b %Y"),
+        "is_historical": is_historical
     }
 
 

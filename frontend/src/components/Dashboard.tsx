@@ -70,6 +70,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const [analysing, setAnalysing] = useState(false);
     const [forecast, setForecast] = useState<any>(null);
     const [forecastLoading, setForecastLoading] = useState(false);
+    const [forecastMarket, setForecastMarket] = useState('NSE');
+    const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [symbol, setSymbol] = useState('^NSEI');
     const [planet, setPlanet] = useState('Moon');
     const [startDate, setStartDate] = useState(() => {
@@ -89,13 +91,17 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             .catch(() => setLoading(false));
     }, []);
 
-    useEffect(() => {
+    const fetchForecast = () => {
         if (!isElite) return;
         setForecastLoading(true);
-        fetch(`${API}/api/forecast/monthly`)
+        fetch(`${API}/api/forecast/monthly?target_date=${forecastDate}&market=${forecastMarket}`)
             .then(r => r.json())
             .then(d => { setForecast(d); setForecastLoading(false); })
             .catch(() => setForecastLoading(false));
+    };
+
+    useEffect(() => {
+        fetchForecast();
     }, [isElite]);
 
     const runAnalysis = async () => {
@@ -150,11 +156,47 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                         padding: '3px 10px', borderRadius: 20, letterSpacing: 1.2,
                     }}>⭐ ELITE</div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                        <span style={{ fontSize: 22 }}>🔭</span>
-                        <div>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-MONTH MARKET FORECAST</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Composite: Astro · Technical · Options Chain · News Sentiment</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 18 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: 22 }}>🔭</span>
+                            <div>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-MONTH MARKET FORECAST</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Composite: Astro · Technical · Institutional · Options · Macro · Seasonality</div>
+                            </div>
+                        </div>
+
+                        {/* Forecast Controls */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.15)', padding: '6px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>MARKET</label>
+                                <select
+                                    className="form-input"
+                                    value={forecastMarket}
+                                    onChange={(e) => setForecastMarket(e.target.value)}
+                                    style={{ padding: '4px 8px', fontSize: 12, height: 'auto', minWidth: 80 }}
+                                >
+                                    <option value="NSE">NSE (India)</option>
+                                    <option value="NASDAQ">NASDAQ (US)</option>
+                                </select>
+                            </div>
+                            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>T-ZERO DATE</label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    value={forecastDate}
+                                    onChange={(e) => setForecastDate(e.target.value)}
+                                    style={{ padding: '4px 8px', fontSize: 12, height: 'auto', maxWidth: 130 }}
+                                />
+                            </div>
+                            <button
+                                onClick={fetchForecast}
+                                className="btn-primary"
+                                style={{ padding: '4px 12px', fontSize: 12, height: 'auto', minWidth: 'auto', background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', color: '#fbbf24' }}
+                            >
+                                Recalculate
+                            </button>
                         </div>
                     </div>
 
@@ -170,11 +212,18 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <span style={{ fontSize: 36 }}>{forecast.verdict_emoji}</span>
                                     <div>
-                                        <div style={{ fontSize: 26, fontWeight: 900, color: forecast.verdict_color, lineHeight: 1 }}>
-                                            {forecast.verdict}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <div style={{ fontSize: 26, fontWeight: 900, color: forecast.verdict_color, lineHeight: 1 }}>
+                                                {forecast.verdict}
+                                            </div>
+                                            {forecast.is_historical && (
+                                                <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: 12, color: 'var(--text-muted)' }}>HISTORICAL</span>
+                                            )}
                                         </div>
-                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                                            Target: {forecast.target_date}
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ color: 'var(--text-secondary)' }}>T-Zero: <strong>{forecast.anchor_date}</strong></span>
+                                            <span>→</span>
+                                            <span style={{ color: 'var(--accent-cyan)' }}>Target: <strong>{forecast.target_date}</strong></span>
                                         </div>
                                     </div>
                                 </div>
@@ -211,9 +260,15 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                     <div key={i} style={{
                                         display: 'flex', alignItems: 'flex-start', gap: 10,
                                         background: sig.direction === 'bullish' ? 'rgba(74,222,128,0.07)'
-                                            : sig.direction === 'bearish' ? 'rgba(248,113,113,0.07)' : 'rgba(255,255,255,0.04)',
-                                        border: `1px solid ${sig.direction === 'bullish' ? 'rgba(74,222,128,0.2)' : sig.direction === 'bearish' ? 'rgba(248,113,113,0.2)' : 'rgba(255,255,255,0.1)'}`,
+                                            : sig.direction === 'bearish' ? 'rgba(248,113,113,0.07)'
+                                                : sig.direction === 'historical' ? 'rgba(0,0,0,0.2)'
+                                                    : 'rgba(255,255,255,0.04)',
+                                        border: `1px solid ${sig.direction === 'bullish' ? 'rgba(74,222,128,0.2)'
+                                            : sig.direction === 'bearish' ? 'rgba(248,113,113,0.2)'
+                                                : sig.direction === 'historical' ? 'rgba(255,255,255,0.05)'
+                                                    : 'rgba(255,255,255,0.1)'}`,
                                         borderRadius: 8, padding: '8px 12px',
+                                        opacity: sig.direction === 'historical' ? 0.6 : 1
                                     }}>
                                         <span style={{ fontSize: 16, flexShrink: 0 }}>{sig.icon}</span>
                                         <div>
@@ -222,8 +277,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                         </div>
                                         <span style={{
                                             marginLeft: 'auto', flexShrink: 0, fontSize: 12,
-                                            color: sig.direction === 'bullish' ? '#4ade80' : sig.direction === 'bearish' ? '#f87171' : '#fbbf24',
-                                        }}>{sig.direction === 'bullish' ? '▲' : sig.direction === 'bearish' ? '▼' : '●'}</span>
+                                            color: sig.direction === 'bullish' ? '#4ade80' : sig.direction === 'bearish' ? '#f87171' : sig.direction === 'historical' ? '#6b7280' : '#fbbf24',
+                                        }}>{sig.direction === 'bullish' ? '▲' : sig.direction === 'bearish' ? '▼' : sig.direction === 'historical' ? '—' : '●'}</span>
                                     </div>
                                 ))}
                             </div>
