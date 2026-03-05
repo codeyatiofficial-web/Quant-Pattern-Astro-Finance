@@ -72,6 +72,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const [forecastLoading, setForecastLoading] = useState(false);
     const [forecastMarket, setForecastMarket] = useState('NSE');
     const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [weekForecast, setWeekForecast] = useState<any[]>([]);
+    const [weekLoading, setWeekLoading] = useState(true);
     const [symbol, setSymbol] = useState('^NSEI');
     const [planet, setPlanet] = useState('Moon');
     const [startDate, setStartDate] = useState(() => {
@@ -89,6 +91,13 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             .then(r => r.json())
             .then(d => { setInsight(d); setLoading(false); })
             .catch(() => setLoading(false));
+
+        // Fetch 1-week forecast for all users
+        const today = new Date().toISOString().slice(0, 10);
+        fetch(`${API}/api/predict/${today}?days=7&market=NSE`)
+            .then(r => r.json())
+            .then(d => { setWeekForecast(d.predictions || []); setWeekLoading(false); })
+            .catch(() => setWeekLoading(false));
     }, []);
 
     const fetchForecast = () => {
@@ -135,6 +144,76 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 <p className="section-subtitle">
                     Correlating Moon's journey through 27 Vedic Nakshatras with global market movements
                 </p>
+            </div>
+
+            {/* ── ALL TIERS: 1-Week Astro Forecast ── */}
+            <div style={{
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(59,130,246,0.05) 100%)',
+                border: '1px solid rgba(99,102,241,0.3)',
+                borderRadius: 16,
+                padding: '20px 24px',
+                marginBottom: 24,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <span style={{ fontSize: 20 }}>📅</span>
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>7-DAY ASTRO OUTLOOK</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Today + upcoming trading days · Nakshatra · Tithi · Yoga · Tendency</div>
+                    </div>
+                </div>
+
+                {weekLoading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', padding: '8px 0' }}>
+                        <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+                        Loading this week’s cosmic forecast…
+                    </div>
+                ) : weekForecast.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${weekForecast.length}, minmax(140px, 1fr))`, gap: 8 }}>
+                            {weekForecast.map((day: any, i: number) => {
+                                const isToday = i === 0;
+                                const tendColor = day.historical_tendency === 'Bullish' ? '#4ade80' : day.historical_tendency === 'Bearish' ? '#f87171' : '#fbbf24';
+                                const tendBg = day.historical_tendency === 'Bullish' ? 'rgba(74,222,128,0.1)' : day.historical_tendency === 'Bearish' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.08)';
+                                const dateObj = new Date(day.date + 'T00:00:00');
+                                const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                                const dateLabel = dateObj.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+                                return (
+                                    <div key={i} style={{
+                                        background: tendBg,
+                                        border: `1px solid ${isToday ? tendColor : 'rgba(255,255,255,0.08)'}`,
+                                        borderRadius: 12,
+                                        padding: '12px 14px',
+                                        textAlign: 'center',
+                                        position: 'relative',
+                                    }}>
+                                        {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-cyan)', color: '#000', fontSize: 9, fontWeight: 800, padding: '1px 8px', borderRadius: 8, letterSpacing: 0.5 }}>TODAY</div>}
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4 }}>{weekday} {dateLabel}</div>
+                                        <div style={{ fontSize: 18, fontWeight: 900, color: tendColor, marginBottom: 6 }}>
+                                            {day.historical_tendency === 'Bullish' ? '▲' : day.historical_tendency === 'Bearish' ? '▼' : '●'}
+                                        </div>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: tendColor, marginBottom: 8 }}>{day.historical_tendency}</div>
+                                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                            <div>🌙 {day.current_nakshatra}</div>
+                                            <div>🌒 {day.tithi_name}</div>
+                                            <div>🔮 {day.yoga_name}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No forecast data available.</div>
+                )}
+
+                {!isElite && (
+                    <div style={{ marginTop: 14, padding: '10px 16px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontSize: 16 }}>⭐</span>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            <strong style={{ color: '#fbbf24' }}>Upgrade to Elite</strong> for the full <strong>1-Month Composite Forecast</strong> with date picker, FII/DII institutional flows, options chain analysis, and seasonality scoring.
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* ── ELITE: 1-Month Composite Forecast ── */}
