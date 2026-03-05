@@ -39,7 +39,7 @@ export type Page = 'dashboard' | 'nakshatra' | 'technical' | 'correlation' | 'se
 
 const links: { key: Page; label: string; fullName: string; icon: any }[] = [
   { key: 'dashboard', label: 'Dashboard', fullName: 'Dashboard', icon: Home },
-  { key: 'nakshatra', label: 'Nakshatra', fullName: 'Nakshatra Scan', icon: BarChart2 },
+  { key: 'nakshatra', label: 'Astro Analysis', fullName: 'Astro Analysis', icon: BarChart2 },
   { key: 'technical', label: 'Technical', fullName: 'Technical Analysis', icon: LineChart },
   { key: 'correlation', label: 'Correlation', fullName: 'Astro-Correlation', icon: PieChart },
   { key: 'sentiment', label: 'Predictions', fullName: 'Daily Predictions', icon: Calendar },
