@@ -62,7 +62,7 @@ function MetricCard({ label, value, sub, color, icon }: {
 }
 
 export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: any) => void }) {
-    const { guardYears, modal: planModal } = usePlanGate(1);
+    const { guardYears, requirePlan, modal: planModal } = usePlanGate(1);
     const { tier } = usePlan();
     const isElite = tier === 'elite';
     const [insight, setInsight] = useState<TodayInsight | null>(null);
@@ -99,6 +99,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     }, [isElite]);
 
     const runAnalysis = async () => {
+        if (!requirePlan(1)) return; // Requires PRO (tier 1) or higher
+
         setAnalysing(true);
         setStatus('Fetching market data & crunching Nakshatras…');
         try {
@@ -457,7 +459,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     <button className="btn-primary" onClick={runAnalysis} disabled={analysing} style={{ minWidth: 220 }}>
                         {analysing
                             ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Analyzing…</>
-                            : '🚀 Load & Analyze Data'
+                            : <>🚀 Load & Analyze Data <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,0.2)', borderRadius: 4, marginLeft: 6 }}>PRO</span></>
                         }
                     </button>
                     {status && (

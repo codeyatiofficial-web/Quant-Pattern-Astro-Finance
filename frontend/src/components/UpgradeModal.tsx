@@ -309,7 +309,16 @@ export function usePlanGate(FREE_LIMIT_YEARS = 1) {
         return false;
     }, [canAccess]);
 
+    /** Explicit plan override check. Returns true if user has tier >= requiredTierLevel */
+    const requirePlan = useCallback((requiredTierLevel: number): boolean => {
+        const tiers: Record<PlanTier, number> = { 'free': 0, 'pro': 1, 'elite': 2 };
+        if (tiers[tier] >= requiredTierLevel) return true;
+
+        setShowModal(true);
+        return false;
+    }, [tier]);
+
     const modal = showModal ? <UpgradeModal onClose={() => setShowModal(false)} /> : null;
 
-    return { guardYears, guardPeriod, modal, tier };
+    return { guardYears, guardPeriod, requirePlan, modal, tier };
 }
