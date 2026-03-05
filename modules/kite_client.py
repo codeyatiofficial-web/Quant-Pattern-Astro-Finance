@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from kiteconnect import KiteConnect
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'backend', '.env'))
 
 # Common yfinance symbols to Kite Trading Symbols mapping
 YFINANCE_TO_KITE_MAP = {

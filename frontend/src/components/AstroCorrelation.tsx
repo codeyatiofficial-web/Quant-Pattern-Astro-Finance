@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
+import { usePlanGate } from './UpgradeModal';
 
-const API = 'http://localhost:8000';
+const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 function ReturnCell({ v }: { v: number | null }) {
     if (v == null) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
@@ -121,7 +122,7 @@ export default function AstroCorrelation() {
     const [symbol, setSymbol] = useState('^NSEI');
     const [planet, setPlanet] = useState('Mercury');
     const [eventType, setEventType] = useState('Retrograde');
-    const [years, setYears] = useState(10);
+    const [years, setYears] = useState(1);
     const [forwardDays, setForwardDays] = useState(0);
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
@@ -130,12 +131,15 @@ export default function AstroCorrelation() {
 
     const [vixPlanet, setVixPlanet] = useState('Mercury');
     const [vixEvent, setVixEvent] = useState('Retrograde');
-    const [vixYears, setVixYears] = useState(10);
+    const [vixYears, setVixYears] = useState(1);
     const [vixLoading, setVixLoading] = useState(false);
     const [vixResult, setVixResult] = useState<any>(null);
     const [vixError, setVixError] = useState('');
 
     const [sub, setSub] = useState<'backtest' | 'vix'>('backtest');
+
+    const { guardYears, modal: planModal } = usePlanGate(1);
+
 
     const US_GLOBAL = new Set([
         '^IXIC', '^GSPC', '^DJI', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META',
@@ -228,6 +232,7 @@ export default function AstroCorrelation() {
 
     return (
         <div>
+            {planModal}
             <h1 className="section-title">🌌 Astro-Correlation Engine</h1>
             <p className="section-subtitle">
                 Backtesting all 9 planets · 44 Yoga types · Solar & Lunar Eclipses · Market & VIX reactions
@@ -365,10 +370,10 @@ export default function AstroCorrelation() {
                                     <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#a78bfa' }}>🔮 Multiple (Yoga)</div>
                                 </div>
                             )}
-                            <div style={{ minWidth: 150 }}>
-                                <label className="form-label">Lookback</label>
-                                <select className="form-select" value={years} onChange={e => setYears(Number(e.target.value))}>
-                                    {[3, 5, 7, 10, 15, 20].map(y => <option key={y} value={y}>{y} years</option>)}
+                            <div style={{ minWidth: 180 }}>
+                                <label className="form-label">Historical Period <span style={{ fontSize: 10, color: '#f59e0b' }}>(Pro)</span></label>
+                                <select className="form-select" value={years} onChange={e => { if (guardYears(Number(e.target.value))) setYears(Number(e.target.value)); }}>
+                                    {[1, 2, 3, 5, 10, 15, 20].map(y => <option key={y} value={y}>{y} {y > 1 ? 'Year(s) 🔒' : 'Year'}</option>)}
                                 </select>
                             </div>
                             <div style={{ minWidth: 150 }}>
@@ -457,10 +462,21 @@ export default function AstroCorrelation() {
                                     <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#a78bfa' }}>🔮 Multiple</div>
                                 </div>
                             )}
-                            <div style={{ minWidth: 150 }}>
-                                <label className="form-label">Lookback</label>
-                                <select className="form-select" value={vixYears} onChange={e => setVixYears(Number(e.target.value))}>
-                                    {[3, 5, 7, 10, 15].map(y => <option key={y} value={y}>{y} years</option>)}
+                            <div style={{ minWidth: 180 }}>
+                                <label className="form-label">Lookback Period</label>
+                                <select className="form-select" value={vixYears} onChange={e => {
+                                    const v = Number(e.target.value);
+                                    if (guardYears(v)) setVixYears(v);
+                                }}>
+                                    <option value={1}>1 year ✓ Free</option>
+                                    <option value={3}>🔒 3 years — Pro</option>
+                                    <option value={5}>🔒 5 years — Pro</option>
+                                    <option value={7}>🔒 7 years — Pro</option>
+                                    <option value={10}>🔒 10 years — Pro</option>
+                                    <option value={15}>🔒 15 years — Elite</option>
+                                    <option value={20}>🔒 20 years — Elite</option>
+                                    <option value={30}>🔒 30 years — Elite</option>
+                                    <option value={99}>🔒 Max Available — Elite</option>
                                 </select>
                             </div>
                         </div>

@@ -4,7 +4,7 @@ Recommends optimal strategies based on market conditions, forecast, IV, and risk
 Offers strategies for all outlooks (Bullish, Bearish, Neutral) and computes real premiums.
 """
 import logging
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +112,74 @@ STRATEGIES = {
 # Options Leg Builder (35-year expert sizing)
 # ---------------------------------------------------------------------------
 
+def optimize_vertical_spread(chain: List[Dict], atm_idx: int, is_credit: bool, is_call: bool, profit_diff_target: float = 500) -> Tuple[int, int]:
+    n = len(chain)
+    best_sell = -1
+    best_buy = -1
+    best_score = -999999
+    
+    start_idx = max(0, atm_idx - 6)
+    end_idx = min(n - 1, atm_idx + 6)
+        
+    for s_idx in range(start_idx, end_idx + 1):
+        for b_idx in range(start_idx, end_idx + 1):
+            if s_idx == b_idx: continue
+            
+            s_strike = chain[s_idx]["strike"]
+            b_strike = chain[b_idx]["strike"]
+            
+            if is_call and not is_credit: # Bull Call Spread
+                if b_idx >= s_idx: continue
+            elif is_call and is_credit: # Bear Call Spread
+                if s_idx >= b_idx: continue
+            elif not is_call and is_credit: # Bull Put Spread
+                if b_idx >= s_idx: continue
+            elif not is_call and not is_credit: # Bear Put Spread
+                if s_idx >= b_idx: continue
+                
+            opt_type = "CE" if is_call else "PE"
+            s_prem = chain[s_idx][opt_type]["price"]
+            b_prem = chain[b_idx][opt_type]["price"]
+            
+            if s_prem <= 0 or b_prem <= 0: continue
+            
+            if is_credit:
+                net_credit = s_prem - b_prem
+                if net_credit <= 0: continue
+                width = abs(s_strike - b_strike)
+                m_prof = net_credit * 50
+                m_loss = (width - net_credit) * 50
+            else:
+                net_debit = b_prem - s_prem
+                if net_debit <= 0: continue
+                width = abs(s_strike - b_strike)
+                m_loss = net_debit * 50
+                m_prof = (width - net_debit) * 50
+                
+            diff = m_prof - m_loss
+            score = diff
+            
+            dist_from_atm = abs(s_idx - atm_idx) + abs(b_idx - atm_idx)
+            if diff >= profit_diff_target:
+                score += (1000 - dist_from_atm * 10)
+                
+            if score > best_score:
+                best_score = score
+                best_sell = s_idx
+                best_buy = b_idx
+                
+    if best_sell == -1 or best_buy == -1:
+        if is_call and not is_credit:
+            return min(atm_idx + 2, n - 1), atm_idx
+        elif is_call and is_credit:
+            return atm_idx, min(atm_idx + 2, n - 1)
+        elif not is_call and is_credit:
+            return atm_idx, max(atm_idx - 2, 0)
+        elif not is_call and not is_credit:
+            return max(atm_idx - 2, 0), atm_idx
+            
+    return best_sell, best_buy
+
 def _build_actual_trade_legs(strategy_key: str, spot: float, chain: List[Dict]) -> Dict:
     """Builds the exact trade legs, max profit/loss based on the live chain."""
     if not chain:
@@ -136,9 +204,7 @@ def _build_actual_trade_legs(strategy_key: str, spot: float, chain: List[Dict]) 
         insight = f"Taking a naked directional bet. ATM strikes offer >0.50 delta, giving immediate response to underlying movement. Ensure tight 30% stop-loss."
         
     elif strategy_key == "bull_call_spread":
-        buy_idx = atm_idx
-        # 3 strikes out for selling
-        sell_idx = min(atm_idx + 3, len(chain) - 1)
+        sell_idx, buy_idx = optimize_vertical_spread(chain, atm_idx, is_credit=False, is_call=True)
         buy_prem = chain[buy_idx]["CE"]["price"]
         sell_prem = chain[sell_idx]["CE"]["price"]
         net_debit = buy_prem - sell_prem
@@ -153,9 +219,8 @@ def _build_actual_trade_legs(strategy_key: str, spot: float, chain: List[Dict]) 
         insight = f"A classic low-risk play. Selling the {chain[sell_idx]['strike']} CE offsets theta decay and reduces capital requirement by ₹{sell_prem * 50:.0f} per lot via IV exposure offset."
 
     elif strategy_key == "bull_put_spread":
-        # Sell ATM put, buy OTM put (credit)
-        sell_idx = atm_idx
-        buy_idx = max(atm_idx - 3, 0)
+        # Sell slightly OTM put, buy further OTM put for better profit probability
+        sell_idx, buy_idx = optimize_vertical_spread(chain, atm_idx, is_credit=True, is_call=False)
         sell_prem = chain[sell_idx]["PE"]["price"]
         buy_prem = chain[buy_idx]["PE"]["price"]
         net_credit = sell_prem - buy_prem
@@ -178,8 +243,7 @@ def _build_actual_trade_legs(strategy_key: str, spot: float, chain: List[Dict]) 
         insight = f"Pure downside velocity play. Puts generally price IV expansion into drops. Exit quickly if structural support holds."
 
     elif strategy_key == "bear_put_spread":
-        buy_idx = atm_idx
-        sell_idx = max(atm_idx - 3, 0)
+        sell_idx, buy_idx = optimize_vertical_spread(chain, atm_idx, is_credit=False, is_call=False)
         buy_prem = chain[buy_idx]["PE"]["price"]
         sell_prem = chain[sell_idx]["PE"]["price"]
         net_debit = buy_prem - sell_prem
@@ -194,8 +258,8 @@ def _build_actual_trade_legs(strategy_key: str, spot: float, chain: List[Dict]) 
         insight = f"Safer than a naked put. The sold {chain[sell_idx]['strike']} leg insulates against an IV collapse that typically happens during minor pullbacks."
 
     elif strategy_key == "bear_call_spread":
-        sell_idx = atm_idx
-        buy_idx = min(atm_idx + 3, len(chain) - 1)
+        # Sell slightly OTM call, buy further OTM call
+        sell_idx, buy_idx = optimize_vertical_spread(chain, atm_idx, is_credit=True, is_call=True)
         sell_prem = chain[sell_idx]["CE"]["price"]
         buy_prem = chain[buy_idx]["CE"]["price"]
         net_credit = sell_prem - buy_prem
@@ -210,10 +274,15 @@ def _build_actual_trade_legs(strategy_key: str, spot: float, chain: List[Dict]) 
         insight = f"Excellent way to short the market without exposure to IV spikes. Max reward achieved simply if the price stays below {chain[sell_idx]['strike'] + net_credit:.0f}."
         
     elif strategy_key == "iron_condor":
-        sell_put = max(atm_idx - 3, 0)
-        buy_put = max(atm_idx - 5, 0)
-        sell_call = min(atm_idx + 3, len(chain) - 1)
-        buy_call = min(atm_idx + 5, len(chain) - 1)
+        sell_put = max(atm_idx - 2, 1)
+        buy_put = max(sell_put - 2, 0)
+        sell_call = min(atm_idx + 2, len(chain) - 2)
+        buy_call = min(sell_call + 2, len(chain) - 1)
+        
+        # Safety checks for condor leg width
+        if sell_put <= buy_put: sell_put = min(buy_put + 1, len(chain) - 1)
+        if sell_call >= buy_call: sell_call = max(buy_call - 1, 0)
+        if sell_call <= sell_put: sell_call = min(sell_put + 1, len(chain) - 1)
         sp = chain[sell_put]["PE"]["price"]
         bp = chain[buy_put]["PE"]["price"]
         sc = chain[sell_call]["CE"]["price"]
@@ -232,8 +301,10 @@ def _build_actual_trade_legs(strategy_key: str, spot: float, chain: List[Dict]) 
         insight = f"A strict non-directional theta trade. Ideal execution occurs roughly 35-45 days out. Profit zone requires the price to remain trapped between {chain[sell_put]['strike']} and {chain[sell_call]['strike']}."
 
     elif strategy_key == "short_strangle":
-        sell_put = max(atm_idx - 3, 0)
-        sell_call = min(atm_idx + 3, len(chain) - 1)
+        sell_put = max(atm_idx - 2, 0)
+        sell_call = min(atm_idx + 2, len(chain) - 1)
+        if sell_call <= sell_put:
+            sell_call = min(sell_put + 1, len(chain) - 1)
         sp = chain[sell_put]["PE"]["price"]
         sc = chain[sell_call]["CE"]["price"]
         net_credit = sp + sc

@@ -664,7 +664,7 @@ class TechnicalAnalyzer:
         daily_drift = slope_pct / 100 * 0.5 + rsi_bias / 100 * 0.5
 
         days = []
-        for i in range(1, 6):
+        for i in range(1, 11):
             proj = last_price * (1 + daily_drift * i)
             upper = proj + atr_val * i * 0.7
             lower = proj - atr_val * i * 0.7

@@ -1,14 +1,15 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { usePlanGate } from './UpgradeModal';
 
-const API = 'http://localhost:8000';
+const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 // ── Tiny helper components ──
 function Spinner() {
     return <div className="flex justify-center py-10"><div className="spinner w-8 h-8 border-4" /></div>;
 }
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-    return <div className={`bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-xl p-5 shadow-lg transition-colors duration-300 ${className}`}>{children}</div>;
+    return <div className={`glass-card p-5 group transition-all duration-300 ${className}`}>{children}</div>;
 }
 function Badge({ text, color }: { text: string; color: string }) {
     const colors: Record<string, string> = {
@@ -142,12 +143,13 @@ function OverviewTab({ snapshot }: { snapshot: any }) {
             {/* FII/DII table */}
             <Card>
                 <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3">💰 FII / DII Flow (Last 5 Days)</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead><tr className="text-[var(--text-muted)] border-b border-[var(--border-subtle)]">
-                            <th className="py-2 text-left">Date</th><th className="text-right">FII Buy</th><th className="text-right">FII Sell</th>
-                            <th className="text-right">FII Net</th><th className="text-right">DII Buy</th><th className="text-right">DII Sell</th><th className="text-right">DII Net</th>
-                        </tr></thead>
+                <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
+                    <table className="w-full text-sm font-quant text-right">
+                        <thead className="bg-[var(--bg-table-head)] border-b border-[var(--border-subtle)] text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-inter font-bold">
+                            <tr>
+                                <th className="py-2 text-left">Date</th><th className="text-right">FII Buy</th><th className="text-right">FII Sell</th>
+                                <th className="text-right">FII Net</th><th className="text-right">DII Buy</th><th className="text-right">DII Sell</th><th className="text-right">DII Net</th>
+                            </tr></thead>
                         <tbody>
                             {fiiRecent.map((d: any, i: number) => (
                                 <tr key={i} className="border-b border-[var(--border-subtle)]/50 hover:bg-[var(--bg-card-hover)]">
@@ -169,18 +171,18 @@ function OverviewTab({ snapshot }: { snapshot: any }) {
 }
 
 function KPI({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
-    const gradients: Record<string, string> = {
-        green: 'from-emerald-500/10 to-emerald-600/5 border-emerald-500/20',
-        red: 'from-red-500/10 to-red-600/5 border-red-500/20',
-        yellow: 'from-amber-500/10 to-amber-600/5 border-amber-500/20',
-        blue: 'from-blue-500/10 to-blue-600/5 border-blue-500/20',
-        purple: 'from-purple-500/10 to-purple-600/5 border-purple-500/20',
+    const bgColors: Record<string, string> = {
+        green: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+        red: 'bg-red-500/10 border-red-500/20 text-red-400',
+        yellow: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+        blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+        purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
     };
     return (
-        <div className={`bg-gradient-to-br ${gradients[color]} border rounded-xl p-4`}>
-            <p className="text-xs text-[var(--text-muted)] mb-1 uppercase tracking-wider">{label}</p>
-            <p className="text-xl font-bold text-[var(--text-primary)]">{value}</p>
-            {sub && <p className="text-xs text-[var(--text-muted)] mt-0.5">{sub}</p>}
+        <div className={`border rounded-xl p-4 text-center ${bgColors[color] || bgColors.blue} flex flex-col justify-center`}>
+            <p className="text-[10px] font-inter text-[var(--text-muted)] mb-1 uppercase tracking-widest font-bold">{label}</p>
+            <p className="text-xl font-bold font-quant drop-shadow-[0_0_8px_currentColor] opacity-90">{value}</p>
+            {sub && <p className="text-[10px] font-inter text-[var(--text-muted)] mt-1">{sub}</p>}
         </div>
     );
 }
@@ -358,13 +360,13 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
                                     </div>
 
                                     {/* Real Trade Execution Block */}
-                                    <div className="mb-3 p-3 bg-[var(--bg-primary)]/50 rounded-lg border border-[var(--border-subtle)]">
-                                        <p className="font-mono text-sm text-[var(--text-primary)] mb-1">
+                                    <div className="mb-3 p-3 bg-[var(--bg-secondary)]/40 rounded-lg border border-[var(--border-active)]/20 shadow-inner">
+                                        <p className="font-quant text-sm text-[var(--text-primary)] mb-1">
                                             {rec.trade_description || rec.description}
                                         </p>
-                                        <div className="flex gap-4 text-xs mt-1">
-                                            <span className="text-emerald-400">Max Profit: {typeof rec.max_profit === 'number' ? `₹${rec.max_profit.toLocaleString()}` : rec.max_profit}</span>
-                                            <span className="text-red-400">Max Risk: {typeof rec.max_loss === 'number' ? `₹${rec.max_loss.toLocaleString()}` : rec.max_loss}</span>
+                                        <div className="flex gap-4 text-[13px] mt-2 font-quant">
+                                            <span className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]">Max Profit: {typeof rec.max_profit === 'number' ? `₹${rec.max_profit.toLocaleString()}` : rec.max_profit}</span>
+                                            <span className="text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.2)]">Max Risk: {typeof rec.max_loss === 'number' ? `₹${rec.max_loss.toLocaleString()}` : rec.max_loss}</span>
                                         </div>
                                     </div>
 
@@ -407,18 +409,19 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
                             {selectedPayoff && selectedPayoff.strategy_key === rec.key && (
                                 <div className="mt-6 pt-6 border-t border-[var(--border-subtle)] animate-in slide-in-from-top-4 fade-in duration-300">
                                     <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3">📈 Payoff Profile</h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                        <div className="text-center p-3 bg-emerald-500/10 rounded-lg"><p className="text-xs text-[var(--text-muted)]">Max Profit</p><p className="text-lg font-bold text-emerald-400">₹{typeof selectedPayoff.max_profit === 'number' ? selectedPayoff.max_profit.toLocaleString() : selectedPayoff.max_profit}</p></div>
-                                        <div className="text-center p-3 bg-red-500/10 rounded-lg"><p className="text-xs text-[var(--text-muted)]">Max Loss</p><p className="text-lg font-bold text-red-400">₹{typeof selectedPayoff.max_loss === 'number' ? selectedPayoff.max_loss.toLocaleString() : selectedPayoff.max_loss}</p></div>
-                                        <div className="text-center p-3 bg-blue-500/10 rounded-lg"><p className="text-xs text-[var(--text-muted)]">Breakeven</p><p className="text-lg font-bold text-blue-400">₹{selectedPayoff.breakeven?.toLocaleString() ?? '-'}</p></div>
-                                        <div className="text-center p-3 bg-purple-500/10 rounded-lg"><p className="text-xs text-[var(--text-muted)]">Capital Req.</p><p className="text-lg font-bold text-purple-400">₹{selectedPayoff.capital_required?.toLocaleString() ?? '-'}</p></div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 font-quant">
+                                        <div className="text-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Max Profit</p><p className="text-lg font-bold text-emerald-400">₹{typeof selectedPayoff.max_profit === 'number' ? selectedPayoff.max_profit.toLocaleString() : selectedPayoff.max_profit}</p></div>
+                                        <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Max Loss</p><p className="text-lg font-bold text-red-400">₹{typeof selectedPayoff.max_loss === 'number' ? selectedPayoff.max_loss.toLocaleString() : selectedPayoff.max_loss}</p></div>
+                                        <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Breakeven</p><p className="text-lg font-bold text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]">₹{selectedPayoff.breakeven?.toLocaleString() ?? '-'}</p></div>
+                                        <div className="text-center p-3 bg-purple-500/10 rounded-lg border border-purple-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Capital Req.</p><p className="text-lg font-bold text-purple-400">₹{selectedPayoff.capital_required?.toLocaleString() ?? '-'}</p></div>
                                     </div>
-                                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">Legs:</h4>
-                                    <div className="space-y-1 mb-4">
+                                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2 mt-6">Execution Legs:</h4>
+                                    <div className="space-y-2 mb-6">
                                         {selectedPayoff.legs?.map((l: any, i: number) => (
-                                            <div key={i} className={`flex gap-3 text-sm p-2 rounded-lg ${l.action === 'BUY' ? 'bg-emerald-500/5' : 'bg-red-500/5'}`}>
+                                            <div key={i} className={`flex items-center gap-4 font-quant text-sm p-3 rounded-lg border ${l.action === 'BUY' ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
                                                 <Badge text={l.action} color={l.action === 'BUY' ? 'green' : 'red'} />
-                                                <span className="text-[var(--text-secondary)]">{l.type} {l.strike} @ ₹{l.premium?.toFixed(2)}</span>
+                                                <span className="text-[var(--text-primary)] font-semibold">{l.type} {l.strike}</span>
+                                                <span className="ml-auto text-[var(--text-muted)]">@ ₹{l.premium?.toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -447,10 +450,12 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
    ═══════════════════════════════════════════════════════════════════ */
 function BacktestTab() {
     const [strategy, setStrategy] = useState('bull_call_spread');
-    const [years, setYears] = useState(3);
+    const [years, setYears] = useState(1);
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [allResults, setAllResults] = useState<any[]>([]);
+
+    const { guardYears, modal: planModal } = usePlanGate(1);
 
     const runBacktest = async () => {
         setLoading(true);
@@ -490,9 +495,18 @@ function BacktestTab() {
                     </div>
                     <div>
                         <label className="block text-xs text-[var(--text-muted)] mb-1">Years</label>
-                        <select value={years} onChange={e => setYears(Number(e.target.value))}
+                        <select value={years} onChange={e => {
+                            const v = Number(e.target.value);
+                            if (guardYears(v)) setYears(v);
+                        }}
                             className="bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]">
-                            {[1, 2, 3, 5].map(y => <option key={y} value={y}>{y} Year{y > 1 ? 's' : ''}</option>)}
+                            <option value={1}>1 Year ✓ Free</option>
+                            <option value={2}>🔒 2 Years — Pro</option>
+                            <option value={3}>🔒 3 Years — Pro</option>
+                            <option value={5}>🔒 5 Years — Pro</option>
+                            <option value={10}>🔒 10 Years — Elite</option>
+                            <option value={15}>🔒 15 Years — Elite</option>
+                            <option value={99}>🔒 Max Available — Elite</option>
                         </select>
                     </div>
                     <button onClick={runBacktest} disabled={loading} className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50">
@@ -503,6 +517,7 @@ function BacktestTab() {
                     </button>
                 </div>
             </Card>
+            {planModal}
 
             {loading && <Spinner />}
 

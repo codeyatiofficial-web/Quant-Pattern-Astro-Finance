@@ -121,8 +121,10 @@ class NewsBacktestEngine:
 
         # Trim to actual requested period
         cutoff = datetime.now() - timedelta(days=days)
-        df = df[df.index >= cutoff]
-
+        if 'date' in df.columns:
+            df = df[pd.to_datetime(df['date']) >= cutoff]
+        else:
+            df = df[df.index >= cutoff]
         # Next-day return (what we're predicting)
         df['next_day_return'] = df['daily_return'].shift(-1)
         # Next-week return (5-day forward)
@@ -245,13 +247,18 @@ class NewsBacktestEngine:
             return {"error": "Insufficient data for backtesting."}
 
         cutoff = datetime.now() - timedelta(days=days)
-        raw_df = raw_df[raw_df.index >= cutoff].copy()
+        if 'date' in raw_df.columns:
+            raw_df = raw_df[pd.to_datetime(raw_df['date']) >= cutoff].copy()
+        else:
+            raw_df = raw_df[raw_df.index >= cutoff].copy()
         raw_df["next_day_return"] = raw_df["daily_return"].shift(-1)
         raw_df = raw_df.dropna(subset=["next_day_return", "sentiment_score"])
 
         # Build a date-indexed work df for astro engine (needs 'date' column)
-        work_df = raw_df.copy().reset_index()
-        work_df = work_df.rename(columns={work_df.columns[0]: "date"})
+        work_df = raw_df.copy()
+        if "date" not in work_df.columns:
+            work_df = work_df.reset_index()
+            work_df = work_df.rename(columns={work_df.columns[0]: "date"})
         work_df["date"] = pd.to_datetime(work_df["date"]).dt.tz_localize(None)
         work_df["daily_return"] = work_df.get("daily_return", work_df.get("Close", 0))
 

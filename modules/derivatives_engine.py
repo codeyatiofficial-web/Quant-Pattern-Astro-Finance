@@ -248,12 +248,27 @@ def _fetch_nse_fii_dii() -> List[Dict]:
 # MAIN ENGINE CLASS  —  Kite-connected with graceful fallback
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Kite instrument token constants for indices
+# Kite instrument key for index quotes (exchange:tradingsymbol format for the quote API)
+KITE_INDEX_KEYS = {
+    "NIFTY": "NSE:NIFTY 50",
+    "BANKNIFTY": "NSE:NIFTY BANK",
+    "NIFTYIT": "NSE:NIFTY IT",
+    "INDIAVIX": "NSE:INDIA VIX",
+}
+
+# Kite instrument token constants for indices (kept for VIX)
 KITE_INDEX_TOKENS = {
     "NIFTY": 256265,       # NIFTY 50
     "BANKNIFTY": 260105,   # NIFTY BANK
     "NIFTYIT": 259849,     # NIFTY IT
     "INDIAVIX": 264969,    # INDIA VIX
+}
+
+# yfinance symbol map for real-price fallback
+YFIN_SYMBOL_MAP = {
+    "NIFTY": "^NSEI",
+    "BANKNIFTY": "^NSEBANK",
+    "NIFTYIT": "^CNXIT",
 }
 
 # NFO exchange segment prefix
@@ -307,13 +322,33 @@ class DerivativesEngine:
         if not self.is_kite_live:
             return None
         try:
-            token = KITE_INDEX_TOKENS.get(symbol.upper(), 256265)
-            quote = self.kite.quote([f"NSE:{token}"])
+            key = KITE_INDEX_KEYS.get(symbol.upper(), "NSE:NIFTY 50")
+            quote = self.kite.quote([key])
             if quote:
-                key = list(quote.keys())[0]
-                return float(quote[key].get("last_price", 0))
+                q_key = list(quote.keys())[0]
+                price = float(quote[q_key].get("last_price", 0))
+                if price > 0:
+                    return price
         except Exception as e:
             logger.warning(f"Kite spot fetch failed: {e}")
+        return None
+
+    def _yfinance_spot(self, symbol: str = "NIFTY") -> Optional[float]:
+        """Fetch the ACTUAL current Nifty price from Yahoo Finance as a reliable fallback."""
+        try:
+            import yfinance as yf
+            yf_symbol = YFIN_SYMBOL_MAP.get(symbol.upper(), "^NSEI")
+            ticker = yf.Ticker(yf_symbol)
+            # fast_info.last_price gives the most recent price reliably
+            price = ticker.fast_info.last_price
+            if price and price > 0:
+                return round(float(price), 2)
+            # Fallback: get today's close from 1 day of history
+            hist = ticker.history(period="2d")
+            if not hist.empty:
+                return round(float(hist["Close"].iloc[-1]), 2)
+        except Exception as e:
+            logger.warning(f"yfinance spot fetch failed: {e}")
         return None
 
     # ── Kite: Get India VIX ────────────────────────────────────────────────
@@ -518,12 +553,18 @@ class DerivativesEngine:
         try:
             data_source = "synthetic"
 
-            # 1. Spot price — try Kite first
+            # 1. Spot price — try Kite first, then yfinance, never generate random
             spot = self._kite_spot(symbol)
             if spot and spot > 0:
                 data_source = "kite"
             else:
-                spot = round(random.uniform(22000, 23500), 2)
+                spot = self._yfinance_spot(symbol)
+                if spot and spot > 0:
+                    data_source = "yfinance"
+                else:
+                    # Last resort: use a known rough estimate — will be stale but not misleading
+                    logger.error("Both Kite and yfinance spot fetch failed — using cached fallback")
+                    spot = 22500.0  # static fallback only if all else fails
 
             # 2. VIX — try Kite
             vix = self._kite_vix()

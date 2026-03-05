@@ -122,8 +122,87 @@ def get_kite_login():
         raise HTTPException(status_code=500, detail="Kite API not configured properly")
     return {"url": url}
 
+@app.get("/api/kite/redirect")
+def kite_redirect_login():
+    """Redirect the browser directly to Kite login page."""
+    from fastapi.responses import RedirectResponse
+    url = kite_client.get_login_url()
+    if not url:
+        raise HTTPException(status_code=500, detail="Kite API not configured properly")
+    return RedirectResponse(url=url)
+
+@app.get("/api/kite/callback")
+def kite_callback_get(request_token: str = None, action: str = None, status: str = None):
+    """
+    Kite redirects here after user completes login on Kite website.
+    URL: /api/kite/callback?request_token=XXX&action=login&status=success
+    """
+    from fastapi.responses import HTMLResponse
+    if status == "success" and request_token:
+        try:
+            kite_client.generate_session(request_token)
+            html = """
+            <html>
+            <head><title>Kite Connected</title>
+            <style>
+              body { font-family: sans-serif; display: flex; justify-content: center; 
+                     align-items: center; height: 100vh; margin: 0; 
+                     background: #0a0f1e; color: white; flex-direction: column; }
+              .card { background: #1a2035; padding: 40px; border-radius: 16px; 
+                      text-align: center; border: 1px solid #2a3f6f; }
+              h2 { color: #4ade80; margin-bottom: 8px; }
+              a { color: #60a5fa; }
+            </style>
+            </head>
+            <body>
+              <div class='card'>
+                <h2>✅ Kite API Connected!</h2>
+                <p>Your session is now active. Live market data is enabled.</p>
+                <p><a href='/'>← Back to Dashboard</a></p>
+              </div>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=html)
+        except Exception as e:
+            html = f"""
+            <html>
+            <head><title>Kite Login Failed</title>
+            <style>
+              body {{ font-family: sans-serif; display: flex; justify-content: center; 
+                     align-items: center; height: 100vh; margin: 0; 
+                     background: #0a0f1e; color: white; flex-direction: column; }}
+              .card {{ background: #1a2035; padding: 40px; border-radius: 16px; 
+                      text-align: center; border: 1px solid #7f1d1d; }}
+              h2 {{ color: #f87171; margin-bottom: 8px; }}
+              a {{ color: #60a5fa; }}
+            </style>
+            </head>
+            <body>
+              <div class='card'>
+                <h2>❌ Kite Login Failed</h2>
+                <p>Error: {str(e)}</p>
+                <p><a href='/api/kite/redirect'>Try again →</a></p>
+              </div>
+            </body>
+            </html>
+            """
+            return HTMLResponse(content=html, status_code=400)
+    else:
+        html = """
+        <html>
+        <head><title>Kite Login Cancelled</title></head>
+        <body>
+          <h2>Login was cancelled or failed.</h2>
+          <a href='/api/kite/redirect'>Try again</a>
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html, status_code=400)
+
 @app.post("/api/kite/callback")
-def kite_callback(payload: dict):
+def kite_callback_post(payload: dict):
+    """Manual POST endpoint for token exchange."""
     request_token = payload.get("request_token")
     if not request_token:
         raise HTTPException(status_code=400, detail="Request token missing")
@@ -132,6 +211,203 @@ def kite_callback(payload: dict):
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/forecast/monthly")
+def get_monthly_forecast():
+    """
+    Elite-only: Composite 1-Month Market Forecast.
+    Combines Astro signals, Technical trends, Options Chain, and News Sentiment
+    into a weighted score and directional forecast.
+    """
+    from datetime import timedelta
+    from dateutil.relativedelta import relativedelta
+    import math
+
+    signals = []
+    score = 0.0  # -12 = very bearish, +12 = very bullish
+
+    # ── 1. ASTRO SIGNAL (weight: 3) ──────────────────────────────────────────
+    try:
+        # Project 30 days into the future
+        upcoming_astro = analyzer.predict_upcoming_market(days=30)
+        bull_days = sum(1 for d in upcoming_astro if d.get("historical_tendency") == "Bullish")
+        bear_days = sum(1 for d in upcoming_astro if d.get("historical_tendency") == "Bearish")
+        
+        astro_score = 0
+        if bull_days > bear_days + 4:
+            astro_score += 3.0
+            signals.append({"category": "Astro", "icon": "🔮", "direction": "bullish",
+                            "text": f"Next 30 days favors bulls ({bull_days} Bull vs {bear_days} Bear nakshatras)"})
+        elif bear_days > bull_days + 4:
+            astro_score -= 3.0
+            signals.append({"category": "Astro", "icon": "🔮", "direction": "bearish",
+                            "text": f"Next 30 days favors bears ({bear_days} Bear vs {bull_days} Bull nakshatras)"})
+        else:
+            signals.append({"category": "Astro", "icon": "🔮", "direction": "neutral",
+                            "text": f"Balanced planetary transit month ({bull_days} Bull vs {bear_days} Bear)"})
+
+        # Today's Yoga bonus
+        today_astro = analyzer.generate_today_insight()
+        yoga_name = today_astro.get("yoga_name", "")
+        bullish_yogas = ["Gajakesari", "Raja", "Amala", "Dhana", "Saraswati"]
+        bearish_yogas = ["Shula", "Visha", "Daridra", "Kemadruma"]
+        if any(y.lower() in yoga_name.lower() for y in bullish_yogas):
+            astro_score += 1.0
+            signals.append({"category": "Astro", "icon": "⭐", "direction": "bullish",
+                            "text": f"{yoga_name} yoga active today — auspicious trigger"})
+        elif any(y.lower() in yoga_name.lower() for y in bearish_yogas):
+            astro_score -= 1.0
+            signals.append({"category": "Astro", "icon": "⚠️", "direction": "bearish",
+                            "text": f"{yoga_name} yoga active today — short-term resistance"})
+                            
+        score += astro_score
+    except Exception as e:
+        logger.warning(f"Forecast: astro signal failed: {e}")
+
+    # ── 2. MACRO EVENTS SIGNAL (weight: 2) ───────────────────────────────────
+    try:
+        from modules.economic_events import EconomicEventsAnalyzer
+        events_engine = EconomicEventsAnalyzer()
+        events = events_engine.get_upcoming_events(days_ahead=30)
+        
+        bullish_events = sum(1 for e in events if e.get("expected_bias") == "Bullish")
+        bearish_events = sum(1 for e in events if e.get("expected_bias") == "Bearish")
+        
+        if bullish_events > bearish_events:
+            score += 2.0
+            signals.append({"category": "Events", "icon": "🗓️", "direction": "bullish",
+                            "text": f"{bullish_events} positive macro events upcoming (e.g. rate cuts or earnings)"})
+        elif bearish_events > bullish_events:
+            score -= 2.0
+            signals.append({"category": "Events", "icon": "🗓️", "direction": "bearish",
+                            "text": f"{bearish_events} negative macro events upcoming (e.g. rate hikes or inflation)"})
+        elif len(events) > 0:
+            signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral",
+                            "text": f"{len(events)} mixed macro events scheduled in the next 30 days"})
+        else:
+            signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral",
+                            "text": "Quiet macroeconomic calendar for the next month"})
+    except Exception as e:
+        logger.warning(f"Forecast: events signal failed: {e}")
+
+    # ── 3. TECHNICAL SIGNAL (weight: 3) ──────────────────────────────────────
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker("^NSEI")
+        hist = ticker.history(period="1y")
+        if not hist.empty and len(hist) >= 200:
+            close = hist["Close"]
+            current = close.iloc[-1]
+            ma50 = close.rolling(50).mean().iloc[-1]
+            ma200 = close.rolling(200).mean().iloc[-1]
+            
+            # RSI
+            delta = close.diff()
+            gain = delta.clip(lower=0).rolling(14).mean().iloc[-1]
+            loss = (-delta.clip(upper=0)).rolling(14).mean().iloc[-1]
+            rsi = 100 - (100 / (1 + gain / loss)) if loss != 0 else 50
+
+            tech_score = 0
+            tech_notes = []
+            
+            if current > ma50: tech_score += 1
+            else: tech_score -= 1
+            
+            if ma50 > ma200: 
+                tech_score += 1; tech_notes.append("Golden Cross (50DMA > 200DMA)")
+            else: 
+                tech_score -= 1; tech_notes.append("Death Cross (50DMA < 200DMA)")
+                
+            if rsi < 30: 
+                tech_score += 1; tech_notes.append("RSI deeply oversold")
+            elif rsi > 70: 
+                tech_score -= 1; tech_notes.append("RSI heavily overbought")
+
+            score += tech_score
+            direction = "bullish" if tech_score > 0 else ("bearish" if tech_score < 0 else "neutral")
+            signals.append({"category": "Technical", "icon": "📈", "direction": direction,
+                            "text": " · ".join(tech_notes) if tech_notes else "Neutral trend continuation"})
+    except Exception as e:
+        logger.warning(f"Forecast: technical signal failed: {e}")
+
+    # ── 4. OPTIONS CHAIN SIGNAL (weight: 2) ──────────────────────────────────
+    try:
+        snap = derivatives_engine.get_market_snapshot("NIFTY")
+        pcr = snap.get("pcr", 1.0)
+        vix = snap.get("vix", {}).get("current", 15) if isinstance(snap.get("vix"), dict) else snap.get("vix", 15)
+
+        opt_score = 0
+        if pcr > 1.3:
+            opt_score += 2; signals.append({"category": "Options", "icon": "⛓️", "direction": "bullish",
+                                            "text": f"PCR {pcr:.2f} — high put accumulation, strong support"})
+        elif pcr < 0.7:
+            opt_score -= 2; signals.append({"category": "Options", "icon": "⛓️", "direction": "bearish",
+                                            "text": f"PCR {pcr:.2f} — heavy call writing, tight resistance"})
+        
+        if vix > 22:
+            opt_score -= 1
+            if opt_score < 0: signals.append({"category": "Options", "icon": "🌡️", "direction": "bearish", "text": f"VIX {vix:.1f} — high volatility panic"})
+        elif vix < 14:
+            opt_score += 1
+            if opt_score > 0 and len(signals) < 5: signals.append({"category": "Options", "icon": "🌡️", "direction": "bullish", "text": f"VIX {vix:.1f} — low volatility complacency"})
+            
+        if opt_score == 0:
+            signals.append({"category": "Options", "icon": "⛓️", "direction": "neutral",
+                            "text": f"Options chain balanced (PCR {pcr:.1f}, VIX {vix:.1f})"})
+        score += opt_score
+    except Exception as e:
+        logger.warning(f"Forecast: options signal failed: {e}")
+
+    # ── 5. NEWS SENTIMENT SIGNAL (weight: 2) ─────────────────────────────────
+    try:
+        sent = sentiment_engine.get_sentiment_forecast("^NSEI", "NSE")
+        sentiment_text = sent.get("overall_sentiment", "Neutral")
+        if sentiment_text == "Bullish":
+            score += 2; signals.append({"category": "Sentiment", "icon": "📰", "direction": "bullish",
+                                        "text": "News & macro sentiment broadly positive for Indian markets"})
+        elif sentiment_text == "Bearish":
+            score -= 2; signals.append({"category": "Sentiment", "icon": "📰", "direction": "bearish",
+                                        "text": "News & macro sentiment broadly negative — caution warranted"})
+    except Exception as e:
+        logger.warning(f"Forecast: sentiment signal failed: {e}")
+
+    # ── COMPOSITE RESULT ─────────────────────────────────────────────────────
+    max_possible = 12.0
+    normalized = round(max(min(score / max_possible * 100, 100), -100), 1)
+    confidence = round(min(abs(normalized), 90), 0)
+
+    if score >= 4:
+        verdict, verdict_color, verdict_emoji = "BULLISH", "#4ade80", "📈"
+        summary = "Multiple converging signals point to upward momentum over the next month. Look for buying opportunities on dips."
+    elif score >= 1:
+        verdict, verdict_color, verdict_emoji = "MILDLY BULLISH", "#86efac", "↗️"
+        summary = "Moderate bullish bias with mixed sub-signals. Selective buying in strong sectors advised."
+    elif score <= -4:
+        verdict, verdict_color, verdict_emoji = "BEARISH", "#f87171", "📉"
+        summary = "Multiple signals indicate downside risk. Consider hedging positions and reducing exposure."
+    elif score <= -1:
+        verdict, verdict_color, verdict_emoji = "MILDLY BEARISH", "#fca5a5", "↘️"
+        summary = "Slight bearish tilt. Maintain strict stops and avoid aggressive long positions."
+    else:
+        verdict, verdict_color, verdict_emoji = "NEUTRAL", "#fbbf24", "↔️"
+        summary = "No clear directional bias. Markets may consolidate. Wait for a breakout before taking large positions."
+
+    # Exact calendar month projection
+    target_date = (datetime.now() + relativedelta(months=1)).strftime("%d %b %Y")
+
+    return {
+        "verdict": verdict,
+        "verdict_color": verdict_color,
+        "verdict_emoji": verdict_emoji,
+        "score": round(score, 1),
+        "normalized_score": normalized,
+        "confidence": int(confidence),
+        "summary": summary,
+        "target_date": target_date,
+        "signals": signals,
+        "generated_at": datetime.now().isoformat(),
+    }
+
 
 @app.get("/api/nakshatras")
 def get_nakshatras():

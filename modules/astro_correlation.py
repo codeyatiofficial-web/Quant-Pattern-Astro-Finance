@@ -465,10 +465,10 @@ class AstroCorrelationEngine:
     def backtest_event(self, symbol: str, planet: str, event_type: str, market: str = "NSE", years: int = 10, forward_days: int = 0) -> dict:
         """
         Executes a targeted astro-financial backtest for a specific symbol.
-        Supports: "Retrograde", "Direct", "High Speed", and Yoga flags ("Angarak_Yoga", etc.)
-        forward_days: if > 0, tests cumulative performance over that many days AFTER event.
+        years=99 is treated as 'Max Available Data' (~30 years).
         """
-        start_date = (datetime.now() - pd.DateOffset(years=years)).strftime('%Y-%m-%d')
+        effective_years = 30 if years >= 99 else years  # 99 = Max Available Data
+        start_date = (datetime.now() - pd.DateOffset(years=effective_years)).strftime('%Y-%m-%d')
         df = self.market.fetch_stock_data(symbol, start_date=start_date, market=market)
         
         if df.empty:
@@ -548,7 +548,7 @@ class AstroCorrelationEngine:
             "symbol": symbol,
             "planet": planet,
             "event": event_type,
-            "period": f"Last {years} Years",
+            "period": f"Last {effective_years} Years" + (" (Max Available)" if years >= 99 else ""),
             "stats": stats_result
         }
 
@@ -611,7 +611,8 @@ class AstroCorrelationEngine:
         Runs the same T-Test backtest engine but against India VIX daily changes
         instead of market price returns. Tests if astro-events correlate with fear spikes.
         """
-        start_date = (datetime.now() - pd.DateOffset(years=years)).strftime('%Y-%m-%d')
+        effective_years = 30 if years >= 99 else years  # 99 = Max Available Data
+        start_date = (datetime.now() - pd.DateOffset(years=effective_years)).strftime('%Y-%m-%d')
         end_date = datetime.now().strftime('%Y-%m-%d')
 
         # Fetch India VIX using MarketDataFetcher
@@ -705,6 +706,6 @@ class AstroCorrelationEngine:
             "symbol": "India VIX",
             "planet": planet,
             "event": event_type,
-            "period": f"Last {years} Years",
+            "period": f"Last {effective_years} Years" + (" (Max Available)" if years >= 99 else ""),
             "stats": stats_result
         }

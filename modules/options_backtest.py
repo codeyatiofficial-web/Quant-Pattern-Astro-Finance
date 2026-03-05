@@ -157,7 +157,8 @@ def backtest_strategy(
     Backtest a specific strategy over historical data.
     Returns comprehensive metrics.
     """
-    days = years * 365
+    effective_years = 30 if years >= 99 else years  # 99 = Max Available Data
+    days = effective_years * 365
     prices = _generate_synthetic_nifty_path(days)
     if len(prices) < holding_days + 10:
         return {"error": "Insufficient data for backtesting"}
@@ -269,6 +270,7 @@ def backtest_strategy(
 
 def backtest_all_strategies(years: int = 3) -> List[Dict]:
     """Backtest all major strategies and return comparative results."""
+    effective_years = 30 if years >= 99 else years
     strategy_keys = [
         "bull_call_spread", "bear_put_spread", "iron_condor",
         "long_call", "long_put", "short_straddle", "long_straddle",
@@ -277,7 +279,7 @@ def backtest_all_strategies(years: int = 3) -> List[Dict]:
     results = []
     for key in strategy_keys:
         try:
-            res = backtest_strategy(key, years)
+            res = backtest_strategy(key, effective_years)
             if "error" not in res:
                 results.append(res)
         except Exception as e:

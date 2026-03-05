@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { usePlanGate } from './UpgradeModal';
 
-const API = 'http://localhost:8000';
+const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 type SubTab = 'upcoming' | 'backtest' | 'pulse' | 'news';
 
@@ -53,6 +54,7 @@ interface CategoryObj { sub_event: string; category: string; count: number; emoj
 interface BacktestResult { sub_event: string; symbol: string; emoji: string; desc: string; stats: any; events: any[]; next_occurrence?: any }
 
 export default function EconomicEvents() {
+    const { guardYears, modal: planModal, tier } = usePlanGate(1);
     const [sub, setSub] = useState<SubTab>('upcoming');
     const [events, setEvents] = useState<any[]>([]);
     const [evLoading, setEvLoading] = useState(false);
@@ -115,6 +117,7 @@ export default function EconomicEvents() {
     };
 
     const runBacktest = async () => {
+        if (!guardYears(5)) return;
         if (!selectedCat) { setBtError('Please select an event category.'); return; }
         setBtLoading(true); setBtResult(null); setBtError('');
         try {
@@ -143,6 +146,7 @@ export default function EconomicEvents() {
 
     return (
         <div>
+            {planModal}
             <h1 className="section-title">📅 Economic Events</h1>
             <p className="section-subtitle">400+ historical events from 2000 · Backtest market reactions · Live pulse & news</p>
 
@@ -205,7 +209,10 @@ export default function EconomicEvents() {
             {sub === 'backtest' && (
                 <div>
                     <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
-                        <h3 style={{ fontWeight: 700, marginBottom: 6, fontSize: 16 }}>📊 Event Category Backtest</h3>
+                        <h3 style={{ fontWeight: 700, marginBottom: 6, fontSize: 16 }}>
+                            📊 Event Category Backtest
+                            <span style={{ fontSize: 10, color: '#f59e0b', verticalAlign: 'middle', marginLeft: 8, padding: '2px 6px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 4 }}>PRO</span>
+                        </h3>
                         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
                             400+ historical events from 2000 · RBI · Fed · Budget · Elections · Bonds · Oil · CPI · FII · Earnings · Global Shocks
                         </p>
@@ -269,8 +276,8 @@ export default function EconomicEvents() {
                                     {[1, 2, 3, 5, 7, 10].map(d => <option key={d} value={d}>T+{d}</option>)}
                                 </select>
                             </div>
-                            <button className="btn-primary" onClick={runBacktest} disabled={btLoading || !selectedCat} style={{ alignSelf: 'flex-end', minWidth: 200 }}>
-                                {btLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Running…</> : `▶ Backtest "${selectedCat}"`}
+                            <button className="btn-primary" onClick={runBacktest} disabled={btLoading || !selectedCat} style={{ alignSelf: 'flex-end', minWidth: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                {btLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} />Running…</> : <>▶ Backtest "{selectedCat}" {tier === 'free' && '🔒'}</>}
                             </button>
                         </div>
                         {btError && <div className="alert-error">❌ {btError}</div>}

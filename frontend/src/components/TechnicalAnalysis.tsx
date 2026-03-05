@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
+import { usePlanGate } from './UpgradeModal';
 
-const API = 'http://localhost:8000';
+const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 const pct_color = (v: number | null) =>
@@ -179,38 +180,65 @@ function FibPanel({ fib }: { fib: any }) {
 }
 
 // ─── Week Prediction Panel ────────────────────────────────────────────────────
-function WeekPrediction({ pred }: { pred: any }) {
+function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, guardPeriod: (p: string) => void }) {
     if (!pred || pred.error || !pred.days) return null;
     const colors: Record<string, string> = { Bullish: '#10b981', Bearish: '#ef4444', Neutral: '#94a3b8' };
     const biasColor = colors[pred.bias] ?? '#94a3b8';
 
+    const displayDays = tier === 'elite' ? pred.days.slice(0, 10) : tier === 'pro' ? pred.days.slice(0, 5) : pred.days.slice(0, 1);
+    const title = tier === 'elite' ? '2-Week Technical Prediction' : tier === 'pro' ? '1-Week Technical Prediction' : '1-Day Technical Prediction';
+
     return (
-        <div className="glass-card" style={{ padding: 20, marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-                <h4 style={{ fontWeight: 700, fontSize: 14 }}>🔮 1-Week Technical Prediction</h4>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <Badge v={pred.bias} />
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>Current: <strong style={{ color: 'white' }}>{pred.current_price?.toLocaleString()}</strong></span>
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>RSI: <strong style={{ color: pred.rsi > 70 ? '#ef4444' : pred.rsi < 30 ? '#10b981' : 'white' }}>{pred.rsi}</strong></span>
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>ATR: <strong style={{ color: 'white' }}>{pred.atr?.toLocaleString('en-IN')}</strong></span>
+        <>
+            <div className="glass-card" style={{ padding: 20, marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                    <h4 style={{ fontWeight: 700, fontSize: 14 }}>🔮 {title}</h4>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <Badge v={pred.bias} />
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>Current: <strong style={{ color: 'white' }}>{pred.current_price?.toLocaleString()}</strong></span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>RSI: <strong style={{ color: pred.rsi > 70 ? '#ef4444' : pred.rsi < 30 ? '#10b981' : 'white' }}>{pred.rsi}</strong></span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>ATR: <strong style={{ color: 'white' }}>{pred.atr?.toLocaleString('en-IN')}</strong></span>
+                    </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8 }}>
+                    {displayDays.map((d: any, i: number) => (
+                        <div key={i} style={{ background: `${biasColor}08`, border: `1px solid ${biasColor}22`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>{d.day}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: biasColor, marginBottom: 4 }}>
+                                {d.projected?.toLocaleString('en-IN')}
+                            </div>
+                            <div style={{ fontSize: 9, color: '#10b981' }}>H: {d.upper_band?.toLocaleString('en-IN')}</div>
+                            <div style={{ fontSize: 9, color: '#ef4444' }}>L: {d.lower_band?.toLocaleString('en-IN')}</div>
+                        </div>
+                    ))}
+                </div>
+                <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-muted)', textAlign: 'center' }}>
+                    Based on linear momentum, ATR bands, and RSI weighted drift. Not financial advice.
                 </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-                {pred.days.map((d: any, i: number) => (
-                    <div key={i} style={{ background: `${biasColor}08`, border: `1px solid ${biasColor}22`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>{d.day}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: biasColor, marginBottom: 4 }}>
-                            {d.projected?.toLocaleString('en-IN')}
+            {/* Upsell Banner */}
+            {tier !== 'elite' && (
+                <div style={{ marginBottom: 18, padding: 20, background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Unlock Extended Predictions</div>
+                    {tier === 'free' && (
+                        <div className="group transition-all duration-300" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 8, cursor: 'pointer' }} onClick={() => guardPeriod('15y')} >
+                            <div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>🚀 Pro Plan</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Get full 1-Week AI Technical Predictions (5-Days)</div>
+                            </div>
+                            <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none' }}>Upgrade to Pro</button>
                         </div>
-                        <div style={{ fontSize: 9, color: '#10b981' }}>H: {d.upper_band?.toLocaleString('en-IN')}</div>
-                        <div style={{ fontSize: 9, color: '#ef4444' }}>L: {d.lower_band?.toLocaleString('en-IN')}</div>
+                    )}
+                    <div className="group transition-all duration-300" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.2)', borderRadius: 8, cursor: 'pointer' }} onClick={() => guardPeriod('30y')} >
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#a855f7', marginBottom: 2 }}>💎 Elite Plan</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Get max 2-Week AI Technical Predictions (10-Days)</div>
+                        </div>
+                        <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none' }}>Upgrade to Elite</button>
                     </div>
-                ))}
-            </div>
-            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-muted)', textAlign: 'center' }}>
-                Based on linear momentum, ATR bands, and RSI weighted drift. Not financial advice.
-            </div>
-        </div>
+                </div>
+            )}
+        </>
     );
 }
 
@@ -278,6 +306,7 @@ function TimeframePane({ label, data, isNSE }: { label: string; data: any; isNSE
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function TechnicalAnalysis() {
+    const { guardPeriod, modal: planModal, tier } = usePlanGate(1);
     const [symbol, setSymbol] = useState('^NSEI');
     const [market, setMarket] = useState('NSE');
     const [period, setPeriod] = useState('5y');
@@ -324,6 +353,7 @@ export default function TechnicalAnalysis() {
 
     return (
         <div>
+            {planModal}
             <h1 className="section-title">🔬 Technical Analysis</h1>
             <p className="section-subtitle">
                 Harmonics (Gartley/Bat/Butterfly/Crab/Cypher/ABCD) · 25+ Candlestick Patterns · Fibonacci · VWAP · OBV · MACD · RSI · ATR · 1-Week Forecast
@@ -405,9 +435,9 @@ export default function TechnicalAnalysis() {
                         </select>
                     </div>
                     <div style={{ minWidth: 130 }}>
-                        <label className="form-label">Backtest Period</label>
-                        <select className="form-select" value={period} onChange={e => setPeriod(e.target.value)}>
-                            {PERIODS.map(p => <option key={p} value={p}>{p}</option>)}
+                        <label className="form-label">Backtest Period <span style={{ fontSize: 10, color: '#f59e0b' }}>(Pro)</span></label>
+                        <select className="form-select" value={period} onChange={e => { if (guardPeriod(e.target.value)) setPeriod(e.target.value); }}>
+                            {PERIODS.map(p => <option key={p} value={p}>{p} {p !== '1y' && '🔒'}</option>)}
                         </select>
                     </div>
                     <button className="btn-primary" onClick={runScan} disabled={loading} style={{ minWidth: 220, alignSelf: 'flex-end' }}>
@@ -430,7 +460,7 @@ export default function TechnicalAnalysis() {
             {result && (
                 <div>
                     {/* ── 1-Week Prediction ────────────────────────────────────── */}
-                    <WeekPrediction pred={result.week_prediction} />
+                    <WeekPrediction pred={result.week_prediction} tier={tier} guardPeriod={guardPeriod} />
 
                     {/* ── Fibonacci Levels ─────────────────────────────────────── */}
                     <FibPanel fib={result.fibonacci} />

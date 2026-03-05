@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Home, LineChart, PieChart, BarChart2, Calendar, FileText, Menu, X, Link as LinkIcon, CheckCircle2, TrendingUp } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-
-const API = 'http://localhost:8000';
+import { PlanStatusBadge } from './UpgradeModal';
+const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 function Logo() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" className="w-[140px] sm:w-[170px] h-auto max-h-[40px]">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" className="w-[160px] sm:w-[190px] h-auto max-h-[50px]">
       <defs>
         <linearGradient id="qGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4ea8c7" />
@@ -63,21 +63,18 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
       .catch(err => console.error("Kite status check failed:", err));
   }, []);
 
-  const handleKiteLogin = async () => {
-    try {
-      const res = await fetch(`${API}/api/kite/login`);
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } catch (err) {
-      console.error("Failed to get Kite login URL", err);
-    }
+  const handleKiteLogin = () => {
+    // Navigate directly - the backend will redirect to Kite login page,
+    // and Kite will redirect back to /api/kite/callback after successful login.
+    window.location.href = `${window.location.origin}/api/kite/redirect`;
   };
 
   return (
     <nav style={{
       position: 'fixed', width: '100%', zIndex: 50, top: 0, left: 0,
-      background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)',
-      backdropFilter: 'blur(12px)', transition: 'background 0.3s, border-color 0.3s',
+      background: 'var(--bg-card)', borderBottom: '1px solid var(--border-active)',
+      backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', transition: 'background 0.3s, border-color 0.3s',
+      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
     }}>
       <div style={{ maxWidth: 1600, margin: '0 auto', padding: '0 16px' }}>
         {/* Row 1: Logo + Kite/Theme + Mobile hamburger */}
@@ -88,6 +85,7 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
 
           {/* Desktop: Kite + Theme — use inline media query via CSS class */}
           <div className="nav-desktop-actions">
+            <PlanStatusBadge />
             {kiteConnected === true ? (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
@@ -130,8 +128,8 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
         {/* Row 2: Desktop tab bar */}
         <div className="nav-desktop-tabs">
           <div style={{
-            display: 'inline-flex', gap: 2, alignItems: 'center',
-            background: 'var(--bg-card)', padding: 4, borderRadius: 14,
+            display: 'inline-flex', gap: 6, alignItems: 'center',
+            background: 'var(--bg-card)', padding: '6px 8px', borderRadius: 14,
             border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-card)',
           }}>
             {links.map((link) => {
@@ -139,11 +137,12 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
               const active = activePage === link.key;
               return (
                 <button key={link.key} onClick={() => onNavigate(link.key)} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: active ? 700 : 500,
-                  whiteSpace: 'nowrap', cursor: 'pointer', border: 'none', transition: 'all 0.15s',
-                  background: active ? 'rgba(99,102,241,0.15)' : 'transparent',
-                  color: active ? 'var(--accent-indigo)' : '#9ca3af',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 20px', borderRadius: 10, fontSize: 14, fontWeight: active ? 700 : 500,
+                  whiteSpace: 'nowrap', cursor: 'pointer', border: 'none', transition: 'all 0.3s ease',
+                  background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.1) 100%)' : 'transparent',
+                  color: active ? 'var(--text-primary)' : 'var(--text-muted)',
+                  boxShadow: active ? 'inset 0 -2px 0 var(--accent-indigo)' : 'none',
                 }}>
                   <Icon size={14} />
                   <span>{link.label}</span>

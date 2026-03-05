@@ -22,7 +22,7 @@ export default function AstroFinanceApp() {
 
     if (requestToken) {
       setIsProcessingAuth(true);
-      fetch('http://localhost:8000/api/kite/callback', {
+      fetch((typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '') + '/api/kite/callback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ export default function AstroFinanceApp() {
     <>
       <Navigation activePage={page} onNavigate={setPage} />
 
-      <main className="pt-24 pb-10 px-4 max-w-[1400px] mx-auto min-h-screen">
+      <main className="pt-32 pb-10 px-4 max-w-[1400px] mx-auto min-h-screen">
         {isProcessingAuth && (
           <div className="flex flex-col items-center justify-center p-10 bg-[var(--bg-card)] rounded-xl border border-[var(--border-subtle)] mb-8 shadow-lg">
             <div className="spinner mb-4 w-8 h-8 border-4"></div>
