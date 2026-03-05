@@ -72,7 +72,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const [forecastLoading, setForecastLoading] = useState(false);
     const [forecastMarket, setForecastMarket] = useState('NSE');
     const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
-    const [weekForecast, setWeekForecast] = useState<any[]>([]);
+    const [weekForecast, setWeekForecast] = useState<any>(null);
     const [weekLoading, setWeekLoading] = useState(true);
     const [symbol, setSymbol] = useState('^NSEI');
     const [planet, setPlanet] = useState('Moon');
@@ -92,11 +92,10 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             .then(d => { setInsight(d); setLoading(false); })
             .catch(() => setLoading(false));
 
-        // Fetch 1-week forecast for all users
-        const today = new Date().toISOString().slice(0, 10);
-        fetch(`${API}/api/predict/${today}?days=7&market=NSE`)
+        // Fetch 7-day comprehensive forecast for all users
+        fetch(`${API}/api/forecast/weekly?market=NSE`)
             .then(r => r.json())
-            .then(d => { setWeekForecast(d.predictions || []); setWeekLoading(false); })
+            .then(d => { setWeekForecast(d); setWeekLoading(false); })
             .catch(() => setWeekLoading(false));
     }, []);
 
@@ -146,7 +145,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 </p>
             </div>
 
-            {/* ── ALL TIERS: 1-Week Astro Forecast ── */}
+            {/* ── ALL TIERS: 7-Day Comprehensive Forecast ── */}
             <div style={{
                 background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(59,130,246,0.05) 100%)',
                 border: '1px solid rgba(99,102,241,0.3)',
@@ -157,51 +156,113 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <span style={{ fontSize: 20 }}>📅</span>
                     <div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>7-DAY ASTRO OUTLOOK</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Today + upcoming trading days · Nakshatra · Tithi · Yoga · Tendency</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>7-DAY MARKET INTELLIGENCE</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Composite: Astro · Planetary Yogas · Technicals · Options · FII/DII · Events · Weekday Seasonality</div>
                     </div>
                 </div>
 
                 {weekLoading ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', padding: '8px 0' }}>
                         <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                        Loading this week’s cosmic forecast…
+                        Crunching astro yogas, technicals, options & institutional data…
                     </div>
-                ) : weekForecast.length > 0 ? (
-                    <div style={{ overflowX: 'auto' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${weekForecast.length}, minmax(140px, 1fr))`, gap: 8 }}>
-                            {weekForecast.map((day: any, i: number) => {
-                                const isToday = i === 0;
-                                const tendColor = day.historical_tendency === 'Bullish' ? '#4ade80' : day.historical_tendency === 'Bearish' ? '#f87171' : '#fbbf24';
-                                const tendBg = day.historical_tendency === 'Bullish' ? 'rgba(74,222,128,0.1)' : day.historical_tendency === 'Bearish' ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.08)';
-                                const dateObj = new Date(day.date + 'T00:00:00');
-                                const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-                                const dateLabel = dateObj.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
-                                return (
-                                    <div key={i} style={{
-                                        background: tendBg,
-                                        border: `1px solid ${isToday ? tendColor : 'rgba(255,255,255,0.08)'}`,
-                                        borderRadius: 12,
-                                        padding: '12px 14px',
-                                        textAlign: 'center',
-                                        position: 'relative',
-                                    }}>
-                                        {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-cyan)', color: '#000', fontSize: 9, fontWeight: 800, padding: '1px 8px', borderRadius: 8, letterSpacing: 0.5 }}>TODAY</div>}
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4 }}>{weekday} {dateLabel}</div>
-                                        <div style={{ fontSize: 18, fontWeight: 900, color: tendColor, marginBottom: 6 }}>
-                                            {day.historical_tendency === 'Bullish' ? '▲' : day.historical_tendency === 'Bearish' ? '▼' : '●'}
-                                        </div>
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: tendColor, marginBottom: 8 }}>{day.historical_tendency}</div>
-                                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                                            <div>🌙 {day.current_nakshatra}</div>
-                                            <div>🌒 {day.tithi_name}</div>
-                                            <div>🔮 {day.yoga_name}</div>
-                                        </div>
+                ) : weekForecast.days && weekForecast.days.length > 0 ? (
+                    <>
+                        {/* Global Signals Bar */}
+                        {weekForecast.global_signals && (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                                {weekForecast.global_signals.technical?.text !== 'N/A' && (
+                                    <div style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, background: weekForecast.global_signals.technical?.direction === 'bullish' ? 'rgba(74,222,128,0.12)' : weekForecast.global_signals.technical?.direction === 'bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: weekForecast.global_signals.technical?.direction === 'bullish' ? '#4ade80' : weekForecast.global_signals.technical?.direction === 'bearish' ? '#f87171' : 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                        📈 {weekForecast.global_signals.technical.text}
                                     </div>
-                                );
-                            })}
+                                )}
+                                {weekForecast.global_signals.options?.text !== 'N/A' && (
+                                    <div style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, background: weekForecast.global_signals.options?.direction === 'bullish' ? 'rgba(74,222,128,0.12)' : weekForecast.global_signals.options?.direction === 'bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: weekForecast.global_signals.options?.direction === 'bullish' ? '#4ade80' : weekForecast.global_signals.options?.direction === 'bearish' ? '#f87171' : 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                        ⛓️ {weekForecast.global_signals.options.text}
+                                    </div>
+                                )}
+                                {weekForecast.global_signals.institutional?.text !== 'N/A' && (
+                                    <div style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, background: weekForecast.global_signals.institutional?.direction === 'bullish' ? 'rgba(74,222,128,0.12)' : weekForecast.global_signals.institutional?.direction === 'bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: weekForecast.global_signals.institutional?.direction === 'bullish' ? '#4ade80' : weekForecast.global_signals.institutional?.direction === 'bearish' ? '#f87171' : 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                        🏦 {weekForecast.global_signals.institutional.text}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Per-Day Cards */}
+                        <div style={{ overflowX: 'auto' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${weekForecast.days.length}, minmax(155px, 1fr))`, gap: 8 }}>
+                                {weekForecast.days.map((day: any, i: number) => {
+                                    const isToday = i === 0;
+                                    return (
+                                        <div key={i} style={{
+                                            background: day.verdict_color === '#4ade80' || day.verdict_color === '#86efac' ? 'rgba(74,222,128,0.08)' : day.verdict_color === '#f87171' || day.verdict_color === '#fca5a5' ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.06)',
+                                            border: `1px solid ${isToday ? day.verdict_color : 'rgba(255,255,255,0.08)'}`,
+                                            borderRadius: 12,
+                                            padding: '12px 12px 10px',
+                                            position: 'relative',
+                                        }}>
+                                            {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-cyan)', color: '#000', fontSize: 9, fontWeight: 800, padding: '1px 8px', borderRadius: 8, letterSpacing: 0.5 }}>TODAY</div>}
+
+                                            {/* Date header */}
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textAlign: 'center' }}>
+                                                {day.weekday?.slice(0, 3)} {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
+                                            </div>
+
+                                            {/* Verdict */}
+                                            <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                                                <div style={{ fontSize: 16, fontWeight: 900, color: day.verdict_color }}>
+                                                    {day.verdict === 'Strong Buy' ? '▲▲' : day.verdict === 'Bullish' ? '▲' : day.verdict === 'Strong Sell' ? '▼▼' : day.verdict === 'Bearish' ? '▼' : '●'}
+                                                </div>
+                                                <div style={{ fontSize: 10, fontWeight: 800, color: day.verdict_color, marginTop: 2 }}>{day.verdict}</div>
+                                                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>Score: {day.score}</div>
+                                            </div>
+
+                                            {/* Astro details */}
+                                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.6, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 6 }}>
+                                                <div>🌙 {day.astro?.nakshatra}</div>
+                                                <div>🌒 {day.astro?.tithi}</div>
+                                                <div>🔮 {day.astro?.yoga}</div>
+                                                <div style={{ color: day.weekday_bias?.bias === 'bullish' ? '#86efac' : day.weekday_bias?.bias === 'bearish' ? '#fca5a5' : 'var(--text-muted)' }}>
+                                                    📊 {day.weekday_bias?.bias?.charAt(0).toUpperCase() + day.weekday_bias?.bias?.slice(1)} day
+                                                </div>
+                                            </div>
+
+                                            {/* Active Yogas */}
+                                            {day.planetary_yogas && day.planetary_yogas.length > 0 && (
+                                                <div style={{ marginTop: 6, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 6 }}>
+                                                    {day.planetary_yogas.slice(0, 3).map((y: any, j: number) => (
+                                                        <div key={j} style={{
+                                                            fontSize: 9, padding: '2px 6px', marginBottom: 2,
+                                                            borderRadius: 6,
+                                                            background: y.impact === 'bullish' ? 'rgba(74,222,128,0.15)' : y.impact === 'bearish' ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.1)',
+                                                            color: y.impact === 'bullish' ? '#4ade80' : y.impact === 'bearish' ? '#f87171' : '#fbbf24',
+                                                            display: 'flex', alignItems: 'center', gap: 4
+                                                        }}>
+                                                            <span>{y.icon}</span>
+                                                            <span style={{ fontWeight: 700 }}>{y.name}</span>
+                                                            <span style={{ marginLeft: 'auto', fontSize: 8, opacity: 0.7 }}>S:{y.severity}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Events */}
+                                            {day.events && day.events.length > 0 && (
+                                                <div style={{ marginTop: 4 }}>
+                                                    {day.events.slice(0, 2).map((ev: any, j: number) => (
+                                                        <div key={j} style={{ fontSize: 9, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                            <span>📋</span> {ev.name?.slice(0, 25)}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    </>
                 ) : (
                     <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No forecast data available.</div>
                 )}
