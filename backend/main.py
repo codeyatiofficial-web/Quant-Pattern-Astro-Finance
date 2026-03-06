@@ -1724,20 +1724,7 @@ async def run_technical_analysis(req: TechnicalAnalysisRequest):
         import pytz
         from datetime import datetime
         
-        # Live Market Testing Fallback for NSE
-        if req.market == "NSE" or req.symbol.startswith("^NSE"):
-            ist = pytz.timezone('Asia/Kolkata')
-            now_ist = datetime.now(ist)
-            # Market is open Mon-Fri (0-4), 09:15 to 15:30
-            is_weekend = now_ist.weekday() > 4
-            time_hm = now_ist.hour * 100 + now_ist.minute
-            is_market_hours = 915 <= time_hm <= 1530
-            
-            if is_weekend or not is_market_hours:
-                # NSE is closed, use Crude Oil for live testing
-                req.symbol = "CL=F"
-                req.market = "Global"
-                live_fallback_used = True
+        # Users can scan any market at any time; no forced fallback needed.
 
         # New engine returns a structured dict with scans, fib, prediction, astro
         result = scanner.run_multi_timeframe_scan(

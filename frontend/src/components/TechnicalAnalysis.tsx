@@ -314,7 +314,6 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('');
-    const [liveFallbackUsed, setLiveFallbackUsed] = useState(false);
 
     const { guardPeriod, modal: planModal, tier } = usePlanGate(1);
 
@@ -331,7 +330,7 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
     const runScan = async () => {
         setLoading(true);
         setError(null);
-        setResult(null); setActiveTab(''); setLiveFallbackUsed(false);
+        setResult(null); setActiveTab('');
         try {
             const res = await fetch(`${API}/api/analyze/technical`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -341,13 +340,6 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
             if (!res.ok || !data.success) { setError(data.detail || 'Scan failed'); }
             else {
                 setResult(data);
-                if (data.live_fallback_used) {
-                    setLiveFallbackUsed(true);
-                    if (data.symbol !== symbol) {
-                        setSymbol(data.symbol);
-                        if (data.symbol === 'CL=F') setMarket('Global');
-                    }
-                }
                 const first = Object.keys(data.scans || {})[0];
                 if (first) setActiveTab(first);
             }
@@ -469,16 +461,7 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
                 {error && <div className="alert-error" style={{ marginTop: 14 }}>❌ {error}</div>}
             </div>
 
-            {liveFallbackUsed && (
-                <div style={{
-                    background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)',
-                    padding: '12px 16px', borderRadius: 8, marginBottom: 16, color: '#fcd34d',
-                    display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 600
-                }}>
-                    <span>⚠️ NSE Offline</span>
-                    <span style={{ color: '#fff', fontWeight: 400 }}>| Temporarily switched to Crude Oil (CL=F) for live market testing and pattern analysis.</span>
-                </div>
-            )}
+
 
 
 
