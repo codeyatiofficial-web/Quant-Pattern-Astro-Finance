@@ -1,7 +1,7 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { usePlanGate } from './UpgradeModal';
 import LiveChart from './LiveChart';
-import { AuthModal } from './AuthModal';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
@@ -316,19 +316,7 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
     const [activeTab, setActiveTab] = useState('');
     const [liveFallbackUsed, setLiveFallbackUsed] = useState(false);
 
-    // Auth State
-    const [showAuth, setShowAuth] = useState(false);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-
     const { guardPeriod, modal: planModal, tier } = usePlanGate(1);
-
-    // Check auth on load
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('auth_token');
-            setIsAuthenticated(!!token);
-        }
-    }, [showAuth]);
 
     // Symbol → market auto-detection
     const US_GLOBAL = new Set([
@@ -341,11 +329,6 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
     const PERIODS = ['1y', '2y', '5y', '10y', '20y', 'max'];
 
     const runScan = async () => {
-        if (!isAuthenticated) {
-            setShowAuth(true);
-            return;
-        }
-
         setLoading(true);
         setError(null);
         setResult(null); setActiveTab(''); setLiveFallbackUsed(false);
@@ -497,15 +480,7 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
                 </div>
             )}
 
-            {showAuth && (
-                <AuthModal
-                    onClose={() => setShowAuth(false)}
-                    onSuccess={() => {
-                        setShowAuth(false);
-                        runScan();
-                    }}
-                />
-            )}
+
 
             {/* ── Live Chart ─────────────────────────────────────────────── */}
             <LiveChart
