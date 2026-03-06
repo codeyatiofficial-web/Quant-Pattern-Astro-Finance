@@ -26,6 +26,8 @@ from modules.news_backtest import NewsBacktestEngine
 from modules.derivatives_engine import DerivativesEngine
 from modules.options_strategy import recommend_strategies, build_strategy_payoff, STRATEGIES
 from modules.options_backtest import backtest_strategy, backtest_all_strategies
+import modules.auth_engine as auth_engine
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,12 @@ app = FastAPI(title="Astro-Finance API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://app.quant-pattern.com",
+        "https://quant-pattern.com"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -76,6 +83,20 @@ class EventBacktestRequest(BaseModel):
     market: str = "NSE"
     years: int = 15
     forward_days: int = 0
+
+# Authentication Models
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+
+class TokenCheckRequest(BaseModel):
+    token: str
+
+class TradeRequest(BaseModel):
+    symbols: List[str]
+    planets: List[str]
+    years: int = 15
+    market: str = "NSE"
 
 class HeatmapRequest(BaseModel):
     symbols: List[str]
@@ -276,6 +297,49 @@ def kite_callback_post(payload: dict):
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# ==========================================
+# Native Email Authentication Endpoints
+# ==========================================
+
+@app.post("/api/auth/signup")
+def signup(payload: AuthRequest):
+    email = payload.email.strip().lower()
+    if not email or not payload.password:
+        raise HTTPException(status_code=400, detail="Email and password required")
+        
+    success = auth_engine.create_user(email, payload.password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Email already registered or invalid")
+        
+    user_id = auth_engine.verify_user(email, payload.password)
+    token = auth_engine.create_session(user_id)
+    return {"success": True, "token": token, "email": email}
+
+@app.post("/api/auth/login")
+def login(payload: AuthRequest):
+    email = payload.email.strip().lower()
+    user_id = auth_engine.verify_user(email, payload.password)
+    
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+    token = auth_engine.create_session(user_id)
+    return {"success": True, "token": token, "email": email}
+
+@app.post("/api/auth/me")
+def get_current_user(payload: TokenCheckRequest):
+    user = auth_engine.get_user_from_token(payload.token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return {"success": True, "email": user["email"]}
+
+@app.get("/api/admin/users/export")
+def export_users():
+    """Returns a list of all registered users for admin dashboard and CSV export"""
+    users = auth_engine.get_all_users()
+    return {"success": True, "users": users}
+
 
 @app.get("/api/forecast/monthly")
 def get_monthly_forecast(target_date: str = None, market: str = "NSE"):

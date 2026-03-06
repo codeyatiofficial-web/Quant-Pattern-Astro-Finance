@@ -1,7 +1,7 @@
-'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePlanGate } from './UpgradeModal';
 import LiveChart from './LiveChart';
+import { AuthModal } from './AuthModal';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
@@ -306,16 +306,29 @@ function TimeframePane({ label, data, isNSE }: { label: string; data: any; isNSE
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function TechnicalAnalysis() {
-    const { guardPeriod, modal: planModal, tier } = usePlanGate(1);
+export default function TechnicalAnalysis({ active }: { active: boolean }) {
     const [symbol, setSymbol] = useState('^NSEI');
     const [market, setMarket] = useState('NSE');
     const [period, setPeriod] = useState('1y');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('');
     const [liveFallbackUsed, setLiveFallbackUsed] = useState(false);
+
+    // Auth State
+    const [showAuth, setShowAuth] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    const { guardPeriod, modal: planModal, tier } = usePlanGate(1);
+
+    // Check auth on load
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('auth_token');
+            setIsAuthenticated(!!token);
+        }
+    }, [showAuth]);
 
     // Symbol → market auto-detection
     const US_GLOBAL = new Set([
@@ -328,7 +341,14 @@ export default function TechnicalAnalysis() {
     const PERIODS = ['1y', '2y', '5y', '10y', '20y', 'max'];
 
     const runScan = async () => {
-        setLoading(true); setError(''); setResult(null); setActiveTab(''); setLiveFallbackUsed(false);
+        if (!isAuthenticated) {
+            setShowAuth(true);
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+        setResult(null); setActiveTab(''); setLiveFallbackUsed(false);
         try {
             const res = await fetch(`${API}/api/analyze/technical`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -475,6 +495,16 @@ export default function TechnicalAnalysis() {
                     <span>⚠️ NSE Offline</span>
                     <span style={{ color: '#fff', fontWeight: 400 }}>| Temporarily switched to Crude Oil (CL=F) for live market testing and pattern analysis.</span>
                 </div>
+            )}
+
+            {showAuth && (
+                <AuthModal
+                    onClose={() => setShowAuth(false)}
+                    onSuccess={() => {
+                        setShowAuth(false);
+                        runScan();
+                    }}
+                />
             )}
 
             {/* ── Live Chart ─────────────────────────────────────────────── */}
