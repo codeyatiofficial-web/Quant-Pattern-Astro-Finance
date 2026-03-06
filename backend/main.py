@@ -113,7 +113,10 @@ def read_root():
 
 @app.get("/api/kite/status")
 def get_kite_status():
-    return {"authenticated": kite_client.is_authenticated()}
+    return {
+        "authenticated": kite_client.is_authenticated(),
+        "has_token": bool(kite_client.kite and kite_client.kite.access_token) if kite_client.kite else False,
+    }
 
 @app.get("/api/kite/login")
 def get_kite_login():
@@ -131,6 +134,54 @@ def kite_redirect_login():
         raise HTTPException(status_code=500, detail="Kite API not configured properly")
     return RedirectResponse(url=url)
 
+# ── Manual token management (for localhost / dev environments) ────────────────
+
+@app.post("/api/kite/token")
+def set_kite_token(payload: dict):
+    """
+    Manually set the Kite access token.
+    Use this when the redirect_url in Kite Developer Portal points to production
+    and you need to authenticate localhost separately.
+
+    Body: { "access_token": "your_access_token_here" }
+    """
+    access_token = payload.get("access_token", "").strip()
+    if not access_token:
+        raise HTTPException(status_code=400, detail="access_token is required")
+
+    if not kite_client.kite:
+        raise HTTPException(status_code=500, detail="Kite API not initialized — check KITE_API_KEY in .env")
+
+    try:
+        kite_client.kite.set_access_token(access_token)
+        kite_client._save_token(access_token)
+
+        # Verify the token works
+        is_valid = kite_client.is_authenticated()
+        if not is_valid:
+            return {"success": False, "message": "Token set but authentication failed — token may be expired"}
+
+        return {"success": True, "message": "Kite token set successfully! Live data is now active."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set token: {str(e)}")
+
+@app.get("/api/kite/token/export")
+def export_kite_token():
+    """
+    Export the current Kite access token (for sharing between environments).
+    Only works when already authenticated.
+    """
+    if not kite_client.is_authenticated():
+        raise HTTPException(status_code=401, detail="Kite is not authenticated. No token to export.")
+
+    token = kite_client.kite.access_token if kite_client.kite else None
+    if not token:
+        raise HTTPException(status_code=404, detail="No active token found")
+
+    return {"access_token": token}
+
+# ── Kite OAuth callback ──────────────────────────────────────────────────────
+
 @app.get("/api/kite/callback")
 def kite_callback_get(request_token: str = None, action: str = None, status: str = None):
     """
@@ -141,24 +192,38 @@ def kite_callback_get(request_token: str = None, action: str = None, status: str
     if status == "success" and request_token:
         try:
             kite_client.generate_session(request_token)
-            html = """
+            access_token = kite_client.kite.access_token if kite_client.kite else "N/A"
+            html = f"""
             <html>
             <head><title>Kite Connected</title>
             <style>
-              body { font-family: sans-serif; display: flex; justify-content: center; 
-                     align-items: center; height: 100vh; margin: 0; 
-                     background: #0a0f1e; color: white; flex-direction: column; }
-              .card { background: #1a2035; padding: 40px; border-radius: 16px; 
-                      text-align: center; border: 1px solid #2a3f6f; }
-              h2 { color: #4ade80; margin-bottom: 8px; }
-              a { color: #60a5fa; }
+              body {{ font-family: sans-serif; display: flex; justify-content: center;
+                     align-items: center; height: 100vh; margin: 0;
+                     background: #0a0f1e; color: white; flex-direction: column; }}
+              .card {{ background: #1a2035; padding: 40px; border-radius: 16px;
+                      text-align: center; border: 1px solid #2a3f6f; max-width: 600px; }}
+              h2 {{ color: #4ade80; margin-bottom: 8px; }}
+              a {{ color: #60a5fa; }}
+              .hint {{ font-size: 12px; color: #8b949e; margin-top: 8px; }}
             </style>
+            <script>
+              // Auto-redirect to the frontend after 2 seconds
+              var frontendUrl = window.location.hostname === 'localhost'
+                  ? 'http://localhost:3000'
+                  : window.location.origin;
+              setTimeout(function() {{ window.location.href = frontendUrl; }}, 2000);
+            </script>
             </head>
             <body>
               <div class='card'>
                 <h2>✅ Kite API Connected!</h2>
                 <p>Your session is now active. Live market data is enabled.</p>
-                <p><a href='/'>← Back to Dashboard</a></p>
+                <p class='hint'>Redirecting to dashboard in 2 seconds…</p>
+                <p><a id='dashLink' href='http://localhost:3000'>← Back to Dashboard</a></p>
+                <script>
+                  document.getElementById('dashLink').href = window.location.hostname === 'localhost'
+                      ? 'http://localhost:3000' : '/';
+                </script>
               </div>
             </body>
             </html>

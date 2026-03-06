@@ -55,6 +55,11 @@ interface NavigationProps {
 export default function Navigation({ activePage, onNavigate }: NavigationProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [kiteConnected, setKiteConnected] = useState<boolean | null>(null);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [tokenStatus, setTokenStatus] = useState<string | null>(null);
+
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
   useEffect(() => {
     fetch(`${API}/api/kite/status`)
@@ -64,9 +69,37 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
   }, []);
 
   const handleKiteLogin = () => {
-    // Navigate directly - the backend will redirect to Kite login page,
-    // and Kite will redirect back to /api/kite/callback after successful login.
-    window.location.href = `${window.location.origin}/api/kite/redirect`;
+    // Redirect to backend's Kite login endpoint
+    // On localhost: API = http://localhost:8000, on production: API = '' (same origin)
+    const backendUrl = API || window.location.origin;
+    window.location.href = `${backendUrl}/api/kite/redirect`;
+  };
+
+  const handlePasteToken = async () => {
+    if (!tokenInput.trim()) return;
+    setTokenStatus('Connecting...');
+    try {
+      const res = await fetch(`${API}/api/kite/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: tokenInput.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTokenStatus('✅ ' + data.message);
+        setKiteConnected(true);
+        setTimeout(() => { setShowTokenModal(false); setTokenStatus(null); setTokenInput(''); }, 1500);
+      } else {
+        setTokenStatus('⚠️ ' + (data.message || 'Token invalid or expired'));
+      }
+    } catch (e) {
+      setTokenStatus('❌ Network error — is backend running on port 8000?');
+    }
+  };
+
+  const handleOpenKiteLogin = () => {
+    const backendUrl = API || window.location.origin;
+    window.open(`${backendUrl}/api/kite/redirect`, '_blank');
   };
 
   return (
