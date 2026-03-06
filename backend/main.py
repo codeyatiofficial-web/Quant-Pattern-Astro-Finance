@@ -775,6 +775,9 @@ def get_chart_data(symbol: str = "^NSEI", interval: str = "1d", period: str = "6
     """
     Fetch OHLCV data for charting with SMA/EMA overlays.
 
+    Strategy: Try Kite API first for NSE symbols (exchange-grade data),
+              fall back to yfinance for US/crypto/commodities or if Kite unavailable.
+
     interval: 1m, 5m, 15m, 1h, 1d, 1wk, 1mo
     period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, max
     """
@@ -782,141 +785,189 @@ def get_chart_data(symbol: str = "^NSEI", interval: str = "1d", period: str = "6
     import pandas as pd
     import numpy as np
 
-    # Validate interval/period compatibility
-    INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
-    if interval in INTRADAY_INTERVALS:
-        # yfinance limits intraday to 60 days for most intervals
-        if period not in {"1d", "5d", "1mo"}:
-            period = "5d" if interval in {"1m", "2m"} else "1mo"
+    # ── Determine if this is an NSE symbol eligible for Kite ──────────────────
+    US_GLOBAL = {
+        '^IXIC', '^GSPC', '^DJI', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN',
+        'GOOGL', 'META', 'GC=F', 'SI=F', 'CL=F', 'BZ=F', 'NG=F', 'HG=F',
+        'PL=F', 'PA=F', 'ALI=F', 'ZC=F', 'ZW=F', 'BTC-USD', 'ETH-USD',
+        'BNB-USD', 'SOL-USD', 'XRP-USD', 'ADA-USD', 'DOGE-USD', 'AVAX-USD',
+        'DOT-USD', 'LINK-USD', 'MATIC-USD', 'LTC-USD',
+    }
+    is_nse = symbol not in US_GLOBAL
 
-    try:
-        hist = yf.download(symbol, period=period, interval=interval, progress=False, auto_adjust=True)
-        if hist.empty:
-            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+    # ── Kite interval mapping ─────────────────────────────────────────────────
+    KITE_INTERVAL_MAP = {
+        '1m': 'minute', '5m': '5minute', '15m': '15minute',
+        '1h': '60minute', '1d': 'day', '1wk': 'week', '1mo': 'month',
+    }
 
-        # Flatten multi-index columns if present
-        if isinstance(hist.columns, pd.MultiIndex):
-            hist.columns = hist.columns.get_level_values(0)
+    # ── Period to days_back mapping ───────────────────────────────────────────
+    PERIOD_DAYS = {
+        '1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180,
+        '1y': 365, '2y': 730, '5y': 1825, '10y': 3650, 'max': 5000,
+    }
 
-        # Calculate indicators
-        close = hist["Close"]
-        sma20 = close.rolling(20).mean()
-        sma50 = close.rolling(50).mean()
-        sma200 = close.rolling(200).mean()
-        ema9 = close.ewm(span=9, adjust=False).mean()
-        ema21 = close.ewm(span=21, adjust=False).mean()
+    hist = None
+    data_source = "yfinance"
 
-        # RSI
-        delta = close.diff()
-        gain = delta.clip(lower=0).rolling(14).mean()
-        loss = (-delta.clip(upper=0)).rolling(14).mean()
-        rs = gain / loss
-        rsi = 100 - 100 / (1 + rs)
+    # ── TRY KITE FIRST for NSE symbols ────────────────────────────────────────
+    if is_nse and kite_client and kite_client.is_authenticated():
+        kite_interval = KITE_INTERVAL_MAP.get(interval)
+        days_back = PERIOD_DAYS.get(period, 180)
 
-        # MACD
-        ema12 = close.ewm(span=12, adjust=False).mean()
-        ema26 = close.ewm(span=26, adjust=False).mean()
-        macd_line = ema12 - ema26
-        signal_line = macd_line.ewm(span=9, adjust=False).mean()
-        macd_hist_series = macd_line - signal_line
+        if kite_interval:
+            try:
+                logger.info(f"Chart: Fetching {symbol} via Kite API ({kite_interval}, {days_back}d)")
+                kite_df = kite_client.fetch_historical_data(
+                    symbol=symbol,
+                    interval=kite_interval,
+                    days_back=days_back,
+                )
+                if kite_df is not None and not kite_df.empty:
+                    # Normalize Kite DataFrame to match yfinance format
+                    kite_df = kite_df.rename(columns={
+                        'open': 'Open', 'high': 'High', 'low': 'Low',
+                        'close': 'Close', 'volume': 'Volume',
+                    })
+                    if 'datetime' in kite_df.columns:
+                        kite_df.index = pd.DatetimeIndex(kite_df['datetime'])
+                        kite_df = kite_df.drop(columns=['datetime'], errors='ignore')
 
-        # Bollinger Bands
-        bb_mid = sma20
-        bb_std = close.rolling(20).std()
-        bb_upper = bb_mid + 2 * bb_std
-        bb_lower = bb_mid - 2 * bb_std
+                    hist = kite_df
+                    data_source = "kite"
+                    logger.info(f"Chart: Got {len(hist)} candles from Kite for {symbol}")
+            except Exception as e:
+                logger.warning(f"Chart: Kite fetch failed for {symbol}, falling back to yfinance: {e}")
+                hist = None
 
-        # Build candles array
-        candles = []
-        sma20_data = []
-        sma50_data = []
-        ema9_data = []
-        ema21_data = []
-        bb_upper_data = []
-        bb_lower_data = []
-        volume_data = []
-        rsi_data = []
-        macd_data = []
+    # ── FALLBACK to yfinance ──────────────────────────────────────────────────
+    if hist is None:
+        INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
+        yf_period = period
+        if interval in INTRADAY_INTERVALS:
+            if yf_period not in {"1d", "5d", "1mo"}:
+                yf_period = "5d" if interval in {"1m", "2m"} else "1mo"
 
-        for idx in hist.index:
-            # Convert timestamp to UNIX seconds for lightweight-charts
-            if hasattr(idx, 'timestamp'):
-                t = int(idx.timestamp())
-            else:
-                t = int(pd.Timestamp(idx).timestamp())
+        try:
+            hist = yf.download(symbol, period=yf_period, interval=interval, progress=False, auto_adjust=True)
+            if isinstance(hist.columns, pd.MultiIndex):
+                hist.columns = hist.columns.get_level_values(0)
+            data_source = "yfinance"
+        except Exception as e:
+            logger.error(f"Chart: yfinance also failed for {symbol}: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
-            o = float(hist.loc[idx, "Open"])
-            h = float(hist.loc[idx, "High"])
-            l = float(hist.loc[idx, "Low"])
-            c = float(hist.loc[idx, "Close"])
-            v = float(hist.loc[idx, "Volume"]) if "Volume" in hist.columns else 0
+    if hist is None or hist.empty:
+        raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
 
-            if np.isnan(o) or np.isnan(c):
-                continue
+    # ── Compute indicators on the DataFrame ───────────────────────────────────
+    close = hist["Close"]
+    sma20 = close.rolling(20).mean()
+    sma50 = close.rolling(50).mean()
+    ema9 = close.ewm(span=9, adjust=False).mean()
+    ema21 = close.ewm(span=21, adjust=False).mean()
 
-            candles.append({"time": t, "open": round(o, 2), "high": round(h, 2), "low": round(l, 2), "close": round(c, 2)})
-            volume_data.append({"time": t, "value": v, "color": "rgba(74,222,128,0.3)" if c >= o else "rgba(248,113,113,0.3)"})
+    # RSI
+    delta = close.diff()
+    gain = delta.clip(lower=0).rolling(14).mean()
+    loss = (-delta.clip(upper=0)).rolling(14).mean()
+    rs = gain / loss
+    rsi = 100 - 100 / (1 + rs)
 
-            s20 = float(sma20.loc[idx]) if not np.isnan(float(sma20.loc[idx])) else None
-            s50 = float(sma50.loc[idx]) if not np.isnan(float(sma50.loc[idx])) else None
-            e9 = float(ema9.loc[idx]) if not np.isnan(float(ema9.loc[idx])) else None
-            e21 = float(ema21.loc[idx]) if not np.isnan(float(ema21.loc[idx])) else None
+    # MACD
+    ema12 = close.ewm(span=12, adjust=False).mean()
+    ema26 = close.ewm(span=26, adjust=False).mean()
+    macd_line = ema12 - ema26
+    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+    macd_hist_series = macd_line - signal_line
 
-            if s20: sma20_data.append({"time": t, "value": round(s20, 2)})
-            if s50: sma50_data.append({"time": t, "value": round(s50, 2)})
-            if e9: ema9_data.append({"time": t, "value": round(e9, 2)})
-            if e21: ema21_data.append({"time": t, "value": round(e21, 2)})
+    # Bollinger Bands
+    bb_std = close.rolling(20).std()
+    bb_upper = sma20 + 2 * bb_std
+    bb_lower = sma20 - 2 * bb_std
 
-            bu = float(bb_upper.loc[idx]) if not np.isnan(float(bb_upper.loc[idx])) else None
-            bl = float(bb_lower.loc[idx]) if not np.isnan(float(bb_lower.loc[idx])) else None
-            if bu: bb_upper_data.append({"time": t, "value": round(bu, 2)})
-            if bl: bb_lower_data.append({"time": t, "value": round(bl, 2)})
+    # ── Build output arrays ───────────────────────────────────────────────────
+    candles = []
+    sma20_data, sma50_data, ema9_data, ema21_data = [], [], [], []
+    bb_upper_data, bb_lower_data = [], []
+    volume_data, rsi_data, macd_data = [], [], []
 
-            r = float(rsi.loc[idx]) if not np.isnan(float(rsi.loc[idx])) else None
-            if r: rsi_data.append({"time": t, "value": round(r, 1)})
+    for idx in hist.index:
+        if hasattr(idx, 'timestamp'):
+            t = int(idx.timestamp())
+        else:
+            t = int(pd.Timestamp(idx).timestamp())
 
-            m = float(macd_line.loc[idx]) if not np.isnan(float(macd_line.loc[idx])) else None
-            s = float(signal_line.loc[idx]) if not np.isnan(float(signal_line.loc[idx])) else None
-            mh = float(macd_hist_series.loc[idx]) if not np.isnan(float(macd_hist_series.loc[idx])) else None
-            if m is not None:
-                macd_data.append({"time": t, "macd": round(m, 2), "signal": round(s, 2) if s else 0, "histogram": round(mh, 2) if mh else 0})
+        o = float(hist.loc[idx, "Open"])
+        h = float(hist.loc[idx, "High"])
+        l = float(hist.loc[idx, "Low"])
+        c = float(hist.loc[idx, "Close"])
+        v = float(hist.loc[idx, "Volume"]) if "Volume" in hist.columns else 0
 
-        # Current price info
-        last_close = float(close.iloc[-1])
-        prev_close = float(close.iloc[-2]) if len(close) > 1 else last_close
-        change = last_close - prev_close
-        change_pct = (change / prev_close * 100) if prev_close != 0 else 0
+        if np.isnan(o) or np.isnan(c):
+            continue
 
-        return {
-            "symbol": symbol,
-            "interval": interval,
-            "period": period,
-            "total_candles": len(candles),
-            "price": {
-                "last": round(last_close, 2),
-                "change": round(change, 2),
-                "change_pct": round(change_pct, 2),
-                "high_52w": round(float(close.tail(252).max()), 2) if len(close) >= 252 else round(float(close.max()), 2),
-                "low_52w": round(float(close.tail(252).min()), 2) if len(close) >= 252 else round(float(close.min()), 2),
-            },
-            "candles": candles,
-            "overlays": {
-                "sma20": sma20_data,
-                "sma50": sma50_data,
-                "ema9": ema9_data,
-                "ema21": ema21_data,
-                "bb_upper": bb_upper_data,
-                "bb_lower": bb_lower_data,
-            },
-            "volume": volume_data,
-            "indicators": {
-                "rsi": rsi_data,
-                "macd": macd_data,
-            }
+        candles.append({"time": t, "open": round(o, 2), "high": round(h, 2), "low": round(l, 2), "close": round(c, 2)})
+        volume_data.append({"time": t, "value": v, "color": "rgba(74,222,128,0.3)" if c >= o else "rgba(248,113,113,0.3)"})
+
+        s20 = float(sma20.loc[idx]) if not np.isnan(float(sma20.loc[idx])) else None
+        s50 = float(sma50.loc[idx]) if not np.isnan(float(sma50.loc[idx])) else None
+        e9 = float(ema9.loc[idx]) if not np.isnan(float(ema9.loc[idx])) else None
+        e21 = float(ema21.loc[idx]) if not np.isnan(float(ema21.loc[idx])) else None
+
+        if s20: sma20_data.append({"time": t, "value": round(s20, 2)})
+        if s50: sma50_data.append({"time": t, "value": round(s50, 2)})
+        if e9: ema9_data.append({"time": t, "value": round(e9, 2)})
+        if e21: ema21_data.append({"time": t, "value": round(e21, 2)})
+
+        bu = float(bb_upper.loc[idx]) if not np.isnan(float(bb_upper.loc[idx])) else None
+        bl = float(bb_lower.loc[idx]) if not np.isnan(float(bb_lower.loc[idx])) else None
+        if bu: bb_upper_data.append({"time": t, "value": round(bu, 2)})
+        if bl: bb_lower_data.append({"time": t, "value": round(bl, 2)})
+
+        r = float(rsi.loc[idx]) if not np.isnan(float(rsi.loc[idx])) else None
+        if r: rsi_data.append({"time": t, "value": round(r, 1)})
+
+        m = float(macd_line.loc[idx]) if not np.isnan(float(macd_line.loc[idx])) else None
+        s = float(signal_line.loc[idx]) if not np.isnan(float(signal_line.loc[idx])) else None
+        mh = float(macd_hist_series.loc[idx]) if not np.isnan(float(macd_hist_series.loc[idx])) else None
+        if m is not None:
+            macd_data.append({"time": t, "macd": round(m, 2), "signal": round(s, 2) if s else 0, "histogram": round(mh, 2) if mh else 0})
+
+    # Current price info
+    last_close = float(close.iloc[-1])
+    prev_close = float(close.iloc[-2]) if len(close) > 1 else last_close
+    change = last_close - prev_close
+    change_pct = (change / prev_close * 100) if prev_close != 0 else 0
+
+    return {
+        "symbol": symbol,
+        "interval": interval,
+        "period": period,
+        "data_source": data_source,
+        "total_candles": len(candles),
+        "price": {
+            "last": round(last_close, 2),
+            "change": round(change, 2),
+            "change_pct": round(change_pct, 2),
+            "high_52w": round(float(close.tail(252).max()), 2) if len(close) >= 252 else round(float(close.max()), 2),
+            "low_52w": round(float(close.tail(252).min()), 2) if len(close) >= 252 else round(float(close.min()), 2),
+        },
+        "candles": candles,
+        "overlays": {
+            "sma20": sma20_data,
+            "sma50": sma50_data,
+            "ema9": ema9_data,
+            "ema21": ema21_data,
+            "bb_upper": bb_upper_data,
+            "bb_lower": bb_lower_data,
+        },
+        "volume": volume_data,
+        "indicators": {
+            "rsi": rsi_data,
+            "macd": macd_data,
         }
-    except Exception as e:
-        logger.error(f"Chart data error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    }
 
 
 @app.get("/api/nakshatras/{number}")

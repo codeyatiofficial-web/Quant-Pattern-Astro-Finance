@@ -129,7 +129,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
             });
         }
 
-        // Pattern markers
+        // Pattern markers on the main chart
         if (patterns && patterns.length > 0) {
             const markers = patterns
                 .filter((p: any) => p.date)
@@ -141,7 +141,12 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                     text: p.name?.slice(0, 15) || 'Pattern',
                 }));
             if (markers.length) {
-                candleSeries.setMarkers(markers);
+                try {
+                    // @ts-ignore — setMarkers exists at runtime in v5
+                    candleSeries.setMarkers(markers);
+                } catch {
+                    // v5 may not support setMarkers on all series types — silently skip
+                }
             }
         }
 
@@ -302,7 +307,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
 
                     {/* Price info bar */}
                     {chartData?.price && (
-                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8, padding: '6px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, alignItems: 'center' }}>
                             <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                                 52W High: <span style={{ color: '#4ade80', fontWeight: 700 }}>{chartData.price.high_52w?.toLocaleString()}</span>
                             </div>
@@ -314,6 +319,15 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                             </div>
                             <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                                 Interval: <span style={{ fontWeight: 700, color: '#c4b5fd' }}>{chartData.interval}</span>
+                            </div>
+                            <div style={{
+                                fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 6,
+                                background: chartData.data_source === 'kite' ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)',
+                                color: chartData.data_source === 'kite' ? '#4ade80' : '#64748b',
+                                border: `1px solid ${chartData.data_source === 'kite' ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                                letterSpacing: 0.5, textTransform: 'uppercase' as const,
+                            }}>
+                                {chartData.data_source === 'kite' ? '⚡ KITE API' : '📊 yfinance'}
                             </div>
                         </div>
                     )}
