@@ -765,6 +765,160 @@ def get_nakshatras():
     """Get all 27 Nakshatras."""
     return {"nakshatras": get_all_nakshatras()}
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# LIVE CHART DATA
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/chart/ohlcv")
+def get_chart_data(symbol: str = "^NSEI", interval: str = "1d", period: str = "6mo"):
+    """
+    Fetch OHLCV data for charting with SMA/EMA overlays.
+
+    interval: 1m, 5m, 15m, 1h, 1d, 1wk, 1mo
+    period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, max
+    """
+    import yfinance as yf
+    import pandas as pd
+    import numpy as np
+
+    # Validate interval/period compatibility
+    INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
+    if interval in INTRADAY_INTERVALS:
+        # yfinance limits intraday to 60 days for most intervals
+        if period not in {"1d", "5d", "1mo"}:
+            period = "5d" if interval in {"1m", "2m"} else "1mo"
+
+    try:
+        hist = yf.download(symbol, period=period, interval=interval, progress=False, auto_adjust=True)
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+
+        # Flatten multi-index columns if present
+        if isinstance(hist.columns, pd.MultiIndex):
+            hist.columns = hist.columns.get_level_values(0)
+
+        # Calculate indicators
+        close = hist["Close"]
+        sma20 = close.rolling(20).mean()
+        sma50 = close.rolling(50).mean()
+        sma200 = close.rolling(200).mean()
+        ema9 = close.ewm(span=9, adjust=False).mean()
+        ema21 = close.ewm(span=21, adjust=False).mean()
+
+        # RSI
+        delta = close.diff()
+        gain = delta.clip(lower=0).rolling(14).mean()
+        loss = (-delta.clip(upper=0)).rolling(14).mean()
+        rs = gain / loss
+        rsi = 100 - 100 / (1 + rs)
+
+        # MACD
+        ema12 = close.ewm(span=12, adjust=False).mean()
+        ema26 = close.ewm(span=26, adjust=False).mean()
+        macd_line = ema12 - ema26
+        signal_line = macd_line.ewm(span=9, adjust=False).mean()
+        macd_hist_series = macd_line - signal_line
+
+        # Bollinger Bands
+        bb_mid = sma20
+        bb_std = close.rolling(20).std()
+        bb_upper = bb_mid + 2 * bb_std
+        bb_lower = bb_mid - 2 * bb_std
+
+        # Build candles array
+        candles = []
+        sma20_data = []
+        sma50_data = []
+        ema9_data = []
+        ema21_data = []
+        bb_upper_data = []
+        bb_lower_data = []
+        volume_data = []
+        rsi_data = []
+        macd_data = []
+
+        for idx in hist.index:
+            # Convert timestamp to UNIX seconds for lightweight-charts
+            if hasattr(idx, 'timestamp'):
+                t = int(idx.timestamp())
+            else:
+                t = int(pd.Timestamp(idx).timestamp())
+
+            o = float(hist.loc[idx, "Open"])
+            h = float(hist.loc[idx, "High"])
+            l = float(hist.loc[idx, "Low"])
+            c = float(hist.loc[idx, "Close"])
+            v = float(hist.loc[idx, "Volume"]) if "Volume" in hist.columns else 0
+
+            if np.isnan(o) or np.isnan(c):
+                continue
+
+            candles.append({"time": t, "open": round(o, 2), "high": round(h, 2), "low": round(l, 2), "close": round(c, 2)})
+            volume_data.append({"time": t, "value": v, "color": "rgba(74,222,128,0.3)" if c >= o else "rgba(248,113,113,0.3)"})
+
+            s20 = float(sma20.loc[idx]) if not np.isnan(float(sma20.loc[idx])) else None
+            s50 = float(sma50.loc[idx]) if not np.isnan(float(sma50.loc[idx])) else None
+            e9 = float(ema9.loc[idx]) if not np.isnan(float(ema9.loc[idx])) else None
+            e21 = float(ema21.loc[idx]) if not np.isnan(float(ema21.loc[idx])) else None
+
+            if s20: sma20_data.append({"time": t, "value": round(s20, 2)})
+            if s50: sma50_data.append({"time": t, "value": round(s50, 2)})
+            if e9: ema9_data.append({"time": t, "value": round(e9, 2)})
+            if e21: ema21_data.append({"time": t, "value": round(e21, 2)})
+
+            bu = float(bb_upper.loc[idx]) if not np.isnan(float(bb_upper.loc[idx])) else None
+            bl = float(bb_lower.loc[idx]) if not np.isnan(float(bb_lower.loc[idx])) else None
+            if bu: bb_upper_data.append({"time": t, "value": round(bu, 2)})
+            if bl: bb_lower_data.append({"time": t, "value": round(bl, 2)})
+
+            r = float(rsi.loc[idx]) if not np.isnan(float(rsi.loc[idx])) else None
+            if r: rsi_data.append({"time": t, "value": round(r, 1)})
+
+            m = float(macd_line.loc[idx]) if not np.isnan(float(macd_line.loc[idx])) else None
+            s = float(signal_line.loc[idx]) if not np.isnan(float(signal_line.loc[idx])) else None
+            mh = float(macd_hist_series.loc[idx]) if not np.isnan(float(macd_hist_series.loc[idx])) else None
+            if m is not None:
+                macd_data.append({"time": t, "macd": round(m, 2), "signal": round(s, 2) if s else 0, "histogram": round(mh, 2) if mh else 0})
+
+        # Current price info
+        last_close = float(close.iloc[-1])
+        prev_close = float(close.iloc[-2]) if len(close) > 1 else last_close
+        change = last_close - prev_close
+        change_pct = (change / prev_close * 100) if prev_close != 0 else 0
+
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "period": period,
+            "total_candles": len(candles),
+            "price": {
+                "last": round(last_close, 2),
+                "change": round(change, 2),
+                "change_pct": round(change_pct, 2),
+                "high_52w": round(float(close.tail(252).max()), 2) if len(close) >= 252 else round(float(close.max()), 2),
+                "low_52w": round(float(close.tail(252).min()), 2) if len(close) >= 252 else round(float(close.min()), 2),
+            },
+            "candles": candles,
+            "overlays": {
+                "sma20": sma20_data,
+                "sma50": sma50_data,
+                "ema9": ema9_data,
+                "ema21": ema21_data,
+                "bb_upper": bb_upper_data,
+                "bb_lower": bb_lower_data,
+            },
+            "volume": volume_data,
+            "indicators": {
+                "rsi": rsi_data,
+                "macd": macd_data,
+            }
+        }
+    except Exception as e:
+        logger.error(f"Chart data error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/nakshatras/{number}")
 def get_nakshatra(number: int):
     """Get specific Nakshatra by number (1-27)."""

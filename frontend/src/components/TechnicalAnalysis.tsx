@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { usePlanGate } from './UpgradeModal';
+import LiveChart from './LiveChart';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
@@ -456,6 +457,16 @@ export default function TechnicalAnalysis() {
 
                 {error && <div className="alert-error" style={{ marginTop: 14 }}>❌ {error}</div>}
             </div>
+
+            {/* ── Live Chart ─────────────────────────────────────────────── */}
+            <LiveChart
+                symbol={symbol}
+                patterns={result ? Object.values(result.scans || {}).flatMap((s: any) => (s.patterns || []).map((p: any) => ({
+                    name: p.name,
+                    date: p.last_occurrences?.[0]?.date,
+                    bias: p.bias,
+                })).filter((p: any) => p.date)) : []}
+            />
 
             {result && (
                 <div>
