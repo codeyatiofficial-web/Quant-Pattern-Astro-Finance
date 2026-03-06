@@ -9,14 +9,35 @@ import AstroCorrelation from '@/components/AstroCorrelation';
 import SentimentVix from '@/components/SentimentVix';
 import EconomicEvents from '@/components/EconomicEvents';
 import DerivativesDashboard from '@/components/DerivativesDashboard';
+import AIChatbot from '@/components/AIChatbot';
+import { usePlan } from '@/contexts/PlanContext';
+
+// Pages that require Pro or Elite
+const PRO_PAGES: Page[] = ['correlation', 'sentiment'];
+// Pages that require Elite
+const ELITE_PAGES: Page[] = ['nakshatra'];
 
 export default function AstroFinanceApp() {
   const [page, setPage] = useState<Page>('dashboard');
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isProcessingAuth, setIsProcessingAuth] = useState(false);
+  const { tier } = usePlan();
+  const isFree = tier === 'free';
+
+  // Guard: redirect free/pro users away from gated pages
+  const handleNavigate = (target: Page) => {
+    if (ELITE_PAGES.includes(target) && tier !== 'elite') {
+      setPage('dashboard');
+      return;
+    }
+    if (PRO_PAGES.includes(target) && tier === 'free') {
+      setPage('dashboard');
+      return;
+    }
+    setPage(target);
+  };
 
   useEffect(() => {
-    // Check if returning from Kite Auth
     const params = new URLSearchParams(window.location.search);
     const requestToken = params.get('request_token');
 
@@ -24,17 +45,13 @@ export default function AstroFinanceApp() {
       setIsProcessingAuth(true);
       fetch((typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '') + '/api/kite/callback', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ request_token: requestToken }),
       })
         .then(res => res.json())
-        .then(data => {
-          // Remove token from URL for clean state
+        .then(() => {
           window.history.replaceState({}, document.title, window.location.pathname);
           setIsProcessingAuth(false);
-          // Force reload to update navigation state
           window.location.reload();
         })
         .catch(err => {
@@ -44,9 +61,18 @@ export default function AstroFinanceApp() {
     }
   }, []);
 
+  // Redirect if user lands on a page they can't access
+  useEffect(() => {
+    if (ELITE_PAGES.includes(page) && tier !== 'elite') {
+      setPage('dashboard');
+    } else if (PRO_PAGES.includes(page) && tier === 'free') {
+      setPage('dashboard');
+    }
+  }, [tier, page]);
+
   return (
     <>
-      <Navigation activePage={page} onNavigate={setPage} />
+      <Navigation activePage={page} onNavigate={handleNavigate} />
 
       <main className="pt-32 pb-10 px-4 max-w-[1400px] mx-auto min-h-screen">
         {isProcessingAuth && (
@@ -61,17 +87,20 @@ export default function AstroFinanceApp() {
           <Dashboard
             onAnalysisDone={(data) => {
               setAnalysisData(data);
-              setPage('nakshatra');
+              if (!isFree) setPage('nakshatra');
             }}
           />
         )}
-        {page === 'nakshatra' && <NakshatraAnalysis data={analysisData} />}
+        {page === 'nakshatra' && tier === 'elite' && <NakshatraAnalysis data={analysisData} />}
         {page === 'technical' && <TechnicalAnalysis />}
-        {page === 'correlation' && <AstroCorrelation />}
-        {page === 'sentiment' && <SentimentVix />}
+        {page === 'correlation' && !isFree && <AstroCorrelation />}
+        {page === 'sentiment' && !isFree && <SentimentVix />}
         {page === 'events' && <EconomicEvents />}
         {page === 'derivatives' && <DerivativesDashboard />}
       </main>
+
+      {/* AI Trading Assistant — accessible from all pages */}
+      <AIChatbot currentTab={page} />
     </>
   );
 }

@@ -74,6 +74,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [weekForecast, setWeekForecast] = useState<any>(null);
     const [weekLoading, setWeekLoading] = useState(true);
+
     const [symbol, setSymbol] = useState('^NSEI');
     const [planet, setPlanet] = useState('Moon');
     const [startDate, setStartDate] = useState(() => {
@@ -97,6 +98,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             .then(r => r.json())
             .then(d => { setWeekForecast(d); setWeekLoading(false); })
             .catch(() => setWeekLoading(false));
+
+
     }, []);
 
     const fetchForecast = () => {
@@ -116,7 +119,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
         if (!requirePlan(1)) return; // Requires PRO (tier 1) or higher
 
         setAnalysing(true);
-        setStatus('Fetching market data & crunching Nakshatras…');
+        setStatus('Fetching market data & crunching AI signals…');
         try {
             const res = await fetch(`${API}/api/analyze`, {
                 method: 'POST',
@@ -139,13 +142,13 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             {planModal}
             {/* ── Page Header ── */}
             <div style={{ marginBottom: 24 }}>
-                <h1 className="section-title">🌙 Astro-Finance Dashboard</h1>
+                <h1 className="section-title">📊 Market Intelligence Dashboard</h1>
                 <p className="section-subtitle">
-                    Correlating Moon's journey through 27 Vedic Nakshatras with global market movements
+                    AI-composite signals across planetary cycles, technicals, options & institutional flows
                 </p>
             </div>
 
-            {/* ── ALL TIERS: 7-Day Comprehensive Forecast ── */}
+            {/* ── 1-WEEK COMPREHENSIVE FORECAST (All users) ── */}
             <div style={{
                 background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(59,130,246,0.05) 100%)',
                 border: '1px solid rgba(99,102,241,0.3)',
@@ -153,397 +156,439 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 padding: '20px 24px',
                 marginBottom: 24,
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                    <span style={{ fontSize: 20 }}>📅</span>
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>7-DAY MARKET INTELLIGENCE</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Composite: Astro · Planetary Yogas · Technicals · Options · FII/DII · Events · Weekday Seasonality</div>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 20 }}>🔮</span>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-WEEK MARKET FORECAST</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>11 Signals: Cycles · Yogas · Lunar Phase · Transits · Technicals · Patterns · Options · FII/DII · News · Events · Weekday</div>
                     </div>
+                    {weekForecast?.global_signals?.technical?.current_price && (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>₹<strong style={{ color: 'white', fontSize: 14 }}>{weekForecast.global_signals.technical.current_price.toLocaleString('en-IN')}</strong></span>
+                    )}
                 </div>
 
                 {weekLoading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', padding: '8px 0' }}>
-                        <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                        Crunching astro yogas, technicals, options & institutional data…
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        gap: 16, padding: '40px 20px', background: 'rgba(99,102,241,0.03)',
+                        border: '1px dashed rgba(99,102,241,0.2)', borderRadius: 12, margin: '10px 0'
+                    }}>
+                        <div style={{ position: 'relative', width: 48, height: 48 }}>
+                            <div className="spinner" style={{ width: 48, height: 48, borderWidth: 3, borderColor: 'rgba(99,102,241,0.2)', borderTopColor: '#6366f1' }} />
+                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 20 }}>🌌</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#a5b4fc', marginBottom: 6, letterSpacing: 0.5 }}>
+                                INITIALIZING QUANTUM SCAN...
+                            </div>
+                            <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 450, lineHeight: 1.5 }}>
+                                Fetching and analyzing huge amounts of data across <strong style={{ color: '#fff' }}>11 distinct market layers</strong>. This includes planetary cycles, live technical patterns, options chain data, and institutional flows.
+                                <br /><span style={{ fontSize: 12, color: '#f59e0b', marginTop: 8, display: 'inline-block' }}>Please wait a moment...</span>
+                            </div>
+                        </div>
                     </div>
-                ) : weekForecast.days && weekForecast.days.length > 0 ? (
+                ) : weekForecast?.days?.length > 0 ? (
                     <>
-                        {/* Global Signals Bar */}
-                        {weekForecast.global_signals && (
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-                                {weekForecast.global_signals.technical?.text !== 'N/A' && (
-                                    <div style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, background: weekForecast.global_signals.technical?.direction === 'bullish' ? 'rgba(74,222,128,0.12)' : weekForecast.global_signals.technical?.direction === 'bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: weekForecast.global_signals.technical?.direction === 'bullish' ? '#4ade80' : weekForecast.global_signals.technical?.direction === 'bearish' ? '#f87171' : 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                        📈 {weekForecast.global_signals.technical.text}
+                        {/* Week Summary Bar */}
+                        {weekForecast.week_summary && (() => {
+                            const ws = weekForecast.week_summary;
+                            return (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: `${ws.verdict_color}12`, border: `1px solid ${ws.verdict_color}33`, borderRadius: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: ws.verdict_color }}>{ws.verdict}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Avg Score: <strong style={{ color: 'white' }}>{ws.avg_score}</strong></div>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <span style={{ fontSize: 10, background: 'rgba(74,222,128,0.15)', color: '#4ade80', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>📈 {ws.bull_days} Bull</span>
+                                        <span style={{ fontSize: 10, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>↔ {ws.neutral_days} Neutral</span>
+                                        <span style={{ fontSize: 10, background: 'rgba(248,113,113,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>📉 {ws.bear_days} Bear</span>
                                     </div>
-                                )}
-                                {weekForecast.global_signals.options?.text !== 'N/A' && (
-                                    <div style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, background: weekForecast.global_signals.options?.direction === 'bullish' ? 'rgba(74,222,128,0.12)' : weekForecast.global_signals.options?.direction === 'bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: weekForecast.global_signals.options?.direction === 'bullish' ? '#4ade80' : weekForecast.global_signals.options?.direction === 'bearish' ? '#f87171' : 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                        ⛓️ {weekForecast.global_signals.options.text}
+                                    <span style={{ fontSize: 9, color: 'var(--text-muted)', marginLeft: 'auto' }}>{ws.total_signals} signals analyzed</span>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Global Signal Badges */}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                            {weekForecast.global_signals?.technical?.text && weekForecast.global_signals.technical.text !== 'N/A' && (
+                                <span style={{ fontSize: 10, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: '3px 8px', color: '#a5b4fc' }}>📊 {weekForecast.global_signals.technical.text}</span>
+                            )}
+                            {weekForecast.global_signals?.options?.text && weekForecast.global_signals.options.text !== 'N/A' && (
+                                <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 8, padding: '3px 8px', color: '#c4b5fd' }}>⛓️ {weekForecast.global_signals.options.text}</span>
+                            )}
+                            {weekForecast.global_signals?.institutional?.text && weekForecast.global_signals.institutional.text !== 'N/A' && (
+                                <span style={{ fontSize: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '3px 8px', color: '#6ee7b7' }}>🏦 {weekForecast.global_signals.institutional.text}</span>
+                            )}
+                            {weekForecast.news_sentiment?.text && weekForecast.news_sentiment.text !== 'N/A' && (
+                                <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '3px 8px', color: '#fcd34d' }}>📰 {weekForecast.news_sentiment.text}</span>
+                            )}
+                            {weekForecast.chart_patterns?.patterns?.length > 0 && (
+                                <span style={{ fontSize: 10, background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)', borderRadius: 8, padding: '3px 8px', color: '#f9a8d4' }}>〽️ {weekForecast.chart_patterns.bullish_count}↑ {weekForecast.chart_patterns.bearish_count}↓ patterns</span>
+                            )}
+                        </div>
+
+                        {/* Per-Day Cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(weekForecast.days.length, 5)}, 1fr)`, gap: 10 }}>
+                            {weekForecast.days.map((day: any, idx: number) => {
+                                const isToday = idx === 0;
+                                return (
+                                    <div key={day.date} style={{
+                                        background: isToday ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
+                                        border: `1px solid ${isToday ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                                        borderRadius: 12, padding: 14, position: 'relative',
+                                    }}>
+                                        {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-indigo)', color: 'white', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 6, letterSpacing: 1 }}>TODAY</div>}
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>{day.weekday} {day.date?.slice(5)}</div>
+
+                                        {/* Verdict */}
+                                        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                                            <div style={{ fontSize: 16 }}>{day.verdict_emoji}</div>
+                                            <div style={{ fontSize: 12, fontWeight: 800, color: day.verdict_color }}>{day.verdict}</div>
+                                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Score: {day.score}</div>
+                                        </div>
+
+                                        {/* Signal Breakdown Mini-Bar */}
+                                        {day.signal_breakdown && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 6 }}>
+                                                {Object.entries(day.signal_breakdown as Record<string, number>).filter(([, v]) => v !== 0).map(([key, val]) => {
+                                                    const v = val as number;
+                                                    const label: Record<string, string> = { nakshatra: '🔄 Cycle', yogas: '🔮 Yoga', weekday: '📅 Day', tithi_paksha: '🌙 Phase', gochar: '🪐 Transit', events: '📋 Event', options: '⛓️ PCR', institutional: '🏦 FII', technical: '📊 Tech', chart_patterns: '〽️ Pattern', news: '📰 News' };
+                                                    return (
+                                                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
+                                                            <span style={{ color: 'var(--text-muted)' }}>{label[key] || key}</span>
+                                                            <span style={{ color: v > 0 ? '#4ade80' : v < 0 ? '#f87171' : '#94a3b8', fontWeight: 700 }}>{v > 0 ? '+' : ''}{v}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
+                                        {/* Yogas */}
+                                        {day.planetary_yogas?.length > 0 && (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+                                                {day.planetary_yogas.slice(0, 2).map((y: any, j: number) => (
+                                                    <div key={j} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: y.impact === 'bullish' ? 'rgba(74,222,128,0.15)' : y.impact === 'bearish' ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.1)', color: y.impact === 'bullish' ? '#4ade80' : y.impact === 'bearish' ? '#f87171' : '#fbbf24', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                        <span>{y.icon}</span>
+                                                        <span style={{ fontWeight: 700 }}>{y.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Events */}
+                                        {day.events?.length > 0 && (
+                                            <div style={{ marginTop: 3 }}>
+                                                {day.events.slice(0, 1).map((ev: any, j: number) => (
+                                                    <div key={j} style={{ fontSize: 8, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        <span>📋</span> {ev.name?.slice(0, 20)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                                {weekForecast.global_signals.institutional?.text !== 'N/A' && (
-                                    <div style={{ padding: '4px 10px', borderRadius: 8, fontSize: 11, background: weekForecast.global_signals.institutional?.direction === 'bullish' ? 'rgba(74,222,128,0.12)' : weekForecast.global_signals.institutional?.direction === 'bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: weekForecast.global_signals.institutional?.direction === 'bullish' ? '#4ade80' : weekForecast.global_signals.institutional?.direction === 'bearish' ? '#f87171' : 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                        🏦 {weekForecast.global_signals.institutional.text}
-                                    </div>
-                                )}
+                                );
+                            })}
+                        </div>
+
+                        {/* Gochar / Transits row */}
+                        {weekForecast.gochar_events?.length > 0 && (
+                            <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 10 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#c4b5fd', marginBottom: 6 }}>🪐 Upcoming Planetary Transits</div>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                    {weekForecast.gochar_events.slice(0, 5).map((g: any, i: number) => (
+                                        <span key={i} style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, background: g.tendency === 'Bullish' ? 'rgba(74,222,128,0.12)' : g.tendency === 'Bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: g.tendency === 'Bullish' ? '#4ade80' : g.tendency === 'Bearish' ? '#f87171' : '#94a3b8' }}>
+                                            {g.event}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
-                        {/* Per-Day Cards */}
-                        <div style={{ overflowX: 'auto' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${weekForecast.days.length}, minmax(155px, 1fr))`, gap: 8 }}>
-                                {weekForecast.days.map((day: any, i: number) => {
-                                    const isToday = i === 0;
-                                    return (
-                                        <div key={i} style={{
-                                            background: day.verdict_color === '#4ade80' || day.verdict_color === '#86efac' ? 'rgba(74,222,128,0.08)' : day.verdict_color === '#f87171' || day.verdict_color === '#fca5a5' ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.06)',
-                                            border: `1px solid ${isToday ? day.verdict_color : 'rgba(255,255,255,0.08)'}`,
-                                            borderRadius: 12,
-                                            padding: '12px 12px 10px',
-                                            position: 'relative',
-                                        }}>
-                                            {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-cyan)', color: '#000', fontSize: 9, fontWeight: 800, padding: '1px 8px', borderRadius: 8, letterSpacing: 0.5 }}>TODAY</div>}
-
-                                            {/* Date header */}
-                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textAlign: 'center' }}>
-                                                {day.weekday?.slice(0, 3)} {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
-                                            </div>
-
-                                            {/* Verdict */}
-                                            <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                                                <div style={{ fontSize: 16, fontWeight: 900, color: day.verdict_color }}>
-                                                    {day.verdict === 'Strong Buy' ? '▲▲' : day.verdict === 'Bullish' ? '▲' : day.verdict === 'Strong Sell' ? '▼▼' : day.verdict === 'Bearish' ? '▼' : '●'}
-                                                </div>
-                                                <div style={{ fontSize: 10, fontWeight: 800, color: day.verdict_color, marginTop: 2 }}>{day.verdict}</div>
-                                                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>Score: {day.score}</div>
-                                            </div>
-
-                                            {/* Astro details */}
-                                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.6, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 6 }}>
-                                                <div>🌙 {day.astro?.nakshatra}</div>
-                                                <div>🌒 {day.astro?.tithi}</div>
-                                                <div>🔮 {day.astro?.yoga}</div>
-                                                <div style={{ color: day.weekday_bias?.bias === 'bullish' ? '#86efac' : day.weekday_bias?.bias === 'bearish' ? '#fca5a5' : 'var(--text-muted)' }}>
-                                                    📊 {day.weekday_bias?.bias?.charAt(0).toUpperCase() + day.weekday_bias?.bias?.slice(1)} day
-                                                </div>
-                                            </div>
-
-                                            {/* Active Yogas */}
-                                            {day.planetary_yogas && day.planetary_yogas.length > 0 && (
-                                                <div style={{ marginTop: 6, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 6 }}>
-                                                    {day.planetary_yogas.slice(0, 3).map((y: any, j: number) => (
-                                                        <div key={j} style={{
-                                                            fontSize: 9, padding: '2px 6px', marginBottom: 2,
-                                                            borderRadius: 6,
-                                                            background: y.impact === 'bullish' ? 'rgba(74,222,128,0.15)' : y.impact === 'bearish' ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.1)',
-                                                            color: y.impact === 'bullish' ? '#4ade80' : y.impact === 'bearish' ? '#f87171' : '#fbbf24',
-                                                            display: 'flex', alignItems: 'center', gap: 4
-                                                        }}>
-                                                            <span>{y.icon}</span>
-                                                            <span style={{ fontWeight: 700 }}>{y.name}</span>
-                                                            <span style={{ marginLeft: 'auto', fontSize: 8, opacity: 0.7 }}>S:{y.severity}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {/* Events */}
-                                            {day.events && day.events.length > 0 && (
-                                                <div style={{ marginTop: 4 }}>
-                                                    {day.events.slice(0, 2).map((ev: any, j: number) => (
-                                                        <div key={j} style={{ fontSize: 9, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                            <span>📋</span> {ev.name?.slice(0, 25)}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                        {!isElite && (
+                            <div style={{ marginTop: 14, padding: '10px 16px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 16 }}>⭐</span>
+                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                    <strong style={{ color: '#fbbf24' }}>Upgrade to Elite</strong> for the full <strong>1-Month Composite Forecast</strong> with date picker, FII/DII institutional flows, options chain analysis, and seasonality scoring.
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </>
                 ) : (
                     <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No forecast data available.</div>
                 )}
-
-                {!isElite && (
-                    <div style={{ marginTop: 14, padding: '10px 16px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 16 }}>⭐</span>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                            <strong style={{ color: '#fbbf24' }}>Upgrade to Elite</strong> for the full <strong>1-Month Composite Forecast</strong> with date picker, FII/DII institutional flows, options chain analysis, and seasonality scoring.
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* ── ELITE: 1-Month Composite Forecast ── */}
-            {isElite && (
-                <div style={{
-                    background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(180,83,9,0.05) 100%)',
-                    border: '1px solid rgba(245,158,11,0.35)',
-                    borderRadius: 16,
-                    padding: '24px 28px',
-                    marginBottom: 28,
-                    position: 'relative',
-                    overflow: 'hidden',
-                }}>
-                    {/* Elite badge */}
+            {
+                isElite && (
+
                     <div style={{
-                        position: 'absolute', top: 16, right: 20,
-                        background: 'linear-gradient(135deg,#f59e0b,#b45309)',
-                        color: '#fff', fontSize: 10, fontWeight: 800,
-                        padding: '3px 10px', borderRadius: 20, letterSpacing: 1.2,
-                    }}>⭐ ELITE</div>
+                        background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(180,83,9,0.05) 100%)',
+                        border: '1px solid rgba(245,158,11,0.35)',
+                        borderRadius: 16,
+                        padding: '24px 28px',
+                        marginBottom: 28,
+                        position: 'relative',
+                        overflow: 'hidden',
+                    }}>
+                        {/* Elite badge */}
+                        <div style={{
+                            position: 'absolute', top: 16, right: 20,
+                            background: 'linear-gradient(135deg,#f59e0b,#b45309)',
+                            color: '#fff', fontSize: 10, fontWeight: 800,
+                            padding: '3px 10px', borderRadius: 20, letterSpacing: 1.2,
+                        }}>⭐ ELITE</div>
 
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 18 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ fontSize: 22 }}>🔭</span>
-                            <div>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-MONTH MARKET FORECAST</div>
-                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Composite: Astro · Technical · Institutional · Options · Macro · Seasonality</div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 18 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ fontSize: 22 }}>🔭</span>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-MONTH MARKET FORECAST</div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Composite: Astro · Technical · Institutional · Options · Macro · Seasonality</div>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Forecast Controls */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.15)', padding: '6px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>MARKET</label>
-                                <select
-                                    className="form-input"
-                                    value={forecastMarket}
-                                    onChange={(e) => setForecastMarket(e.target.value)}
-                                    style={{ padding: '4px 8px', fontSize: 12, height: 'auto', minWidth: 80 }}
+                            {/* Forecast Controls */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.15)', padding: '6px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>MARKET</label>
+                                    <select
+                                        className="form-input"
+                                        value={forecastMarket}
+                                        onChange={(e) => setForecastMarket(e.target.value)}
+                                        style={{ padding: '4px 8px', fontSize: 12, height: 'auto', minWidth: 80 }}
+                                    >
+                                        <option value="NSE">NSE (India)</option>
+                                        <option value="NASDAQ">NASDAQ (US)</option>
+                                    </select>
+                                </div>
+                                <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>T-ZERO DATE</label>
+                                    <input
+                                        type="date"
+                                        className="form-input"
+                                        value={forecastDate}
+                                        onChange={(e) => setForecastDate(e.target.value)}
+                                        style={{ padding: '4px 8px', fontSize: 12, height: 'auto', maxWidth: 130 }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={fetchForecast}
+                                    className="btn-primary"
+                                    style={{ padding: '4px 12px', fontSize: 12, height: 'auto', minWidth: 'auto', background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', color: '#fbbf24' }}
                                 >
-                                    <option value="NSE">NSE (India)</option>
-                                    <option value="NASDAQ">NASDAQ (US)</option>
-                                </select>
+                                    Recalculate
+                                </button>
                             </div>
-                            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)' }} />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>T-ZERO DATE</label>
-                                <input
-                                    type="date"
-                                    className="form-input"
-                                    value={forecastDate}
-                                    onChange={(e) => setForecastDate(e.target.value)}
-                                    style={{ padding: '4px 8px', fontSize: 12, height: 'auto', maxWidth: 130 }}
-                                />
-                            </div>
-                            <button
-                                onClick={fetchForecast}
-                                className="btn-primary"
-                                style={{ padding: '4px 12px', fontSize: 12, height: 'auto', minWidth: 'auto', background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', color: '#fbbf24' }}
-                            >
-                                Recalculate
-                            </button>
                         </div>
-                    </div>
 
-                    {forecastLoading ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', padding: '12px 0' }}>
-                            <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
-                            Crunching astro, technicals, options & news signals…
-                        </div>
-                    ) : forecast ? (
-                        <>
-                            {/* Top row: verdict + confidence */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <span style={{ fontSize: 36 }}>{forecast.verdict_emoji}</span>
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <div style={{ fontSize: 26, fontWeight: 900, color: forecast.verdict_color, lineHeight: 1 }}>
-                                                {forecast.verdict}
-                                            </div>
-                                            {forecast.is_historical && (
-                                                <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: 12, color: 'var(--text-muted)' }}>HISTORICAL</span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ color: 'var(--text-secondary)' }}>T-Zero: <strong>{forecast.anchor_date}</strong></span>
-                                            <span>→</span>
-                                            <span style={{ color: 'var(--accent-cyan)' }}>Target: <strong>{forecast.target_date}</strong></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                {/* Confidence meter */}
-                                <div style={{ flex: 1, minWidth: 180 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
-                                        <span>Confidence</span>
-                                        <span style={{ fontWeight: 700, color: forecast.verdict_color }}>{forecast.confidence}%</span>
-                                    </div>
-                                    <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
-                                        <div style={{
-                                            height: '100%', width: `${forecast.confidence}%`,
-                                            background: `linear-gradient(90deg, ${forecast.verdict_color}88, ${forecast.verdict_color})`,
-                                            borderRadius: 8, transition: 'width 0.8s ease',
-                                        }} />
-                                    </div>
-                                </div>
+                        {forecastLoading ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', padding: '12px 0' }}>
+                                <span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                                Crunching astro, technicals, options & news signals…
                             </div>
-
-                            {/* Summary */}
-                            <div style={{
-                                background: 'rgba(255,255,255,0.04)', borderRadius: 10,
-                                padding: '12px 16px', marginBottom: 20,
-                                fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
-                                borderLeft: `3px solid ${forecast.verdict_color}`,
-                            }}>{forecast.summary}</div>
-
-                            {/* Signal breakdown */}
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
-                                Signal Breakdown
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
-                                {(forecast.signals || []).map((sig: any, i: number) => (
-                                    <div key={i} style={{
-                                        display: 'flex', alignItems: 'flex-start', gap: 10,
-                                        background: sig.direction === 'bullish' ? 'rgba(74,222,128,0.07)'
-                                            : sig.direction === 'bearish' ? 'rgba(248,113,113,0.07)'
-                                                : sig.direction === 'historical' ? 'rgba(0,0,0,0.2)'
-                                                    : 'rgba(255,255,255,0.04)',
-                                        border: `1px solid ${sig.direction === 'bullish' ? 'rgba(74,222,128,0.2)'
-                                            : sig.direction === 'bearish' ? 'rgba(248,113,113,0.2)'
-                                                : sig.direction === 'historical' ? 'rgba(255,255,255,0.05)'
-                                                    : 'rgba(255,255,255,0.1)'}`,
-                                        borderRadius: 8, padding: '8px 12px',
-                                        opacity: sig.direction === 'historical' ? 0.6 : 1
-                                    }}>
-                                        <span style={{ fontSize: 16, flexShrink: 0 }}>{sig.icon}</span>
+                        ) : forecast ? (
+                            <>
+                                {/* Top row: verdict + confidence */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <span style={{ fontSize: 36 }}>{forecast.verdict_emoji}</span>
                                         <div>
-                                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{sig.category}</div>
-                                            <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{sig.text}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <div style={{ fontSize: 26, fontWeight: 900, color: forecast.verdict_color, lineHeight: 1 }}>
+                                                    {forecast.verdict}
+                                                </div>
+                                                {forecast.is_historical && (
+                                                    <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: 12, color: 'var(--text-muted)' }}>HISTORICAL</span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <span style={{ color: 'var(--text-secondary)' }}>T-Zero: <strong>{forecast.anchor_date}</strong></span>
+                                                <span>→</span>
+                                                <span style={{ color: 'var(--accent-cyan)' }}>Target: <strong>{forecast.target_date}</strong></span>
+                                            </div>
                                         </div>
-                                        <span style={{
-                                            marginLeft: 'auto', flexShrink: 0, fontSize: 12,
-                                            color: sig.direction === 'bullish' ? '#4ade80' : sig.direction === 'bearish' ? '#f87171' : sig.direction === 'historical' ? '#6b7280' : '#fbbf24',
-                                        }}>{sig.direction === 'bullish' ? '▲' : sig.direction === 'bearish' ? '▼' : sig.direction === 'historical' ? '—' : '●'}</span>
                                     </div>
-                                ))}
-                            </div>
-                        </>
-                    ) : null}
-                </div>
-            )}
+                                    {/* Confidence meter */}
+                                    <div style={{ flex: 1, minWidth: 180 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
+                                            <span>Confidence</span>
+                                            <span style={{ fontWeight: 700, color: forecast.verdict_color }}>{forecast.confidence}%</span>
+                                        </div>
+                                        <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
+                                            <div style={{
+                                                height: '100%', width: `${forecast.confidence}%`,
+                                                background: `linear-gradient(90deg, ${forecast.verdict_color}88, ${forecast.verdict_color})`,
+                                                borderRadius: 8, transition: 'width 0.8s ease',
+                                            }} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Summary */}
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.04)', borderRadius: 10,
+                                    padding: '12px 16px', marginBottom: 20,
+                                    fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
+                                    borderLeft: `3px solid ${forecast.verdict_color}`,
+                                }}>{forecast.summary}</div>
+
+                                {/* Signal breakdown */}
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>
+                                    Signal Breakdown
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 8 }}>
+                                    {(forecast.signals || []).map((sig: any, i: number) => (
+                                        <div key={i} style={{
+                                            display: 'flex', alignItems: 'flex-start', gap: 10,
+                                            background: sig.direction === 'bullish' ? 'rgba(74,222,128,0.07)'
+                                                : sig.direction === 'bearish' ? 'rgba(248,113,113,0.07)'
+                                                    : sig.direction === 'historical' ? 'rgba(0,0,0,0.2)'
+                                                        : 'rgba(255,255,255,0.04)',
+                                            border: `1px solid ${sig.direction === 'bullish' ? 'rgba(74,222,128,0.2)'
+                                                : sig.direction === 'bearish' ? 'rgba(248,113,113,0.2)'
+                                                    : sig.direction === 'historical' ? 'rgba(255,255,255,0.05)'
+                                                        : 'rgba(255,255,255,0.1)'}`,
+                                            borderRadius: 8, padding: '8px 12px',
+                                            opacity: sig.direction === 'historical' ? 0.6 : 1
+                                        }}>
+                                            <span style={{ fontSize: 16, flexShrink: 0 }}>{sig.icon}</span>
+                                            <div>
+                                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{sig.category}</div>
+                                                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{sig.text}</div>
+                                            </div>
+                                            <span style={{
+                                                marginLeft: 'auto', flexShrink: 0, fontSize: 12,
+                                                color: sig.direction === 'bullish' ? '#4ade80' : sig.direction === 'bearish' ? '#f87171' : sig.direction === 'historical' ? '#6b7280' : '#fbbf24',
+                                            }}>{sig.direction === 'bullish' ? '▲' : sig.direction === 'bearish' ? '▼' : sig.direction === 'historical' ? '—' : '●'}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : null}
+                    </div>
+                )
+            }
 
             {/* ── Today's Cosmic Snapshot ── */}
-            {loading ? (
-                <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                    <span className="spinner" />
-                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading today's cosmic data…</span>
-                </div>
-            ) : insight ? (
-                <>
-                    {/* ── 4-card metrics row ── */}
-                    <div className="grid-4" style={{ marginBottom: 18 }}>
-                        <MetricCard
-                            icon="🌙"
-                            label="Current Nakshatra"
-                            value={<span className="gradient-text" style={{ fontSize: 20, fontWeight: 800 }}>{insight.current_nakshatra}</span>}
-                            sub={insight.nakshatra_sanskrit}
-                        />
-                        <MetricCard
-                            icon="⭐"
-                            label="Pada / Planet"
-                            value={<span className="gradient-text" style={{ fontSize: 20, fontWeight: 800 }}>Pada {insight.pada}</span>}
-                            sub={insight.ruling_planet}
-                        />
-                        <MetricCard
-                            icon="📐"
-                            label="Sidereal Longitude"
-                            value={
-                                typeof insight.moon_longitude === 'number'
-                                    ? <span className="num" style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent-cyan)' }}>{insight.moon_longitude.toFixed(2)}°</span>
-                                    : <span style={{ color: 'var(--text-muted)' }}>—</span>
-                            }
-                            sub="Moon sidereal position"
-                        />
-                        <MetricCard
-                            icon="📈"
-                            label="Historical Tendency"
-                            value={<TendencyBadge t={tendency} />}
-                            sub="Based on historical data"
-                        />
+            {
+                loading ? (
+                    <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                        <span className="spinner" />
+                        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading today's cosmic data…</span>
                     </div>
-
-                    {/* ── Secondary info row ── */}
-                    {(insight.tithi_name || insight.yoga_name) && (
-                        <div className="grid-3" style={{ marginBottom: 18 }}>
-                            {insight.tithi_name && (
-                                <MetricCard icon="🌒" label="Tithi" value={
-                                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-gold)' }}>{insight.tithi_name}</span>
-                                } sub={insight.paksha ?? ''} />
-                            )}
-                            {insight.yoga_name && (
-                                <MetricCard icon="🔮" label="Nitya Yoga" value={
-                                    <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-purple)' }}>{insight.yoga_name}</span>
-                                } sub="Active yoga period" />
-                            )}
-                            <MetricCard icon="🌿" label="Ruling Planet" value={
-                                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-violet)' }}>{insight.ruling_planet}</span>
-                            } sub="Nakshatra lord" />
+                ) : insight ? (
+                    <>
+                        {/* ── 4-card metrics row ── */}
+                        <div className="grid-4" style={{ marginBottom: 18 }}>
+                            <MetricCard
+                                icon="🔄"
+                                label="Current Cycle"
+                                value={<span className="gradient-text" style={{ fontSize: 20, fontWeight: 800 }}>{insight.current_nakshatra}</span>}
+                                sub={insight.nakshatra_sanskrit}
+                            />
+                            <MetricCard
+                                icon="⭐"
+                                label="Cycle Position"
+                                value={<span className="gradient-text" style={{ fontSize: 20, fontWeight: 800 }}>Phase {insight.pada}</span>}
+                                sub={insight.ruling_planet}
+                            />
+                            <MetricCard
+                                icon="📐"
+                                label="Sidereal Longitude"
+                                value={
+                                    typeof insight.moon_longitude === 'number'
+                                        ? <span className="num" style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent-cyan)' }}>{insight.moon_longitude.toFixed(2)}°</span>
+                                        : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                }
+                                sub="Moon sidereal position"
+                            />
+                            <MetricCard
+                                icon="📈"
+                                label="Historical Tendency"
+                                value={<TendencyBadge t={tendency} />}
+                                sub="Based on historical data"
+                            />
                         </div>
-                    )}
 
-                    {/* ── Insight traits box ── */}
-                    {insight.favorable_for && (
-                        <div className="glass-card" style={{ padding: '18px 22px', marginBottom: 16 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
-                                <div>
-                                    <span style={{ color: 'var(--accent-green)', fontWeight: 700, fontSize: 12.5 }}>✅ Favorable for</span>
-                                    <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                        {(insight.favorable_for || []).join(', ')}
-                                    </p>
-                                </div>
-                                <div>
-                                    <span style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: 12.5 }}>❌ Unfavorable for</span>
-                                    <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                        {(insight.unfavorable_for || []).join(', ')}
-                                    </p>
-                                </div>
-                                <div>
-                                    <span style={{ color: 'var(--accent-gold)', fontWeight: 700, fontSize: 12.5 }}>🎯 Financial Traits</span>
-                                    <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                        {(insight.financial_traits || []).join(', ')}
-                                    </p>
-                                </div>
-                                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                        {/* ── Secondary info row ── */}
+                        {(insight.tithi_name || insight.yoga_name) && (
+                            <div className="grid-3" style={{ marginBottom: 18 }}>
+                                {insight.tithi_name && (
+                                    <MetricCard icon="🌒" label="Lunar Phase" value={
+                                        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-gold)' }}>{insight.tithi_name}</span>
+                                    } sub={insight.paksha ?? ''} />
+                                )}
+                                {insight.yoga_name && (
+                                    <MetricCard icon="🔮" label="Signal Pattern" value={
+                                        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-purple)' }}>{insight.yoga_name}</span>
+                                    } sub="Active pattern period" />
+                                )}
+                                <MetricCard icon="🌿" label="Signal Driver" value={
+                                    <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-violet)' }}>{insight.ruling_planet}</span>
+                                } sub="Pattern driver" />
+                            </div>
+                        )}
+
+                        {/* ── Insight traits box ── */}
+                        {insight.favorable_for && (
+                            <div className="glass-card" style={{ padding: '18px 22px', marginBottom: 16 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
                                     <div>
-                                        <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}>🔢 Lucky Numbers</span>
-                                        <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)' }}>
-                                            {(insight.lucky_numbers || []).join(', ')}
+                                        <span style={{ color: 'var(--accent-green)', fontWeight: 700, fontSize: 12.5 }}>✅ Favorable for</span>
+                                        <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                            {(insight.favorable_for || []).join(', ')}
                                         </p>
                                     </div>
                                     <div>
-                                        <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}>🎨 Lucky Colors</span>
-                                        <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)' }}>
-                                            {(insight.lucky_colors || []).join(', ')}
+                                        <span style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: 12.5 }}>❌ Unfavorable for</span>
+                                        <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                            {(insight.unfavorable_for || []).join(', ')}
                                         </p>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: 'var(--accent-gold)', fontWeight: 700, fontSize: 12.5 }}>🎯 Financial Traits</span>
+                                        <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                                            {(insight.financial_traits || []).join(', ')}
+                                        </p>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                                        <div>
+                                            <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}>🔢 Lucky Numbers</span>
+                                            <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                {(insight.lucky_numbers || []).join(', ')}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}>🎨 Lucky Colors</span>
+                                            <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)' }}>
+                                                {(insight.lucky_colors || []).join(', ')}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* ── Nakshatra transition ── */}
-                    {insight.transition && (
-                        <div className="alert-info" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ fontSize: 18 }}>🔄</span>
-                            <span>
-                                <strong>Nakshatra Transition Today:</strong>{' '}
-                                <span style={{ color: 'var(--accent-red)' }}>{insight.transition.from_nakshatra}</span>
-                                {' → '}
-                                <span style={{ color: 'var(--accent-green)' }}>{insight.transition.to_nakshatra}</span>
-                                {' at '}
-                                <span className="num" style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>{insight.transition.transition_time}</span>
-                            </span>
-                        </div>
-                    )}
-                </>
-            ) : (
-                <div className="alert-warn" style={{ marginBottom: 20 }}>⚠️ Could not load today's insight. Check backend connection.</div>
-            )}
+                        {/* ── Cycle transition ── */}
+                        {insight.transition && (
+                            <div className="alert-info" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <span style={{ fontSize: 18 }}>🔄</span>
+                                <span>
+                                    <strong>Cycle Transition Today:</strong>{' '}
+                                    <span style={{ color: 'var(--accent-red)' }}>{insight.transition.from_nakshatra}</span>
+                                    {' → '}
+                                    <span style={{ color: 'var(--accent-green)' }}>{insight.transition.to_nakshatra}</span>
+                                    {' at '}
+                                    <span className="num" style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>{insight.transition.transition_time}</span>
+                                </span>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="alert-warn" style={{ marginBottom: 20 }}>⚠️ Could not load today's insight. Check backend connection.</div>
+                )
+            }
 
             {/* ── Analysis Form Panel ── */}
             <div className="glass-card" style={{ padding: 28 }}>
@@ -551,7 +596,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     <span style={{ fontSize: 20 }}>📥</span>
                     <div>
                         <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>Load Statistical Analysis</h2>
-                        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Choose a market, planet, and date range — then run the Nakshatra backtest</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Choose a market, planet, and date range — then run the composite signal backtest</p>
                     </div>
                     {market === 'NASDAQ' && (
                         <span className="badge badge-info" style={{ marginLeft: 'auto' }}>🇺🇸 US / Global Market</span>
@@ -672,6 +717,6 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

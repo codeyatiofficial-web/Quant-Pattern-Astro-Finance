@@ -542,21 +542,24 @@ def get_monthly_forecast(target_date: str = None, market: str = "NSE"):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 7-DAY COMPREHENSIVE FORECAST
+# 14-DAY COMPREHENSIVE FORECAST
 # ══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/api/forecast/weekly")
 def get_weekly_forecast(market: str = "NSE"):
     """
-    Comprehensive 7-day forecast combining:
-    - Per-day astro (Nakshatra, Tithi, Yoga, Weekday)
-    - Planetary Yogas (Angarak, Guru Chandal, Vish, Grahan, etc.)
-    - Upcoming economic events
-    - Option chain snapshot (PCR, VIX)
-    - FII/DII institutional flows
-    - Technical bias (50/200 DMA, RSI)
-    - Nakshatra historical win rates
-    - Weekday seasonality
+    Enhanced 1-week (5 trading day) forecast combining 11 signal layers:
+    1. Nakshatra historical tendency
+    2. Vedic Yogas (Angarak, Gajakesari, Guru-Chandal, etc.)
+    3. Weekday seasonality
+    4. Options chain / PCR / VIX
+    5. FII/DII institutional flows
+    6. Technical trend (DMA, RSI)
+    7. Tithi / Paksha lunar phase bias
+    8. Gochar / planetary transits
+    9. Chart + Harmonic pattern bias
+    10. News sentiment
+    11. Economic event impact
     """
     from modules.planetary_yogas import detect_active_yogas, get_yoga_market_score
     from modules.institutional_data import fetch_fii_dii_data
@@ -564,265 +567,484 @@ def get_weekly_forecast(market: str = "NSE"):
     import pandas as pd
     from datetime import timedelta
 
-    today = datetime.now()
-    days = []
-
-    # ── GLOBAL SIGNALS (computed once) ────────────────────────────────────────
-
-    # 1. Options Chain snapshot
-    options_signal = {"pcr": None, "vix": None, "direction": "neutral", "text": "N/A"}
     try:
-        snap = derivatives_engine.get_market_snapshot("NIFTY" if market == "NSE" else "SPY")
-        pcr = snap.get("pcr", {}).get("value")
-        vix = snap.get("vix", {}).get("value")
-        options_signal["pcr"] = pcr
-        options_signal["vix"] = vix
-        if pcr and vix:
-            if pcr > 1.3:
-                options_signal["direction"] = "bullish"
-                options_signal["text"] = f"High PCR {pcr:.2f} (put writing) · VIX {vix:.1f}"
-            elif pcr < 0.7:
-                options_signal["direction"] = "bearish"
-                options_signal["text"] = f"Low PCR {pcr:.2f} (call writing) · VIX {vix:.1f}"
+        today = datetime.now()
+        days = []
+
+        # ══════════════════════════════════════════════════════════════════════════
+        # GLOBAL SIGNALS (computed once, applied with decay to each day)
+        # ══════════════════════════════════════════════════════════════════════════
+    
+        # ── 1. Options Chain snapshot ─────────────────────────────────────────────
+        options_signal = {"pcr": None, "vix": None, "direction": "neutral", "text": "N/A"}
+        try:
+            snap = derivatives_engine.get_market_snapshot("NIFTY" if market == "NSE" else "SPY")
+            pcr = snap.get("pcr", {}).get("value")
+            vix = snap.get("vix", {}).get("value")
+            options_signal["pcr"] = pcr
+            options_signal["vix"] = vix
+            if pcr and vix:
+                if pcr > 1.3:
+                    options_signal["direction"] = "bullish"
+                    options_signal["text"] = f"High PCR {pcr:.2f} (put writing) · VIX {vix:.1f}"
+                elif pcr < 0.7:
+                    options_signal["direction"] = "bearish"
+                    options_signal["text"] = f"Low PCR {pcr:.2f} (call writing) · VIX {vix:.1f}"
+                else:
+                    options_signal["text"] = f"PCR {pcr:.2f} balanced · VIX {vix:.1f}"
+        except Exception as e:
+            logger.warning(f"Weekly forecast: Options snapshot failed: {e}")
+    
+        # ── 2. FII/DII flows ─────────────────────────────────────────────────────
+        fii_signal = {"direction": "neutral", "text": "N/A", "fii_net": None, "dii_net": None}
+        try:
+            fii_data = fetch_fii_dii_data()
+            if fii_data and fii_data.get("fii_net") is not None:
+                fii_net = fii_data["fii_net"]
+                dii_net = fii_data.get("dii_net", 0)
+                fii_signal["fii_net"] = fii_net
+                fii_signal["dii_net"] = dii_net
+                if fii_net > 500:
+                    fii_signal["direction"] = "bullish"
+                elif fii_net < -500:
+                    fii_signal["direction"] = "bearish"
+                fii_signal["text"] = f"FII {'+' if fii_net > 0 else ''}{fii_net:.0f} Cr · DII {'+' if dii_net > 0 else ''}{dii_net:.0f} Cr"
+        except Exception as e:
+            logger.warning(f"Weekly forecast: FII/DII failed: {e}")
+    
+        # ── 3. Technical snapshot ─────────────────────────────────────────────────
+        tech_signal = {"direction": "neutral", "text": "N/A", "rsi": None, "trend": None, "current_price": None}
+        try:
+            ticker = "^NSEI" if market == "NSE" else "^IXIC"
+            hist = yf.download(ticker, period="6mo", progress=False, auto_adjust=True)
+            if not hist.empty:
+                close = hist["Close"]
+                if hasattr(close, 'columns'):
+                    close = close.iloc[:, 0]
+                dma50 = float(close.rolling(50).mean().iloc[-1])
+                dma200 = float(close.rolling(200).mean().iloc[-1]) if len(close) >= 200 else None
+                last = float(close.iloc[-1])
+                tech_signal["current_price"] = round(last, 2)
+                # RSI
+                delta = close.diff()
+                gain = delta.clip(lower=0).rolling(14).mean()
+                loss = (-delta.clip(upper=0)).rolling(14).mean()
+                rs = gain / loss
+                rsi = float((100 - 100 / (1 + rs)).iloc[-1])
+                tech_signal["rsi"] = round(rsi, 1)
+    
+                parts = []
+                if dma200 and dma50 > dma200:
+                    parts.append("Golden Cross")
+                    tech_signal["trend"] = "bullish"
+                elif dma200 and dma50 < dma200:
+                    parts.append("Death Cross")
+                    tech_signal["trend"] = "bearish"
+    
+                if last > dma50:
+                    parts.append("Above 50-DMA")
+                else:
+                    parts.append("Below 50-DMA")
+    
+                if rsi > 70:
+                    parts.append(f"Overbought RSI {rsi:.0f}")
+                elif rsi < 30:
+                    parts.append(f"Oversold RSI {rsi:.0f}")
+                else:
+                    parts.append(f"RSI {rsi:.0f}")
+    
+                tech_signal["text"] = " · ".join(parts)
+                if tech_signal["trend"] == "bullish" and last > dma50:
+                    tech_signal["direction"] = "bullish"
+                elif tech_signal["trend"] == "bearish" and last < dma50:
+                    tech_signal["direction"] = "bearish"
+        except Exception as e:
+            logger.warning(f"Weekly forecast: Technical failed: {e}")
+    
+        # ── 4. Upcoming economic events ───────────────────────────────────────────
+        upcoming_events = []
+        try:
+            events_list = events_engine.get_upcoming_events(days_ahead=10)
+            for ev in events_list[:12]:
+                upcoming_events.append({
+                    "date": ev.get("date", ""),
+                    "name": ev.get("event", ev.get("name", "")),
+                    "impact": ev.get("impact", "medium"),
+                    "bias": ev.get("expected_bias", "neutral"),
+                    "market_impact": ev.get("historical_market_reaction", ""),
+                })
+        except Exception as e:
+            logger.warning(f"Weekly forecast: Events failed: {e}")
+    
+        # ── 5. Gochar / Planetary transits in next 7 days ─────────────────────────
+        gochar_events = []
+        gochar_bias = 0
+        try:
+            upcoming_astro = analyzer.predict_upcoming_market(start_date=today, days=7, market=market)
+            for entry in upcoming_astro:
+                note = entry.get("note", entry.get("event", ""))
+                tendency = entry.get("historical_tendency", "")
+                if note:
+                    gochar_events.append({
+                        "date": entry.get("date", ""),
+                        "event": note,
+                        "tendency": tendency,
+                    })
+                if tendency == "Bullish":
+                    gochar_bias += 0.3
+                elif tendency == "Bearish":
+                    gochar_bias -= 0.3
+        except Exception as e:
+            logger.warning(f"Weekly forecast: Gochar/transits failed: {e}")
+    
+        # ── 6. Chart + Harmonic pattern bias ──────────────────────────────────────
+        chart_pattern_summary = {"bullish_count": 0, "bearish_count": 0, "neutral_count": 0, "patterns": [], "direction": "neutral"}
+        try:
+            from modules.technical_analysis import TechnicalAnalyzer
+            scanner = TechnicalAnalyzer()
+            ticker_sym = "^NSEI" if market == "NSE" else "^IXIC"
+            result = scanner.run_multi_timeframe_scan(symbol=ticker_sym, market=market, historical_period="1y")
+            all_pats = []
+            for tf_key, tf_data in result.get("scans", {}).items():
+                for p in tf_data.get("patterns", []):
+                    bias = (p.get("bias") or "").lower()
+                    name = p.get("pattern_name") or p.get("name", "")
+                    wr = p.get("win_rate")
+                    all_pats.append({"name": name, "bias": bias, "source": p.get("source", ""), "timeframe": tf_key, "win_rate": wr})
+                    if "bullish" in bias:
+                        chart_pattern_summary["bullish_count"] += 1
+                    elif "bearish" in bias:
+                        chart_pattern_summary["bearish_count"] += 1
+                    else:
+                        chart_pattern_summary["neutral_count"] += 1
+            chart_pattern_summary["patterns"] = all_pats[:10]  # Top 10
+            bc = chart_pattern_summary["bullish_count"]
+            brc = chart_pattern_summary["bearish_count"]
+            if bc > brc + 1:
+                chart_pattern_summary["direction"] = "bullish"
+            elif brc > bc + 1:
+                chart_pattern_summary["direction"] = "bearish"
+        except Exception as e:
+            logger.warning(f"Weekly forecast: Chart pattern scan failed: {e}")
+    
+        # ── 7. News sentiment ─────────────────────────────────────────────────────
+        news_signal = {"score": 0, "direction": "neutral", "text": "N/A", "headlines": []}
+        try:
+            news_data = sentiment_engine.get_live_sentiment()
+            if news_data:
+                avg_score = news_data.get("average_sentiment", news_data.get("avg_score", 0))
+                headlines = news_data.get("headlines", news_data.get("articles", []))[:5]
+                news_signal["score"] = round(avg_score, 2) if avg_score else 0
+                news_signal["headlines"] = [
+                    {"title": h.get("title", h.get("headline", "")), "sentiment": h.get("sentiment", "")}
+                    for h in headlines
+                ]
+                if avg_score and avg_score > 0.15:
+                    news_signal["direction"] = "bullish"
+                    news_signal["text"] = f"Positive news sentiment ({avg_score:.2f})"
+                elif avg_score and avg_score < -0.15:
+                    news_signal["direction"] = "bearish"
+                    news_signal["text"] = f"Negative news sentiment ({avg_score:.2f})"
+                else:
+                    news_signal["text"] = f"Mixed news sentiment ({avg_score:.2f})" if avg_score else "N/A"
+        except Exception as e:
+            logger.warning(f"Weekly forecast: News sentiment failed: {e}")
+    
+        # ── Weekday performance map ───────────────────────────────────────────────
+        WEEKDAY_BIAS = {
+            0: {"day": "Monday", "bias": "bearish", "note": "Gap-down tendency, weekend risk unwinding"},
+            1: {"day": "Tuesday", "bias": "bullish", "note": "Historically strongest day for NIFTY"},
+            2: {"day": "Wednesday", "bias": "neutral", "note": "Mid-week consolidation typical"},
+            3: {"day": "Thursday", "bias": "bullish", "note": "Pre-expiry positioning, mild upside bias"},
+            4: {"day": "Friday", "bias": "bearish", "note": "Profit booking before weekend"},
+        }
+        WEEKDAY_BIAS_US = {
+            0: {"day": "Monday", "bias": "bearish", "note": "Monday effect, lower returns historically"},
+            1: {"day": "Tuesday", "bias": "neutral", "note": "Mid-early week, mixed signals"},
+            2: {"day": "Wednesday", "bias": "bullish", "note": "FOMC day effect, institutional positioning"},
+            3: {"day": "Thursday", "bias": "neutral", "note": "Mid-week consolidation"},
+            4: {"day": "Friday", "bias": "bullish", "note": "Friday rally tendency, pre-weekend buying"},
+        }
+        weekday_map = WEEKDAY_BIAS if market == "NSE" else WEEKDAY_BIAS_US
+    
+        # Tithi/Paksha bias map
+        TITHI_BIAS = {
+            "Amavasya": -1.0,    # New Moon — historically bearish
+            "Purnima": 0.8,      # Full Moon — mildly bullish
+            "Chaturthi": -0.3,   # Vinayaka — cautious
+            "Ekadashi": 0.5,     # Auspicious
+        }
+        PAKSHA_BIAS = {
+            "Shukla": 0.3,   # Waxing — growth sentiment
+            "Krishna": -0.2,  # Waning — caution
+        }
+    
+        # ══════════════════════════════════════════════════════════════════════════
+        # PER-DAY FORECAST (7 calendar days → ~5 trading days)
+        # ══════════════════════════════════════════════════════════════════════════
+        for i in range(7):
+            target_dt = today + timedelta(days=i)
+            if target_dt.weekday() >= 5:
+                continue
+    
+            breakdown = {}  # Track each signal's contribution
+    
+            # ── A. Astro: Nakshatra + Tithi + Yoga ────────────────────────────────
+            astro = {}
+            try:
+                calc_dt = target_dt.replace(hour=9, minute=15, second=0, microsecond=0)
+                astro = moon_calc.calculate_nakshatra(calc_dt)
+            except Exception as e:
+                logger.warning(f"Weekly forecast day {i}: astro failed: {e}")
+    
+            # ── B. Planetary Yogas ────────────────────────────────────────────────
+            yoga_data = {}
+            active_yogas = []
+            try:
+                calc_dt = target_dt.replace(hour=9, minute=15, second=0, microsecond=0)
+                yoga_data = get_yoga_market_score(calc_dt)
+                active_yogas = yoga_data.get("active_yogas", [])
+            except Exception as e:
+                logger.warning(f"Weekly forecast day {i}: yogas failed: {e}")
+    
+            # ── SIGNAL 1: Nakshatra tendency (weight: 2.0) ────────────────────────
+            tendency = astro.get("historical_market_tendency", "Neutral")
+            day_score = 0
+            if tendency == "Bullish":
+                day_score += 2.0
+                breakdown["nakshatra"] = 2.0
+            elif tendency == "Bearish":
+                day_score -= 2.0
+                breakdown["nakshatra"] = -2.0
             else:
-                options_signal["text"] = f"PCR {pcr:.2f} balanced · VIX {vix:.1f}"
-    except Exception as e:
-        logger.warning(f"Weekly forecast: Options snapshot failed: {e}")
-
-    # 2. FII/DII flows
-    fii_signal = {"direction": "neutral", "text": "N/A", "fii_net": None, "dii_net": None}
-    try:
-        fii_data = fetch_fii_dii_data()
-        if fii_data and fii_data.get("fii_net") is not None:
-            fii_net = fii_data["fii_net"]
-            dii_net = fii_data.get("dii_net", 0)
-            fii_signal["fii_net"] = fii_net
-            fii_signal["dii_net"] = dii_net
-            if fii_net > 500:
-                fii_signal["direction"] = "bullish"
-            elif fii_net < -500:
-                fii_signal["direction"] = "bearish"
-            fii_signal["text"] = f"FII {'+' if fii_net > 0 else ''}{fii_net:.0f} Cr · DII {'+' if dii_net > 0 else ''}{dii_net:.0f} Cr"
-    except Exception as e:
-        logger.warning(f"Weekly forecast: FII/DII failed: {e}")
-
-    # 3. Technical snapshot
-    tech_signal = {"direction": "neutral", "text": "N/A", "rsi": None, "trend": None}
-    try:
-        ticker = "^NSEI" if market == "NSE" else "^IXIC"
-        hist = yf.download(ticker, period="6mo", progress=False, auto_adjust=True)
-        if not hist.empty:
-            close = hist["Close"]
-            if hasattr(close, 'columns'):
-                close = close.iloc[:, 0]
-            dma50 = float(close.rolling(50).mean().iloc[-1])
-            dma200 = float(close.rolling(200).mean().iloc[-1]) if len(close) >= 200 else None
-            last = float(close.iloc[-1])
-            # RSI
-            delta = close.diff()
-            gain = delta.clip(lower=0).rolling(14).mean()
-            loss = (-delta.clip(upper=0)).rolling(14).mean()
-            rs = gain / loss
-            rsi = float((100 - 100 / (1 + rs)).iloc[-1])
-            tech_signal["rsi"] = round(rsi, 1)
-
-            parts = []
-            if dma200 and dma50 > dma200:
-                parts.append("Golden Cross")
-                tech_signal["trend"] = "bullish"
-            elif dma200 and dma50 < dma200:
-                parts.append("Death Cross")
-                tech_signal["trend"] = "bearish"
-
-            if last > dma50:
-                parts.append("Above 50-DMA")
+                breakdown["nakshatra"] = 0
+    
+            # ── SIGNAL 2: Vedic Yogas (weight: scaled ×0.3) ──────────────────────
+            yoga_score_raw = yoga_data.get("score", 0)
+            yoga_contrib = round(yoga_score_raw * 0.3, 2)
+            day_score += yoga_contrib
+            breakdown["yogas"] = yoga_contrib
+    
+            # ── SIGNAL 3: Weekday seasonality (weight: 0.5) ──────────────────────
+            wday = target_dt.weekday()
+            wday_info = weekday_map.get(wday, {"day": "", "bias": "neutral", "note": ""})
+            if wday_info["bias"] == "bullish":
+                day_score += 0.5
+                breakdown["weekday"] = 0.5
+            elif wday_info["bias"] == "bearish":
+                day_score -= 0.5
+                breakdown["weekday"] = -0.5
             else:
-                parts.append("Below 50-DMA")
-
-            if rsi > 70:
-                parts.append(f"Overbought RSI {rsi:.0f}")
-            elif rsi < 30:
-                parts.append(f"Oversold RSI {rsi:.0f}")
+                breakdown["weekday"] = 0
+    
+            # ── SIGNAL 7: Tithi + Paksha (weight: 0.5-1.0) ───────────────────────
+            tithi_name = astro.get("tithi_name", "")
+            paksha = astro.get("paksha", "")
+            tithi_score = 0
+            for key, val in TITHI_BIAS.items():
+                if key.lower() in tithi_name.lower():
+                    tithi_score += val
+                    break
+            tithi_score += PAKSHA_BIAS.get(paksha, 0)
+            day_score += tithi_score
+            breakdown["tithi_paksha"] = round(tithi_score, 2)
+    
+            # ── SIGNAL 8: Gochar / transits (global, applied per day) ─────────────
+            gochar_contrib = round(gochar_bias * max(0.5, 1.0 - i * 0.1), 2)
+            day_score += gochar_contrib
+            breakdown["gochar"] = gochar_contrib
+    
+            # ── Events on this day ────────────────────────────────────────────────
+            day_str = target_dt.strftime("%Y-%m-%d")
+            day_events = [ev for ev in upcoming_events if ev.get("date", "").startswith(day_str)]
+    
+            # ── SIGNAL 11: Event impact (weight: 0.5–1.0) ─────────────────────────
+            event_score = 0
+            for ev in day_events:
+                impact = ev.get("impact", "medium")
+                bias = ev.get("bias", "neutral").lower()
+                weight = 1.0 if impact == "high" else 0.5
+                if "bullish" in bias:
+                    event_score += weight
+                elif "bearish" in bias:
+                    event_score -= weight
+                else:
+                    event_score -= weight * 0.3  # Uncertainty penalty
+            day_score += event_score
+            breakdown["events"] = round(event_score, 2)
+    
+            # ── Global signals with decay ─────────────────────────────────────────
+            decay = max(0.3, 1.0 - i * 0.1)
+    
+            # SIGNAL 4: Options/PCR
+            opt_contrib = 0
+            if options_signal["direction"] == "bullish":
+                opt_contrib = round(1.0 * decay, 2)
+            elif options_signal["direction"] == "bearish":
+                opt_contrib = round(-1.0 * decay, 2)
+            day_score += opt_contrib
+            breakdown["options"] = opt_contrib
+    
+            # SIGNAL 5: FII/DII
+            fii_contrib = 0
+            if fii_signal["direction"] == "bullish":
+                fii_contrib = round(0.8 * decay, 2)
+            elif fii_signal["direction"] == "bearish":
+                fii_contrib = round(-0.8 * decay, 2)
+            day_score += fii_contrib
+            breakdown["institutional"] = fii_contrib
+    
+            # SIGNAL 6: Technical trend
+            tech_contrib = 0
+            if tech_signal["direction"] == "bullish":
+                tech_contrib = round(1.0 * decay, 2)
+            elif tech_signal["direction"] == "bearish":
+                tech_contrib = round(-1.0 * decay, 2)
+            day_score += tech_contrib
+            breakdown["technical"] = tech_contrib
+    
+            # SIGNAL 9: Chart pattern bias (global, decayed)
+            cp_contrib = 0
+            if chart_pattern_summary["direction"] == "bullish":
+                cp_contrib = round(1.5 * decay, 2)
+            elif chart_pattern_summary["direction"] == "bearish":
+                cp_contrib = round(-1.5 * decay, 2)
+            day_score += cp_contrib
+            breakdown["chart_patterns"] = cp_contrib
+    
+            # SIGNAL 10: News sentiment (global, decayed)
+            news_contrib = 0
+            if news_signal["direction"] == "bullish":
+                news_contrib = round(1.0 * decay, 2)
+            elif news_signal["direction"] == "bearish":
+                news_contrib = round(-1.0 * decay, 2)
+            day_score += news_contrib
+            breakdown["news"] = news_contrib
+    
+            # ── Determine verdict ─────────────────────────────────────────────────
+            if day_score >= 3.5:
+                verdict = "Strong Buy"
+                color = "#4ade80"
+                emoji = "🚀"
+            elif day_score >= 1.5:
+                verdict = "Bullish"
+                color = "#86efac"
+                emoji = "📈"
+            elif day_score >= 0.5:
+                verdict = "Mildly Bullish"
+                color = "#a7f3d0"
+                emoji = "↗️"
+            elif day_score <= -3.5:
+                verdict = "Strong Sell"
+                color = "#f87171"
+                emoji = "🔻"
+            elif day_score <= -1.5:
+                verdict = "Bearish"
+                color = "#fca5a5"
+                emoji = "📉"
+            elif day_score <= -0.5:
+                verdict = "Mildly Bearish"
+                color = "#fed7aa"
+                emoji = "↘️"
             else:
-                parts.append(f"RSI {rsi:.0f}")
-
-            tech_signal["text"] = " · ".join(parts)
-            if tech_signal["trend"] == "bullish" and last > dma50:
-                tech_signal["direction"] = "bullish"
-            elif tech_signal["trend"] == "bearish" and last < dma50:
-                tech_signal["direction"] = "bearish"
-    except Exception as e:
-        logger.warning(f"Weekly forecast: Technical failed: {e}")
-
-    # 4. Upcoming economic events
-    upcoming_events = []
-    try:
-        events_list = events_engine.get_upcoming_events(days_ahead=10)
-        for ev in events_list[:8]:
-            upcoming_events.append({
-                "date": ev.get("date", ""),
-                "name": ev.get("event", ev.get("name", "")),
-                "impact": ev.get("impact", "medium"),
-                "market_impact": ev.get("historical_market_reaction", ""),
+                verdict = "Neutral"
+                color = "#fbbf24"
+                emoji = "↔️"
+    
+            # ── Build day object ──────────────────────────────────────────────────
+            days.append({
+                "date": day_str,
+                "weekday": target_dt.strftime("%A"),
+                "verdict": verdict,
+                "verdict_color": color,
+                "verdict_emoji": emoji,
+                "score": round(day_score, 2),
+                "signal_breakdown": breakdown,
+                "astro": {
+                    "nakshatra": astro.get("nakshatra_name", "—"),
+                    "nakshatra_sanskrit": astro.get("nakshatra_sanskrit", ""),
+                    "pada": astro.get("pada", 0),
+                    "tithi": astro.get("tithi_name", "—"),
+                    "paksha": astro.get("paksha", ""),
+                    "yoga": astro.get("yoga_name", "—"),
+                    "tendency": tendency,
+                    "ruling_planet": astro.get("ruling_planet", ""),
+                },
+                "planetary_yogas": [{
+                    "name": y["name"],
+                    "sanskrit": y.get("sanskrit", ""),
+                    "icon": y.get("icon", ""),
+                    "severity": y.get("severity", 0),
+                    "impact": y.get("market_impact", "neutral"),
+                    "desc": y.get("desc", ""),
+                } for y in active_yogas],
+                "weekday_bias": wday_info,
+                "events": day_events,
             })
-    except Exception as e:
-        logger.warning(f"Weekly forecast: Events failed: {e}")
-
-    # 5. Weekday performance map (backtested averages for Indian market)
-    WEEKDAY_BIAS = {
-        0: {"day": "Monday", "bias": "bearish", "note": "Gap-down tendency, weekend risk unwinding"},
-        1: {"day": "Tuesday", "bias": "bullish", "note": "Historically strongest day for NIFTY"},
-        2: {"day": "Wednesday", "bias": "neutral", "note": "Mid-week consolidation typical"},
-        3: {"day": "Thursday", "bias": "bullish", "note": "Pre-expiry positioning, mild upside bias"},
-        4: {"day": "Friday", "bias": "bearish", "note": "Profit booking before weekend"},
-    }
-
-    WEEKDAY_BIAS_US = {
-        0: {"day": "Monday", "bias": "bearish", "note": "Monday effect, lower returns historically"},
-        1: {"day": "Tuesday", "bias": "neutral", "note": "Mid-early week, mixed signals"},
-        2: {"day": "Wednesday", "bias": "bullish", "note": "FOMC day effect, institutional positioning"},
-        3: {"day": "Thursday", "bias": "neutral", "note": "Mid-week consolidation"},
-        4: {"day": "Friday", "bias": "bullish", "note": "Friday rally tendency, pre-weekend buying"},
-    }
-
-    weekday_map = WEEKDAY_BIAS if market == "NSE" else WEEKDAY_BIAS_US
-
-    # ── PER-DAY FORECAST ──────────────────────────────────────────────────────
-    for i in range(7):
-        target_dt = today + timedelta(days=i)
-        # Skip weekends
-        if target_dt.weekday() >= 5:
-            continue
-
-        # Astro data
-        astro = {}
-        try:
-            calc_dt = target_dt.replace(hour=9, minute=15, second=0, microsecond=0)
-            astro = moon_calc.calculate_nakshatra(calc_dt)
-        except Exception as e:
-            logger.warning(f"Weekly forecast day {i}: astro failed: {e}")
-
-        # Planetary yogas for this day
-        yoga_data = {}
-        active_yogas = []
-        try:
-            calc_dt = target_dt.replace(hour=9, minute=15, second=0, microsecond=0)
-            yoga_data = get_yoga_market_score(calc_dt)
-            active_yogas = yoga_data.get("active_yogas", [])
-        except Exception as e:
-            logger.warning(f"Weekly forecast day {i}: yogas failed: {e}")
-
-        # Historical tendency from nakshatra
-        tendency = astro.get("historical_market_tendency", "Neutral")
-
-        # Weekday bias
-        wday = target_dt.weekday()
-        wday_info = weekday_map.get(wday, {"day": "", "bias": "neutral", "note": ""})
-
-        # Events on this day
-        day_str = target_dt.strftime("%Y-%m-%d")
-        day_events = [ev for ev in upcoming_events if ev.get("date", "").startswith(day_str)]
-
-        # ── Compute per-day composite score ───────────────────────────────────
-        day_score = 0
-
-        # Astro tendency
-        if tendency == "Bullish":
-            day_score += 2
-        elif tendency == "Bearish":
-            day_score -= 2
-
-        # Yoga score (-10 to +10, scale down)
-        yoga_score = yoga_data.get("score", 0)
-        day_score += yoga_score * 0.3
-
-        # Weekday bias
-        if wday_info["bias"] == "bullish":
-            day_score += 0.5
-        elif wday_info["bias"] == "bearish":
-            day_score -= 0.5
-
-        # Events impact
-        for ev in day_events:
-            impact = ev.get("impact", "medium")
-            if impact == "high":
-                day_score -= 0.5  # High-impact events add uncertainty
-
-        # Global signals (applied with decay for future days)
-        decay = max(0.3, 1.0 - i * 0.1)  # Less weight for further days
-
-        if options_signal["direction"] == "bullish":
-            day_score += 1.0 * decay
-        elif options_signal["direction"] == "bearish":
-            day_score -= 1.0 * decay
-
-        if fii_signal["direction"] == "bullish":
-            day_score += 0.8 * decay
-        elif fii_signal["direction"] == "bearish":
-            day_score -= 0.8 * decay
-
-        if tech_signal["direction"] == "bullish":
-            day_score += 1.0 * decay
-        elif tech_signal["direction"] == "bearish":
-            day_score -= 1.0 * decay
-
-        # Determine verdict
-        if day_score >= 2.5:
-            verdict = "Strong Buy"
-            color = "#4ade80"
-        elif day_score >= 1.0:
-            verdict = "Bullish"
-            color = "#86efac"
-        elif day_score <= -2.5:
-            verdict = "Strong Sell"
-            color = "#f87171"
-        elif day_score <= -1.0:
-            verdict = "Bearish"
-            color = "#fca5a5"
+    
+        # ── Week summary ──────────────────────────────────────────────────────────
+        bull_days = sum(1 for d in days if d["score"] > 0.5)
+        bear_days = sum(1 for d in days if d["score"] < -0.5)
+        neutral_days = len(days) - bull_days - bear_days
+        avg_score = round(sum(d["score"] for d in days) / max(len(days), 1), 2)
+    
+        if avg_score >= 1.5:
+            week_verdict = "Bullish"
+            week_color = "#4ade80"
+        elif avg_score >= 0.5:
+            week_verdict = "Mildly Bullish"
+            week_color = "#86efac"
+        elif avg_score <= -1.5:
+            week_verdict = "Bearish"
+            week_color = "#f87171"
+        elif avg_score <= -0.5:
+            week_verdict = "Mildly Bearish"
+            week_color = "#fca5a5"
         else:
-            verdict = "Neutral"
-            color = "#fbbf24"
-
-        # Build day object
-        days.append({
-            "date": day_str,
-            "weekday": target_dt.strftime("%A"),
-            "verdict": verdict,
-            "verdict_color": color,
-            "score": round(day_score, 2),
-            "astro": {
-                "nakshatra": astro.get("nakshatra_name", "—"),
-                "nakshatra_sanskrit": astro.get("nakshatra_sanskrit", ""),
-                "pada": astro.get("pada", 0),
-                "tithi": astro.get("tithi_name", "—"),
-                "paksha": astro.get("paksha", ""),
-                "yoga": astro.get("yoga_name", "—"),
-                "tendency": tendency,
-                "ruling_planet": astro.get("ruling_planet", ""),
+            week_verdict = "Neutral"
+            week_color = "#fbbf24"
+    
+        return {
+            "market": market,
+            "generated_at": datetime.now().isoformat(),
+            "days": days,
+            "week_summary": {
+                "avg_score": avg_score,
+                "verdict": week_verdict,
+                "verdict_color": week_color,
+                "bull_days": bull_days,
+                "bear_days": bear_days,
+                "neutral_days": neutral_days,
+                "total_signals": 11,
             },
-            "planetary_yogas": [{
-                "name": y["name"],
-                "sanskrit": y.get("sanskrit", ""),
-                "icon": y["icon"],
-                "severity": y["severity"],
-                "impact": y["market_impact"],
-                "desc": y["desc"],
-            } for y in active_yogas],
-            "weekday_bias": wday_info,
-            "events": day_events,
-        })
-
-    return {
-        "market": market,
-        "generated_at": datetime.now().isoformat(),
-        "days": days,
-        "global_signals": {
-            "options": options_signal,
-            "institutional": fii_signal,
-            "technical": tech_signal,
-        },
-        "upcoming_events": upcoming_events,
+            "global_signals": {
+                "options": options_signal,
+                "institutional": fii_signal,
+                "technical": tech_signal,
+            },
+            "chart_patterns": chart_pattern_summary,
+            "news_sentiment": news_signal,
+            "gochar_events": gochar_events,
+            "upcoming_events": upcoming_events,
     }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        logger.error(f"Weekly forecast failed: {e}")
+        # Return partial data if possible
+        return {
+            "market": market,
+            "generated_at": datetime.now().isoformat(),
+            "days": days if 'days' in dir() else [],
+            "week_summary": {"avg_score": 0, "verdict": "Error", "verdict_color": "#f87171", "bull_days": 0, "bear_days": 0, "neutral_days": 0, "total_signals": 0},
+            "global_signals": {},
+            "chart_patterns": {},
+            "news_sentiment": {},
+            "gochar_events": [],
+            "upcoming_events": [],
+            "error": str(e),
+        }
+
 
 
 @app.get("/api/nakshatras")
@@ -862,7 +1084,7 @@ def get_chart_data(symbol: str = "^NSEI", interval: str = "1d", period: str = "6
 
     # ── Kite interval mapping ─────────────────────────────────────────────────
     KITE_INTERVAL_MAP = {
-        '1m': 'minute', '5m': '5minute', '15m': '15minute',
+        '1m': 'minute', '3m': '3minute', '5m': '5minute', '15m': '15minute',
         '1h': '60minute', '1d': 'day', '1wk': 'week', '1mo': 'month',
     }
 
@@ -907,7 +1129,7 @@ def get_chart_data(symbol: str = "^NSEI", interval: str = "1d", period: str = "6
 
     # ── FALLBACK to yfinance ──────────────────────────────────────────────────
     if hist is None:
-        INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
+        INTRADAY_INTERVALS = {"1m", "2m", "3m", "5m", "15m", "30m", "60m", "90m", "1h"}
         yf_period = period
         if interval in INTRADAY_INTERVALS:
             if yf_period not in {"1d", "5d", "1mo"}:
@@ -1033,6 +1255,195 @@ def get_chart_data(symbol: str = "^NSEI", interval: str = "1d", period: str = "6
             "macd": macd_data,
         }
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CHART PATTERN DETECTION — returns all patterns positioned for chart overlay
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/chart/patterns")
+def get_chart_patterns(symbol: str = "^NSEI", interval: str = "1d", period: str = "6mo"):
+    """
+    Detect all technical patterns on the chart OHLCV data.
+    Returns candlestick, harmonic, chart patterns + fibonacci + pivots with timestamps.
+    Uses Kite first for NSE, fallback yfinance — same data as /api/chart/ohlcv.
+    """
+    import pandas as pd
+    import numpy as np
+    from scipy.signal import argrelextrema
+
+    try:
+        from modules.technical_analysis import TechnicalAnalyzer
+        scanner = TechnicalAnalyzer()
+
+        # Map frontend intervals to kite/yfinance intervals
+        KITE_INTERVAL_MAP = {
+            '1m': 'minute', '3m': '3minute', '5m': '5minute', '15m': '15minute', 
+            '1h': '60minute', '1d': 'day', '1wk': 'week', '1mo': 'month',
+        }
+        YF_INTERVAL_MAP = {
+            '1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m', 
+            '1h': '60m', '1d': '1d', '1wk': '1wk', '1mo': '1mo',
+        }
+        PERIOD_DAYS = {
+            '1d': 1, '5d': 5, '1mo': 30, '3mo': 90, '6mo': 180,
+            '1y': 365, '2y': 730, '5y': 1825, 'max': 5000,
+        }
+
+        kite_int = KITE_INTERVAL_MAP.get(interval, 'day')
+        yf_int = YF_INTERVAL_MAP.get(interval, '1d')
+        days_back = PERIOD_DAYS.get(period, 180)
+
+        # Determine market
+        US_GLOBAL = {
+            '^IXIC', '^GSPC', '^DJI', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN',
+            'GOOGL', 'META', 'GC=F', 'SI=F', 'CL=F', 'BTC-USD', 'ETH-USD',
+        }
+        market = "NASDAQ" if symbol in US_GLOBAL else "NSE"
+
+        # Fetch data using existing kite-or-fallback method
+        df = scanner._fetch_with_kite_or_fallback(symbol, yf_int, "", market, days_back)
+        if df is None or df.empty or len(df) < 30:
+            return {"patterns": [], "fibonacci": {}, "harmonic": {}, "chart_pattern": {}}
+
+        df.columns = [c.lower() for c in df.columns]
+        for col in ["open", "high", "low", "close", "volume"]:
+            if col not in df.columns:
+                df[col] = 0.0
+
+        current_price = float(df["close"].iloc[-1])
+
+        # ── Helper: get timestamps from DataFrame ────────────────────────
+        def get_ts(idx_val):
+            """Convert a DataFrame index value to UNIX timestamp."""
+            try:
+                if hasattr(idx_val, 'timestamp'):
+                    return int(idx_val.timestamp())
+                return int(pd.Timestamp(idx_val).timestamp())
+            except Exception:
+                return 0
+
+        # ══════════════════════════════════════════════════════════════════
+        # 1. SCAN CANDLESTICK PATTERNS across the last N bars
+        # ══════════════════════════════════════════════════════════════════
+        candle_markers = []
+        scan_range = min(len(df) - 5, 200)  # scan last 200 bars
+
+        for i in range(scan_range):
+            end_idx = len(df) - i
+            if end_idx < 6:
+                break
+            window = df.iloc[:end_idx].copy()
+            pat = scanner._detect_candlestick_patterns(window)
+            pname = pat.get("name", "")
+            if pname not in ["No Signal", "Consolidation", "Spinning Top"]:
+                bar_time = get_ts(df.index[end_idx - 1])
+                bar_price = float(df.iloc[end_idx - 1]["close"])
+                is_bull = any(k in pname for k in ["Bull", "Morning", "Hammer", "Soldier",
+                                                     "Piercing", "Bottom", "Inverted", "Kicker Up",
+                                                     "Belt Hold" if "Bull" in pname else "___"])
+                is_bear = any(k in pname for k in ["Bear", "Evening", "Shooting", "Hanging",
+                                                     "Crow", "Dark Cloud", "Top", "Kicker"])
+
+                # Avoid duplicate markers at the same time
+                if not any(m["time"] == bar_time and m["name"] == pname for m in candle_markers):
+                    candle_markers.append({
+                        "time": bar_time,
+                        "price": round(bar_price, 2),
+                        "name": pname,
+                        "type": "candlestick",
+                        "bias": "Bullish" if is_bull else "Bearish" if is_bear else "Neutral",
+                        "target": pat.get("target", ""),
+                        "stop": pat.get("stop", ""),
+                        "all_detected": pat.get("all_detected", [pname]),
+                    })
+
+        # ══════════════════════════════════════════════════════════════════
+        # 2. HARMONIC PATTERN (current state + XABCD points)
+        # ══════════════════════════════════════════════════════════════════
+        harmonic_result = scanner._detect_harmonics(df, current_price)
+        harmonic_data = {**harmonic_result}
+
+        # Get XABCD swing point coordinates for drawing on chart
+        try:
+            prices = df["close"].values
+            highs = df["high"].values
+            lows = df["low"].values
+            order = max(3, len(prices) // 30)
+            max_idx = argrelextrema(highs, np.greater_equal, order=order)[0]
+            min_idx = argrelextrema(lows, np.less_equal, order=order)[0]
+            swings = sorted([(i, "H", highs[i]) for i in max_idx] +
+                            [(i, "L", lows[i]) for i in min_idx])
+            if len(swings) >= 5:
+                pts = swings[-5:]
+                harmonic_data["xabcd_points"] = [
+                    {"label": lbl, "time": get_ts(df.index[pt[0]]),
+                     "price": round(float(pt[2]), 2)}
+                    for lbl, pt in zip(["X", "A", "B", "C", "D_current"], pts)
+                ]
+                # Add current as D
+                harmonic_data["xabcd_points"][-1] = {
+                    "label": "D",
+                    "time": get_ts(df.index[-1]),
+                    "price": round(current_price, 2),
+                }
+        except Exception:
+            pass
+
+        # Backtest harmonic
+        h_name = harmonic_result.get("name", "")
+        if h_name not in ["No Swing", "Consolidation"]:
+            harmonic_data["backtest"] = scanner._backtest_pattern(df, h_name, 5)
+
+        # ══════════════════════════════════════════════════════════════════
+        # 3. CHART PATTERNS (structural — H&S, Double Top, Triangles etc.)
+        # ══════════════════════════════════════════════════════════════════
+        chart_pattern = scanner._detect_chart_patterns(df, current_price)
+        cp_name = chart_pattern.get("name", "")
+        if cp_name not in ["Consolidation", "Ranging"]:
+            chart_pattern["backtest"] = scanner._backtest_pattern(df, cp_name, 5)
+
+        # ══════════════════════════════════════════════════════════════════
+        # 4. FIBONACCI LEVELS + PIVOTS
+        # ══════════════════════════════════════════════════════════════════
+        fib_data = scanner._fibonacci_levels(df)
+
+        # ══════════════════════════════════════════════════════════════════
+        # 5. BACKTEST top candlestick patterns
+        # ══════════════════════════════════════════════════════════════════
+        # Backtest up to 5 unique candlestick pattern names
+        seen_names = set()
+        for m in candle_markers:
+            pn = m["name"]
+            if pn not in seen_names and len(seen_names) < 5:
+                seen_names.add(pn)
+                bt = scanner._backtest_pattern(df, pn, 5)
+                m["backtest"] = bt
+            elif pn in seen_names:
+                # Copy backtest from first occurrence
+                for prev in candle_markers:
+                    if prev["name"] == pn and "backtest" in prev:
+                        m["backtest"] = prev["backtest"]
+                        break
+
+        # Sort markers by time (newest first for frontend display)
+        candle_markers.sort(key=lambda x: x["time"], reverse=True)
+
+        return {
+            "symbol": symbol,
+            "interval": interval,
+            "total_bars_scanned": scan_range,
+            "patterns": candle_markers[:50],  # cap at 50 markers
+            "harmonic": harmonic_data,
+            "chart_pattern": chart_pattern,
+            "fibonacci": fib_data,
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        logger.error(f"Chart patterns error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/nakshatras/{number}")
@@ -1244,6 +1655,25 @@ async def run_technical_analysis(req: TechnicalAnalysisRequest):
     try:
         from modules.technical_analysis import TechnicalAnalyzer
         scanner = TechnicalAnalyzer()
+        
+        live_fallback_used = False
+        import pytz
+        from datetime import datetime
+        
+        # Live Market Testing Fallback for NSE
+        if req.market == "NSE" or req.symbol.startswith("^NSE"):
+            ist = pytz.timezone('Asia/Kolkata')
+            now_ist = datetime.now(ist)
+            # Market is open Mon-Fri (0-4), 09:15 to 15:30
+            is_weekend = now_ist.weekday() > 4
+            time_hm = now_ist.hour * 100 + now_ist.minute
+            is_market_hours = 915 <= time_hm <= 1530
+            
+            if is_weekend or not is_market_hours:
+                # NSE is closed, use Crude Oil for live testing
+                req.symbol = "CL=F"
+                req.market = "Global"
+                live_fallback_used = True
 
         # New engine returns a structured dict with scans, fib, prediction, astro
         result = scanner.run_multi_timeframe_scan(
@@ -1255,6 +1685,7 @@ async def run_technical_analysis(req: TechnicalAnalysisRequest):
         return {
             "success": True,
             "symbol": req.symbol,
+            "live_fallback_used": live_fallback_used,
             # New structured fields
             "scans":          result.get("scans", {}),
             "fibonacci":      result.get("fibonacci", {}),
@@ -1660,3 +2091,77 @@ def get_derivatives_alerts():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AI TRADING ASSISTANT — DeepSeek powered chatbot
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Lazy-load AI assistant
+_ai_assistant = None
+
+def get_ai_assistant():
+    global _ai_assistant
+    if _ai_assistant is None:
+        from modules.ai_assistant import AIAssistant
+        _ai_assistant = AIAssistant()
+    return _ai_assistant
+
+
+class AIChatRequest(BaseModel):
+    message: str
+    session_id: str = "default"
+    context: Optional[Dict[str, Any]] = None  # {tab, symbol, patterns, price}
+
+
+@app.post("/api/ai/chat")
+async def ai_chat(req: AIChatRequest):
+    """AI Trading Assistant — answers trading questions, explains patterns, guides newbies."""
+    try:
+        assistant = get_ai_assistant()
+        reply = assistant.chat(
+            message=req.message,
+            session_id=req.session_id,
+            context=req.context,
+        )
+        return {"success": True, "reply": reply}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        logger.error(f"AI chat error: {e}")
+        # Return fallback response instead of 500
+        return {
+            "success": True,
+            "reply": ("👋 I'm having trouble connecting right now, but I can still help!\n\n"
+                      "Try asking about:\n"
+                      "- 📊 Candlestick patterns (Doji, Hammer, Engulfing)\n"
+                      "- 📈 Options strategies (Iron Condor, Spreads)\n"
+                      "- 📐 Fibonacci, RSI, MACD indicators\n\n"
+                      "Please try again in a moment! 💡")
+        }
+
+
+@app.get("/api/ai/prompts")
+def ai_quick_prompts(tab: str = ""):
+    """Get context-aware quick prompt suggestions for the AI chat."""
+    try:
+        assistant = get_ai_assistant()
+        prompts = assistant.get_quick_prompts(tab)
+        return {"prompts": prompts}
+    except Exception:
+        return {"prompts": [
+            "What is a Doji pattern?",
+            "Explain Iron Condor strategy",
+            "How to use Fibonacci levels?",
+            "What does RSI tell me?",
+        ]}
+
+
+@app.delete("/api/ai/clear")
+def ai_clear_session(session_id: str = "default"):
+    """Clear AI conversation history for a session."""
+    try:
+        assistant = get_ai_assistant()
+        assistant.clear_session(session_id)
+        return {"success": True, "message": "Conversation cleared"}
+    except Exception:
+        return {"success": True, "message": "Session cleared"}

@@ -729,12 +729,15 @@ class TechnicalAnalyzer:
         pnl_list = []
         equity = [1.0]
 
-        step = 1
+        # Performance optimization: Max 50 detection points across history
+        total_bars = len(df)
+        step = max(1, (total_bars - 45) // 50)
         i = 30
         while i < len(df) - 15:
             window = df.iloc[:i]
             cp = prices[i - 1]
             dt_str = dates[i - 1].strftime("%Y-%m-%d")
+            unix_time = int(dates[i - 1].timestamp())
 
             # Match pattern
             pat = {}
@@ -746,8 +749,10 @@ class TechnicalAnalyzer:
                          ["Engulfing", "Hammer", "Doji", "Star", "Crow", "Soldier", "Harami",
                           "Cloud", "Piercing", "Tweezer", "Kicker", "Marubozu"]):
                     pat = self._detect_candlestick_patterns(window)
+                elif "Double" in pattern_name or "Head" in pattern_name or "Triangle" in pattern_name or "Wedge" in pattern_name:
+                    pat = self._detect_chart_patterns(window, cp) # Assuming cp is needed here, as in original
                 else:
-                    pat = self._detect_chart_patterns(window, cp)
+                    pat = self._detect_chart_patterns(window, cp) # Fallback for other chart patterns
             except Exception:
                 i += step; continue
 
@@ -779,7 +784,7 @@ class TechnicalAnalyzer:
                         equity.append(equity[-1] * (1 + pnl / 100))
                         if result == "Win": wins += 1
                         else: losses += 1
-                        trades.append({"date": dt_str, "result": result,
+                        trades.append({"date": dt_str, "time": unix_time, "result": result,
                                        "return": f"{'+'if pnl>0 else''}{pnl:.2f}%"})
                         i += 20
                         continue

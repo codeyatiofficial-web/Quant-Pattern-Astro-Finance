@@ -310,11 +310,12 @@ export default function TechnicalAnalysis() {
     const { guardPeriod, modal: planModal, tier } = usePlanGate(1);
     const [symbol, setSymbol] = useState('^NSEI');
     const [market, setMarket] = useState('NSE');
-    const [period, setPeriod] = useState('5y');
+    const [period, setPeriod] = useState('1y');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('');
+    const [liveFallbackUsed, setLiveFallbackUsed] = useState(false);
 
     // Symbol → market auto-detection
     const US_GLOBAL = new Set([
@@ -327,7 +328,7 @@ export default function TechnicalAnalysis() {
     const PERIODS = ['1y', '2y', '5y', '10y', '20y', 'max'];
 
     const runScan = async () => {
-        setLoading(true); setError(''); setResult(null); setActiveTab('');
+        setLoading(true); setError(''); setResult(null); setActiveTab(''); setLiveFallbackUsed(false);
         try {
             const res = await fetch(`${API}/api/analyze/technical`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -337,6 +338,13 @@ export default function TechnicalAnalysis() {
             if (!res.ok || !data.success) { setError(data.detail || 'Scan failed'); }
             else {
                 setResult(data);
+                if (data.live_fallback_used) {
+                    setLiveFallbackUsed(true);
+                    if (data.symbol !== symbol) {
+                        setSymbol(data.symbol);
+                        if (data.symbol === 'CL=F') setMarket('Global');
+                    }
+                }
                 const first = Object.keys(data.scans || {})[0];
                 if (first) setActiveTab(first);
             }
@@ -450,13 +458,24 @@ export default function TechnicalAnalysis() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {['〽️ Harmonic (7 types)', '🕯 Candlestick (25+)', '📊 Chart Patterns',
                         '📐 Fibonacci + Pivots', '📈 MACD + RSI', '📊 OBV + VWAP',
-                        '⚡ Volume Confirm', '🔮 1-Week Forecast', '🌙 Astro Triggers'].map(t => (
+                        '⚡ Volume Confirm', '🔮 1-Week Forecast'].map(t => (
                             <span key={t} style={{ fontSize: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 14, padding: '3px 10px', color: '#c4b5fd' }}>{t}</span>
                         ))}
                 </div>
 
                 {error && <div className="alert-error" style={{ marginTop: 14 }}>❌ {error}</div>}
             </div>
+
+            {liveFallbackUsed && (
+                <div style={{
+                    background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)',
+                    padding: '12px 16px', borderRadius: 8, marginBottom: 16, color: '#fcd34d',
+                    display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 600
+                }}>
+                    <span>⚠️ NSE Offline</span>
+                    <span style={{ color: '#fff', fontWeight: 400 }}>| Temporarily switched to Crude Oil (CL=F) for live market testing and pattern analysis.</span>
+                </div>
+            )}
 
             {/* ── Live Chart ─────────────────────────────────────────────── */}
             <LiveChart
@@ -479,13 +498,12 @@ export default function TechnicalAnalysis() {
                     {/* ── Astro Triggers ───────────────────────────────────────── */}
                     {result.astro_confluence?.length > 0 && (
                         <div className="glass-card" style={{ padding: 20, marginBottom: 16 }}>
-                            <h4 style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>⚡ Upcoming Astro Triggers (7 Days)</h4>
+                            <h4 style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>⚡ Upcoming AI Signal Triggers (7 Days)</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {result.astro_confluence.map((t: any, i: number) => (
                                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
                                         <div>
                                             <span style={{ fontWeight: 600, fontSize: 13 }}>{t.event}</span>
-                                            {t.nakshatra && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>{t.nakshatra}</span>}
                                         </div>
                                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                             <span style={{ fontSize: 12, color: '#f59e0b' }}>{t.date}</span>

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { Home, LineChart, PieChart, BarChart2, Calendar, FileText, Menu, X, Link as LinkIcon, CheckCircle2, TrendingUp } from 'lucide-react';
+import { Home, LineChart, PieChart, BarChart2, Calendar, FileText, Menu, X, Link as LinkIcon, CheckCircle2, TrendingUp, Lock } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { PlanStatusBadge } from './UpgradeModal';
+import { usePlan } from '../contexts/PlanContext';
+
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
 function Logo() {
@@ -37,14 +39,14 @@ function Logo() {
 
 export type Page = 'dashboard' | 'nakshatra' | 'technical' | 'correlation' | 'sentiment' | 'events' | 'derivatives';
 
-const links: { key: Page; label: string; fullName: string; icon: any }[] = [
+const ALL_LINKS: { key: Page; label: string; fullName: string; icon: any; proOnly?: boolean; eliteOnly?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', fullName: 'Dashboard', icon: Home },
-  { key: 'nakshatra', label: 'Astro Analysis', fullName: 'Astro Analysis', icon: BarChart2 },
+  { key: 'nakshatra', label: 'Cycle Analysis', fullName: 'Cycle Analysis', icon: BarChart2, eliteOnly: true },
   { key: 'technical', label: 'Technical', fullName: 'Technical Analysis', icon: LineChart },
-  { key: 'correlation', label: 'Correlation', fullName: 'Astro-Correlation', icon: PieChart },
-  { key: 'sentiment', label: 'Predictions', fullName: 'Daily Predictions', icon: Calendar },
-  { key: 'events', label: 'Events', fullName: 'Economic Events', icon: FileText },
   { key: 'derivatives', label: 'Derivatives', fullName: 'Derivatives', icon: TrendingUp },
+  { key: 'sentiment', label: 'Predictions', fullName: 'Daily Predictions', icon: Calendar, proOnly: true },
+  { key: 'events', label: 'Events', fullName: 'Economic Events', icon: FileText },
+  { key: 'correlation', label: 'Signal Correlation', fullName: 'Signal Correlation', icon: PieChart, proOnly: true },
 ];
 
 interface NavigationProps {
@@ -58,6 +60,10 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [tokenStatus, setTokenStatus] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const { tier } = usePlan();
+  const isFree = tier === 'free';
+  const isElite = tier === 'elite';
 
   const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
@@ -69,8 +75,6 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
   }, []);
 
   const handleKiteLogin = () => {
-    // Redirect to backend's Kite login endpoint
-    // On localhost: API = http://localhost:8000, on production: API = '' (same origin)
     const backendUrl = API || window.location.origin;
     window.location.href = `${backendUrl}/api/kite/redirect`;
   };
@@ -102,119 +106,148 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
     window.open(`${backendUrl}/api/kite/redirect`, '_blank');
   };
 
-  return (
-    <nav style={{
-      position: 'fixed', width: '100%', zIndex: 50, top: 0, left: 0,
-      background: 'var(--bg-card)', borderBottom: '1px solid var(--border-active)',
-      backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', transition: 'background 0.3s, border-color 0.3s',
-      boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
-    }}>
-      <div style={{ maxWidth: 1600, margin: '0 auto', padding: '0 16px' }}>
-        {/* Row 1: Logo + Kite/Theme + Mobile hamburger */}
-        <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={() => onNavigate('dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}>
-            <Logo />
-          </button>
+  const handleNavClick = (link: typeof ALL_LINKS[0]) => {
+    if (link.eliteOnly && !isElite) {
+      setShowUpgrade(true);
+      return;
+    }
+    if (link.proOnly && isFree) {
+      setShowUpgrade(true);
+      return;
+    }
+    onNavigate(link.key);
+  };
 
-          {/* Desktop: Kite + Theme — use inline media query via CSS class */}
-          <div className="nav-desktop-actions">
-            <PlanStatusBadge />
-            {kiteConnected === true ? (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
-                background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 12, fontWeight: 600,
-                borderRadius: 20, border: '1px solid rgba(16,185,129,0.2)',
+  // Dynamically import UpgradeModal only when needed to avoid circular deps
+  const [UpgradeModal, setUpgradeModalComp] = useState<any>(null);
+  useEffect(() => {
+    if (showUpgrade && !UpgradeModal) {
+      import('./UpgradeModal').then(m => setUpgradeModalComp(() => m.UpgradeModal));
+    }
+  }, [showUpgrade]);
+
+  return (
+    <>
+      {showUpgrade && UpgradeModal && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      <nav style={{
+        position: 'fixed', width: '100%', zIndex: 50, top: 0, left: 0,
+        background: 'var(--bg-card)', borderBottom: '1px solid var(--border-active)',
+        backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', transition: 'background 0.3s, border-color 0.3s',
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+      }}>
+        <div style={{ maxWidth: 1600, margin: '0 auto', padding: '0 16px' }}>
+          {/* Row 1: Logo + Kite/Theme + Mobile hamburger */}
+          <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button onClick={() => onNavigate('dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}>
+              <Logo />
+            </button>
+
+            {/* Desktop: Kite + Theme */}
+            <div className="nav-desktop-actions">
+              <PlanStatusBadge />
+              {kiteConnected === true ? (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
+                  background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: 12, fontWeight: 600,
+                  borderRadius: 20, border: '1px solid rgba(16,185,129,0.2)',
+                }}>
+                  <CheckCircle2 size={14} /> Kite Live
+                </div>
+              ) : kiteConnected === false ? (
+                <button onClick={handleKiteLogin} style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
+                  background: 'var(--accent-indigo)', color: 'white', fontSize: 12, fontWeight: 600,
+                  borderRadius: 20, border: 'none', cursor: 'pointer',
+                }}>
+                  <LinkIcon size={14} /> Connect Kite
+                </button>
+              ) : null}
+              <ThemeToggle />
+            </div>
+
+            {/* Mobile hamburger + theme */}
+            <div className="nav-mobile-actions">
+              {kiteConnected === false && (
+                <button onClick={handleKiteLogin} style={{
+                  padding: '4px 10px', background: 'var(--accent-indigo)', color: 'white',
+                  fontSize: 11, fontWeight: 600, borderRadius: 8, border: 'none', cursor: 'pointer',
+                }}>
+                  Connect
+                </button>
+              )}
+              <ThemeToggle />
+              <button onClick={() => setMobileMenuOpen(x => !x)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 8, color: '#9ca3af',
               }}>
-                <CheckCircle2 size={14} /> Kite Live
-              </div>
-            ) : kiteConnected === false ? (
-              <button onClick={handleKiteLogin} style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
-                background: 'var(--accent-indigo)', color: 'white', fontSize: 12, fontWeight: 600,
-                borderRadius: 20, border: 'none', cursor: 'pointer',
-              }}>
-                <LinkIcon size={14} /> Connect Kite
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
-            ) : null}
-            <ThemeToggle />
+            </div>
           </div>
 
-          {/* Mobile hamburger + theme */}
-          <div className="nav-mobile-actions">
-            {kiteConnected === false && (
-              <button onClick={handleKiteLogin} style={{
-                padding: '4px 10px', background: 'var(--accent-indigo)', color: 'white',
-                fontSize: 11, fontWeight: 600, borderRadius: 8, border: 'none', cursor: 'pointer',
-              }}>
-                Connect
-              </button>
-            )}
-            <ThemeToggle />
-            <button onClick={() => setMobileMenuOpen(x => !x)} style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 8, color: '#9ca3af',
+          {/* Row 2: Desktop tab bar */}
+          <div className="nav-desktop-tabs">
+            <div style={{
+              display: 'inline-flex', gap: 6, alignItems: 'center',
+              background: 'var(--bg-card)', padding: '6px 8px', borderRadius: 14,
+              border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-card)',
             }}>
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+              {ALL_LINKS.map((link) => {
+                const Icon = link.icon;
+                const active = activePage === link.key;
+                const locked = (link.eliteOnly && !isElite) || (link.proOnly && isFree);
+                return (
+                  <button key={link.key} onClick={() => handleNavClick(link)} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 20px', borderRadius: 10, fontSize: 14, fontWeight: active ? 700 : 500,
+                    whiteSpace: 'nowrap', cursor: 'pointer', border: 'none', transition: 'all 0.3s ease',
+                    background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.1) 100%)' : 'transparent',
+                    color: locked ? 'var(--text-muted)' : active ? 'var(--text-primary)' : 'var(--text-muted)',
+                    boxShadow: active ? 'inset 0 -2px 0 var(--accent-indigo)' : 'none',
+                    opacity: locked ? 0.65 : 1,
+                  }}>
+                    <Icon size={14} />
+                    <span>{link.label}</span>
+                    {locked && <Lock size={10} style={{ marginLeft: 2, opacity: 0.7 }} />}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Row 2: Desktop tab bar */}
-        <div className="nav-desktop-tabs">
-          <div style={{
-            display: 'inline-flex', gap: 6, alignItems: 'center',
-            background: 'var(--bg-card)', padding: '6px 8px', borderRadius: 14,
-            border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-card)',
+        {/* Mobile dropdown */}
+        {mobileMenuOpen && (
+          <div className="nav-mobile-dropdown" style={{
+            position: 'absolute', top: 56, left: 0, width: '100%',
+            background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.3)', padding: 16,
+            display: 'flex', flexDirection: 'column', gap: 8, zIndex: 50,
           }}>
-            {links.map((link) => {
+            {ALL_LINKS.map((link) => {
               const Icon = link.icon;
               const active = activePage === link.key;
+              const locked = (link.eliteOnly && !isElite) || (link.proOnly && isFree);
               return (
-                <button key={link.key} onClick={() => onNavigate(link.key)} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '8px 20px', borderRadius: 10, fontSize: 14, fontWeight: active ? 700 : 500,
-                  whiteSpace: 'nowrap', cursor: 'pointer', border: 'none', transition: 'all 0.3s ease',
-                  background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.1) 100%)' : 'transparent',
-                  color: active ? 'var(--text-primary)' : 'var(--text-muted)',
-                  boxShadow: active ? 'inset 0 -2px 0 var(--accent-indigo)' : 'none',
-                }}>
-                  <Icon size={14} />
-                  <span>{link.label}</span>
+                <button key={link.key}
+                  onClick={() => { handleNavClick(link); setMobileMenuOpen(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 16px', borderRadius: 12, border: 'none',
+                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
+                    background: active ? 'rgba(99,102,241,0.12)' : 'transparent',
+                    color: locked ? '#6b7280' : active ? 'var(--accent-indigo)' : '#9ca3af',
+                    fontWeight: active ? 700 : 500, fontSize: 14,
+                    opacity: locked ? 0.7 : 1,
+                  }}>
+                  <Icon size={18} />
+                  <span>{link.fullName}</span>
+                  {locked && <Lock size={12} style={{ marginLeft: 'auto', opacity: 0.6 }} />}
                 </button>
               );
             })}
           </div>
-        </div>
-      </div>
-
-      {/* Mobile dropdown */}
-      {mobileMenuOpen && (
-        <div className="nav-mobile-dropdown" style={{
-          position: 'absolute', top: 56, left: 0, width: '100%',
-          background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)',
-          boxShadow: '0 12px 30px rgba(0,0,0,0.3)', padding: 16,
-          display: 'flex', flexDirection: 'column', gap: 8, zIndex: 50,
-        }}>
-          {links.map((link) => {
-            const Icon = link.icon;
-            const active = activePage === link.key;
-            return (
-              <button key={link.key}
-                onClick={() => { onNavigate(link.key); setMobileMenuOpen(false); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 16px', borderRadius: 12, border: 'none',
-                  cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-                  background: active ? 'rgba(99,102,241,0.12)' : 'transparent',
-                  color: active ? 'var(--accent-indigo)' : '#9ca3af',
-                  fontWeight: active ? 700 : 500, fontSize: 14,
-                }}>
-                <Icon size={18} />
-                <span>{link.fullName}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </nav>
+        )}
+      </nav>
+    </>
   );
 }

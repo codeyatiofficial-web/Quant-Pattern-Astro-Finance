@@ -10,105 +10,105 @@ function ReturnCell({ v }: { v: number | null }) {
     return <span style={{ color, fontWeight: 600 }}>{v > 0 ? '+' : ''}{v.toFixed(3)}%</span>;
 }
 
-// ── Comprehensive event type groups ─────────────────────────────────────────────
+// ── Comprehensive signal type groups ─────────────────────────────────────────────
 const EVENT_GROUPS = [
     {
-        group: '⚙️ Planet Motion',
+        group: '⚙️ Cycle Motion',
         desc: 'Planetary speed & direction states',
         color: '#6366f1',
         events: [
-            { value: 'Retrograde', label: '↩ Retrograde', note: 'Planet moving backward' },
-            { value: 'Direct', label: '→ Direct', note: 'Planet moving forward' },
-            { value: 'High Speed', label: '⚡ High Speed', note: 'Top 20% orbital velocity' },
-            { value: 'Exalted', label: '⬆️ Exalted', note: 'Planet in exaltation sign' },
-            { value: 'Debilitated', label: '⬇️ Debilitated', note: 'Planet in debilitation sign' },
-            { value: 'Own House', label: '🏠 Own House', note: 'Planet in own sign' },
+            { value: 'Retrograde', label: '↩ Retrograde Cycle', note: 'Planet moving backward' },
+            { value: 'Direct', label: '→ Direct Cycle', note: 'Planet moving forward' },
+            { value: 'High Speed', label: '⚡ High Velocity', note: 'Top 20% orbital velocity' },
+            { value: 'Exalted', label: '⬆️ Peak Strength', note: 'Planet at maximum strength' },
+            { value: 'Debilitated', label: '⬇️ Low Strength', note: 'Planet at minimum strength' },
+            { value: 'Own House', label: '🏠 Home Position', note: 'Planet in home sign' },
         ],
     },
     {
-        group: '🔥 Malefic Conjunction Yogas',
+        group: '🔥 Stress Signals',
         desc: 'Challenging planetary combinations',
         color: '#ef4444',
         events: [
-            { value: 'Angarak_Yoga', label: '🔥 Angarak Yoga', note: 'Mars + Rahu' },
-            { value: 'Guru_Chandal_Yoga', label: '☠️ Guru Chandal', note: 'Jupiter + Rahu' },
-            { value: 'Vish_Yoga', label: '☠️ Vish Yoga', note: 'Moon + Saturn' },
-            { value: 'Yama_Yoga', label: '⚔️ Yama Yoga', note: 'Mars + Saturn' },
-            { value: 'Surya_Shani_Yoga', label: '☀️🪐 Surya-Shani', note: 'Sun + Saturn' },
-            { value: 'Surya_Mangal_Yoga', label: '☀️♂️ Surya-Mangal', note: 'Sun + Mars' },
-            { value: 'Chandra_Mangal_Yoga', label: '🌙♂️ Chandra-Mangal', note: 'Moon + Mars' },
-            { value: 'Chandra_Shani_Yoga', label: '🌙🪐 Chandra-Shani', note: 'Moon + Saturn' },
-            { value: 'Chandal_Venus', label: '♀️🐍 Chandal Venus', note: 'Venus + Rahu' },
-            { value: 'Shani_Rahu', label: '🪐🐍 Shani-Rahu', note: 'Saturn + Rahu (Shrapit)' },
-            { value: 'Shani_Ketu', label: '🪐🔱 Shani-Ketu', note: 'Saturn + Ketu' },
+            { value: 'Angarak_Yoga', label: '🔥 Stress Signal A1', note: 'Mars + Rahu combination' },
+            { value: 'Guru_Chandal_Yoga', label: '☠️ Stress Signal A2', note: 'Jupiter + Rahu combination' },
+            { value: 'Vish_Yoga', label: '☠️ Stress Signal A3', note: 'Moon + Saturn combination' },
+            { value: 'Yama_Yoga', label: '⚔️ Stress Signal A4', note: 'Mars + Saturn combination' },
+            { value: 'Surya_Shani_Yoga', label: '☀️🪐 Stress Signal A5', note: 'Sun + Saturn combination' },
+            { value: 'Surya_Mangal_Yoga', label: '☀️♂️ Stress Signal A6', note: 'Sun + Mars combination' },
+            { value: 'Chandra_Mangal_Yoga', label: '🌙♂️ Stress Signal A7', note: 'Moon + Mars combination' },
+            { value: 'Chandra_Shani_Yoga', label: '🌙🪐 Stress Signal A8', note: 'Moon + Saturn combination' },
+            { value: 'Chandal_Venus', label: '♀️🐍 Stress Signal A9', note: 'Venus + Rahu combination' },
+            { value: 'Shani_Rahu', label: '🪐🐍 Stress Signal A10', note: 'Saturn + Rahu combination' },
+            { value: 'Shani_Ketu', label: '🪐🔱 Stress Signal A11', note: 'Saturn + Ketu combination' },
         ],
     },
     {
-        group: '✨ Benefic Conjunction Yogas',
-        desc: 'Favorable planetary combinations',
+        group: '✨ Momentum Signals',
+        desc: 'Favorable compound combinations',
         color: '#10b981',
         events: [
-            { value: 'Budh_Aditya_Yoga', label: '☿☀️ Budh-Aditya', note: 'Mercury + Sun' },
-            { value: 'Gajakesari_Yoga', label: '🐘 Gajakesari', note: 'Moon + Jupiter (same sign)' },
-            { value: 'Gajakesari_Kendra', label: '🐘🔲 Gajakesari Kendra', note: 'Jupiter in Kendra to Moon' },
-            { value: 'Shukra_Guru_Yoga', label: '♀️♃ Shukra-Guru', note: 'Venus + Jupiter' },
-            { value: 'Guru_Mangal_Yoga', label: '♃♂️ Guru-Mangal', note: 'Jupiter + Mars' },
-            { value: 'Bhrigu_Mangal_Yoga', label: '♀️♂️ Bhrigu-Mangal', note: 'Venus + Mars' },
-            { value: 'Clash_Of_Gurus', label: '⚖️ Clash of Gurus', note: 'Jupiter + Venus (same sign)' },
-            { value: 'Budh_Shani_Yoga', label: '☿🪐 Budh-Shani', note: 'Mercury + Saturn' },
-            { value: 'Guru_Ketu', label: '♃🔱 Guru-Ketu', note: 'Jupiter + Ketu' },
+            { value: 'Budh_Aditya_Yoga', label: '☿☀️ Momentum Signal B1', note: 'Mercury + Sun combination' },
+            { value: 'Gajakesari_Yoga', label: '🐘 Momentum Signal B2', note: 'Moon + Jupiter (same sign)' },
+            { value: 'Gajakesari_Kendra', label: '🐘🔲 Momentum Signal B3', note: 'Jupiter in Kendra to Moon' },
+            { value: 'Shukra_Guru_Yoga', label: '♀️♃️ Momentum Signal B4', note: 'Venus + Jupiter combination' },
+            { value: 'Guru_Mangal_Yoga', label: '♃️♂️ Momentum Signal B5', note: 'Jupiter + Mars combination' },
+            { value: 'Bhrigu_Mangal_Yoga', label: '♀️♂️ Momentum Signal B6', note: 'Venus + Mars combination' },
+            { value: 'Clash_Of_Gurus', label: '⚖️ Momentum Signal B7', note: 'Jupiter + Venus (same sign)' },
+            { value: 'Budh_Shani_Yoga', label: '☿🪐 Momentum Signal B8', note: 'Mercury + Saturn combination' },
+            { value: 'Guru_Ketu', label: '♃️🔱 Momentum Signal B9', note: 'Jupiter + Ketu combination' },
         ],
     },
     {
-        group: '👑 Pancha Mahapurusha Yogas',
-        desc: 'Five great person yogas by planet in power',
+        group: '👑 Strength Signals',
+        desc: 'High-strength planetary placements',
         color: '#f59e0b',
         events: [
-            { value: 'Shasha_Yoga', label: '🪐 Shasha Yoga', note: 'Saturn in Libra/Cap/Aqua' },
-            { value: 'Malavya_Yoga', label: '♀️ Malavya Yoga', note: 'Venus in Taurus/Libra/Pisces' },
-            { value: 'Ruchaka_Yoga', label: '♂️ Ruchaka Yoga', note: 'Mars in Aries/Scorpio/Cap' },
-            { value: 'Hamsa_Yoga', label: '♃ Hamsa Yoga', note: 'Jupiter in Cancer/Sag/Pisces' },
-            { value: 'Bhadra_Yoga', label: '☿ Bhadra Yoga', note: 'Mercury in Gemini/Virgo' },
-            { value: 'Neech_Bhang_Raj_Yoga', label: '♻️ Neech Bhang Raj', note: 'Debilitated planet saved' },
+            { value: 'Shasha_Yoga', label: '🪐 Strength Signal C1', note: 'Saturn at peak power' },
+            { value: 'Malavya_Yoga', label: '♀️ Strength Signal C2', note: 'Venus at peak power' },
+            { value: 'Ruchaka_Yoga', label: '♂️ Strength Signal C3', note: 'Mars at peak power' },
+            { value: 'Hamsa_Yoga', label: '♃️ Strength Signal C4', note: 'Jupiter at peak power' },
+            { value: 'Bhadra_Yoga', label: '☿ Strength Signal C5', note: 'Mercury at peak power' },
+            { value: 'Neech_Bhang_Raj_Yoga', label: '♻️ Strength Signal C6', note: 'Weakness reversal pattern' },
         ],
     },
     {
-        group: '🌑 Eclipse & Node Yogas',
-        desc: 'Solar/Lunar eclipses and Rahu-Ketu formations',
+        group: '🌑 Volatility Events',
+        desc: 'High-volatility astronomical formations',
         color: '#dc2626',
         events: [
-            { value: 'Solar_Eclipse', label: '🌑 Solar Eclipse', note: 'New Moon + Rahu/Ketu <18°' },
-            { value: 'Lunar_Eclipse', label: '🌕 Lunar Eclipse', note: 'Full Moon + Rahu/Ketu <18°' },
-            { value: 'Grahan_Yoga', label: '🌗 Grahan Yoga', note: 'Any planet within 9° of nodes' },
-            { value: 'Kaal_Sarp_Dosh', label: '🐍 Kaal Sarp Dosh', note: 'All 7 planets hemmed by nodes' },
-            { value: 'Sarp_Dosh', label: '🐍 Sarp Dosh', note: '2+ malefics in same sign' },
-            { value: 'Rahu_Ketu_Axis_Sun', label: '☀️🐍 Sun on Node Axis', note: 'Sun within 10° of Rahu/Ketu' },
-            { value: 'Rahu_Ketu_Axis_Moon', label: '🌙🐍 Moon on Node Axis', note: 'Moon within 10° of Rahu/Ketu' },
-            { value: 'Rahu_Ketu_Axis_Mars', label: '♂️🐍 Mars on Node Axis', note: 'Mars within 10° of Rahu/Ketu' },
+            { value: 'Solar_Eclipse', label: '🌑 Volatility Event D1', note: 'Solar eclipse formation' },
+            { value: 'Lunar_Eclipse', label: '🌕 Volatility Event D2', note: 'Lunar eclipse formation' },
+            { value: 'Grahan_Yoga', label: '🎗 Volatility Event D3', note: 'Near-node planetary alignment' },
+            { value: 'Kaal_Sarp_Dosh', label: '🐍 Volatility Event D4', note: 'All planets hemmed by nodes' },
+            { value: 'Sarp_Dosh', label: '🐍 Volatility Event D5', note: '2+ malefics in same sign' },
+            { value: 'Rahu_Ketu_Axis_Sun', label: '☀️🐍 Volatility Event D6', note: 'Sun on nodal axis' },
+            { value: 'Rahu_Ketu_Axis_Moon', label: '🌙🐍 Volatility Event D7', note: 'Moon on nodal axis' },
+            { value: 'Rahu_Ketu_Axis_Mars', label: '♂️🐍 Volatility Event D8', note: 'Mars on nodal axis' },
         ],
     },
     {
-        group: '🌙 Moon Phase Yogas',
+        group: '🌙 Phase Events',
         desc: 'Lunar cycle formations',
         color: '#8b5cf6',
         events: [
-            { value: 'Amavasya_Defect', label: '🌑 Amavasya', note: 'New Moon (Sun+Moon <12°)' },
-            { value: 'Purnima_Yoga', label: '🌕 Purnima', note: 'Full Moon (Sun-Moon ~180°)' },
-            { value: 'Paksha_Sandi', label: '🌓 Paksha Sandi', note: 'Moon at waxing/waning boundary' },
-            { value: 'Paap_Kartari_Moon', label: '🌙⚔️ Paap Kartari Moon', note: 'Moon hemmed by malefics' },
+            { value: 'Amavasya_Defect', label: '🌑 Phase Event E1', note: 'New Moon formation' },
+            { value: 'Purnima_Yoga', label: '🌕 Phase Event E2', note: 'Full Moon formation' },
+            { value: 'Paksha_Sandi', label: '🍓 Phase Event E3', note: 'Waxing/waning boundary' },
+            { value: 'Paap_Kartari_Moon', label: '🌙⚔️ Phase Event E4', note: 'Moon hemmed by malefics' },
         ],
     },
     {
-        group: '🔥 Combustion Yogas',
-        desc: 'Planets hidden/weakened by proximity to Sun',
+        group: '🔥 Suppression Signals',
+        desc: 'Planets weakened by proximity to Sun',
         color: '#f97316',
         events: [
-            { value: 'Mercury_Combust', label: '☿🔥 Mercury Combust', note: 'Mercury within 14° of Sun' },
-            { value: 'Venus_Combust', label: '♀️🔥 Venus Combust', note: 'Venus within 10° of Sun' },
-            { value: 'Mars_Combust', label: '♂️🔥 Mars Combust', note: 'Mars within 17° of Sun' },
-            { value: 'Jupiter_Combust', label: '♃🔥 Jupiter Combust', note: 'Jupiter within 11° of Sun' },
-            { value: 'Saturn_Combust', label: '🪐🔥 Saturn Combust', note: 'Saturn within 15° of Sun' },
-            { value: 'Multiple_Retrograde', label: '↩↩ Multiple Retrograde', note: '3+ planets retrograde simultaneously' },
+            { value: 'Mercury_Combust', label: '☿🔥 Suppression F1', note: 'Mercury suppressed' },
+            { value: 'Venus_Combust', label: '♀️🔥 Suppression F2', note: 'Venus suppressed' },
+            { value: 'Mars_Combust', label: '♂️🔥 Suppression F3', note: 'Mars suppressed' },
+            { value: 'Jupiter_Combust', label: '♃️🔥 Suppression F4', note: 'Jupiter suppressed' },
+            { value: 'Saturn_Combust', label: '🪐🔥 Suppression F5', note: 'Saturn suppressed' },
+            { value: 'Multiple_Retrograde', label: '↩↩ Suppression F6', note: '3+ planets retrograde simultaneously' },
         ],
     },
 ];
@@ -233,9 +233,9 @@ export default function AstroCorrelation() {
     return (
         <div>
             {planModal}
-            <h1 className="section-title">🌌 Astro-Correlation Engine</h1>
+            <h1 className="section-title">🔬 Signal Correlation Engine</h1>
             <p className="section-subtitle">
-                Backtesting all 9 planets · 44 Yoga types · Solar & Lunar Eclipses · Market & VIX reactions
+                Backtesting 44 proprietary signal patterns · Cycle & Volatility reactions across markets
             </p>
 
             <div className="tab-list" style={{ marginBottom: 20 }}>
@@ -246,9 +246,9 @@ export default function AstroCorrelation() {
             {sub === 'backtest' && (
                 <div>
                     <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
-                        <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 16 }}>Configure Planetary + Yoga Backtest</h3>
+                        <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 16 }}>Configure Signal Pattern Backtest</h3>
                         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
-                            Select any yoga / planetary state below · {ALL_YOGA_EVENTS.length} yoga types across 7 categories
+                            Select any signal pattern below · {ALL_YOGA_EVENTS.length} signal types across 7 categories
                         </p>
 
                         {/* Symbol, Planet (if applicable), Lookback, Forward */}
@@ -379,7 +379,7 @@ export default function AstroCorrelation() {
                             <div style={{ minWidth: 150 }}>
                                 <label className="form-label">Forward Days (lag)</label>
                                 <select className="form-select" value={forwardDays} onChange={e => setForwardDays(Number(e.target.value))}>
-                                    {[0, 1, 2, 3, 5, 7].map(d => <option key={d} value={d}>{d === 0 ? 'Same day' : `T+${d}`}</option>)}
+                                    {[0, 1, 2, 3, 5, 7, 10, 14].map(d => <option key={d} value={d}>{d === 0 ? 'Same day' : `T+${d}`}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -442,9 +442,9 @@ export default function AstroCorrelation() {
             {sub === 'vix' && (
                 <div>
                     <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
-                        <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 16 }}>VIX Planetary Backtest (India VIX)</h3>
+                        <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 16 }}>VIX Signal Backtest (India VIX)</h3>
                         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
-                            Does a specific yoga or planetary state cause India VIX to spike or drop?
+                            Does a specific signal pattern or cycle state cause India VIX to spike or drop?
                         </p>
 
                         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20, alignItems: 'flex-end' }}>

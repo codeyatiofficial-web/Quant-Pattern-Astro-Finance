@@ -49,12 +49,12 @@ function NumCell({ v, decimals = 4, suffix = '%' }: { v: number | null; decimals
 type SubTab = 'all' | 'rise' | 'no_rise' | 'tithi' | 'stats' | 'planets';
 
 const SUBTABS: { key: SubTab; label: string; emoji: string }[] = [
-    { key: 'all', label: 'All Days', emoji: '🌕' },
-    { key: 'rise', label: 'Moon Rises (Market)', emoji: '🌅' },
-    { key: 'no_rise', label: 'Moon Not Visible', emoji: '🌑' },
-    { key: 'tithi', label: 'By Tithi', emoji: '📅' },
+    { key: 'all', label: 'All Days', emoji: '📊' },
+    { key: 'rise', label: 'Intraday Cycle', emoji: '🌅' },
+    { key: 'no_rise', label: 'Off-Cycle', emoji: '📉' },
+    { key: 'tithi', label: 'By Lunar Phase', emoji: '📅' },
     { key: 'stats', label: 'Statistical Tests', emoji: '🔬' },
-    { key: 'planets', label: 'Planet / Element', emoji: '🪐' },
+    { key: 'planets', label: 'Signal Driver', emoji: '⚡' },
 ];
 
 export default function NakshatraAnalysis({ data }: { data: any }) {
@@ -63,7 +63,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
     if (!data) {
         return (
             <div style={{ padding: '40px 0' }}>
-                <h1 className="section-title">📊 Nakshatra Performance Analysis</h1>
+                <h1 className="section-title">📊 Cycle Pattern Analysis</h1>
                 <p className="section-subtitle">Load data from the Dashboard to run analysis.</p>
                 <div className="alert-warn" style={{ maxWidth: 500 }}>
                     ⚠️ Please run analysis from the <strong>Dashboard</strong> tab first.
@@ -85,7 +85,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
             {/* ── Header ── */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                 <div>
-                    <h1 className="section-title">📊 Nakshatra Performance Analysis</h1>
+                    <h1 className="section-title">📊 Cycle Pattern Analysis</h1>
                     <p className="section-subtitle">
                         <span className="pulse-dot" style={{ marginRight: 7 }} />
                         {data.observations?.toLocaleString()} trading days analysed
@@ -106,7 +106,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                 ))}
             </div>
 
-            {/* ── Nakshatra / Tithi tables ── */}
+            {/* ── Cycle Pattern / Phase tables ── */}
             {(isNak || isTithi) && (
                 <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                     <div style={{ overflowX: 'auto', maxHeight: 620, overflowY: 'auto' }}>
@@ -115,8 +115,8 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                                 <thead>
                                     <tr>
                                         <th style={{ width: 32 }}>#</th>
-                                        <th>Nakshatra</th>
-                                        <th>Ruling Planet</th>
+                                        <th>Cycle Pattern</th>
+                                        <th>Cycle Driver</th>
                                         <th>Days</th>
                                         <th>Mean Return</th>
                                         <th>Median</th>
@@ -155,7 +155,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                                 <thead>
                                     <tr>
                                         <th style={{ width: 32 }}>#</th>
-                                        <th>Tithi</th>
+                                        <th>Phase</th>
                                         <th>Paksha</th>
                                         <th>Days</th>
                                         <th>Mean Return</th>
@@ -192,7 +192,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                     {[
                         {
                             title: '🔬 ANOVA Test',
-                            sub: 'Are mean returns significantly different across Nakshatras?',
+                            sub: 'Are mean returns significantly different across cycle patterns?',
                             result: data.anova?.result,
                             fields: [
                                 { label: 'F-Statistic', value: data.anova?.f_statistic?.toFixed(4) },
@@ -204,7 +204,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                         },
                         {
                             title: '📐 Chi-Square Test',
-                            sub: 'Is market direction independent of Nakshatra?',
+                            sub: 'Is market direction independent of cycle pattern?',
                             result: data.chi2?.result,
                             fields: [
                                 { label: 'χ² Statistic', value: data.chi2?.chi_square_statistic?.toFixed(4) },
@@ -239,7 +239,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
             {sub === 'planets' && (
                 <div className="grid-2" style={{ gap: 20 }}>
                     {[
-                        { title: '🪐 Ruling Planet Returns', rows: data.planet_analysis || [], nameKey: 'ruling_planet' },
+                        { title: '⚡ Signal Driver Returns', rows: data.planet_analysis || [], nameKey: 'ruling_planet' },
                         { title: '🔥 Element Returns', rows: data.element_analysis || [], nameKey: 'element' },
                     ].map((section, si) => (
                         <div key={si} className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -250,7 +250,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>{si === 0 ? 'Planet' : 'Element'}</th>
+                                        <th>{si === 0 ? 'Driver' : 'Element'}</th>
                                         <th>Days</th>
                                         <th>Mean Return</th>
                                         <th>Win Rate</th>
