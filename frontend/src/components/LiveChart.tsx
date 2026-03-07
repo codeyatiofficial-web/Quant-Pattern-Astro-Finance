@@ -373,7 +373,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
         if (rsiContainerRef.current && chartData.indicators?.rsi?.length) {
             const rsiChart = createChart(rsiContainerRef.current, {
                 width: container.clientWidth,
-                height: 100,
+                height: 140,
                 layout: {
                     background: { type: ColorType.Solid, color: 'transparent' },
                     textColor: '#94a3b8',
@@ -424,6 +424,9 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                 if (range) chart.timeScale().setVisibleLogicalRange(range);
             });
         }
+
+        // Fit all candles into the visible chart area
+        chart.timeScale().fitContent();
 
         // Resize handler
         const handleResize = () => {

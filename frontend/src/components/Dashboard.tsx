@@ -237,7 +237,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                         borderRadius: 12, padding: 14, position: 'relative',
                                     }}>
                                         {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-indigo)', color: 'white', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 6, letterSpacing: 1 }}>TODAY</div>}
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>{day.weekday} {day.date?.slice(5)}</div>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>{day.weekday} {day.date ? new Date(day.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'long' }) : ''}</div>
 
                                         {/* Verdict */}
                                         <div style={{ textAlign: 'center', marginBottom: 8 }}>

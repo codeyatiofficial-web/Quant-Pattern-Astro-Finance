@@ -187,8 +187,8 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
           {/* Row 2: Desktop tab bar */}
           <div className="nav-desktop-tabs">
             <div style={{
-              display: 'inline-flex', gap: 6, alignItems: 'center',
-              background: 'var(--bg-card)', padding: '6px 8px', borderRadius: 14,
+              display: 'inline-flex', gap: 4, alignItems: 'center',
+              background: 'var(--bg-card)', padding: '5px 6px', borderRadius: 14,
               border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-card)',
             }}>
               {ALL_LINKS.map((link) => {
@@ -197,17 +197,17 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
                 const locked = (link.eliteOnly && !isElite) || (link.proOnly && isFree);
                 return (
                   <button key={link.key} onClick={() => handleNavClick(link)} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 20px', borderRadius: 10, fontSize: 14, fontWeight: active ? 700 : 500,
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '7px 14px', borderRadius: 10, fontSize: 12.5, fontWeight: active ? 700 : 500,
                     whiteSpace: 'nowrap', cursor: 'pointer', border: 'none', transition: 'all 0.3s ease',
                     background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.1) 100%)' : 'transparent',
                     color: locked ? 'var(--text-muted)' : active ? 'var(--text-primary)' : 'var(--text-muted)',
                     boxShadow: active ? 'inset 0 -2px 0 var(--accent-indigo)' : 'none',
                     opacity: locked ? 0.65 : 1,
                   }}>
-                    <Icon size={14} />
+                    <Icon size={13} />
                     <span>{link.label}</span>
-                    {locked && <Lock size={10} style={{ marginLeft: 2, opacity: 0.7 }} />}
+                    {locked && <Lock size={9} style={{ marginLeft: 2, opacity: 0.7 }} />}
                   </button>
                 );
               })}
