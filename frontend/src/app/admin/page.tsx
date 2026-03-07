@@ -59,7 +59,7 @@ export default function AdminDashboard() {
     return (
         <main className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-purple-500/30 selection:text-white">
             <div className="gradient-bg" />
-            <Navigation />
+            <Navigation activePage={'technical' as any} onNavigate={() => { }} />
 
             <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ marginTop: '80px' }}>
                 <div className="flex justify-between items-center mb-8">

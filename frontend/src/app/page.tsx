@@ -92,7 +92,7 @@ export default function AstroFinanceApp() {
           />
         )}
         {page === 'nakshatra' && tier === 'elite' && <NakshatraAnalysis data={analysisData} />}
-        {page === 'technical' && <TechnicalAnalysis />}
+        {page === 'technical' && <TechnicalAnalysis active={true} />}
         {page === 'correlation' && !isFree && <AstroCorrelation />}
         {page === 'sentiment' && !isFree && <SentimentVix />}
         {page === 'events' && <EconomicEvents />}

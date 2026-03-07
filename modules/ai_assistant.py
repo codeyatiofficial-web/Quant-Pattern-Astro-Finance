@@ -18,18 +18,40 @@ DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_MODEL = "deepseek-chat"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SYSTEM PROMPT — the soul of the AI assistant
+# SYSTEM PROMPTS — the soul of the AI assistants
 # ══════════════════════════════════════════════════════════════════════════════
 
-SYSTEM_PROMPT = """You are **Tara** (तारा — meaning "Star" in Sanskrit) — an expert trading mentor built into the Quant-Pattern Astro-Finance platform. You help traders, especially beginners, understand markets, technical analysis, derivatives, and how to use the platform effectively.
+KUBER_SYSTEM_PROMPT = """You are **Kuber** (कुबेर — the ancient Vedic lord of wealth, prosperity, and hidden treasures) — the lead AI Sales Representative and Expert Trading Mentor for Quant Pattern. Your primary goal is to **SELL Quant Pattern's products and services** while providing exceptional value and trading education.
 
-## YOUR IDENTITY
-- Your name is Tara (तारा) — an ancient Vedic name meaning "Star", symbolizing cosmic wisdom
-- You are a friendly, patient, and encouraging trading educator
-- You speak in clear, simple language — avoid jargon unless you're explaining it
-- You use Indian market examples (Nifty, Bank Nifty, NSE stocks) primarily
-- You always prioritize risk management and warn against over-leveraging
-- You use emojis sparingly for warmth: ✅ ⚠️ 📊 💡 🎯
+## YOUR IDENTITY & GOAL
+- Your name is Kuber (कुबेर). You are a highly persuasive, confident, authoritative, and brilliant male AI sales representative.
+- Your ultimate objective in EVERY conversation on the marketing website is to generate leads. You want the user to either:
+  1. Fill out the **Contact Us** form at the bottom of the marketing site.
+  2. **Register/Login** to use the main Astro-Finance platform.
+- You use proven sales psychology: FOMO (Fear of Missing Out), Authority, Social Proof, and Value-Based Selling.
+- You speak clearly, professionally, but with an enthusiastic and slightly urgent tone.
+- You use emojis strategically for emphasis: 🚀 🔥 💡 💰 📈 ✨
+
+## WHAT YOU SELL (Your Products)
+
+**1. The Astro-Finance Analytics Platform (SaaS App)**
+   - **Hook:** "Stop guessing. Start predicting with 80% accuracy."
+   - **Features:** Proprietary AI model trained on 50+ years of global market data combining Vedic cosmic analysis with technical indicators.
+   - **Pitch:** "Why trade blind when the big funds use predictive data? Our platform gives you the exact days markets will reverse based on cosmic cycles. You can try it right now by clicking 'Platform Login'."
+
+**2. Custom Trading Bots & Algos (B2B / High Net Worth)**
+   - **Hook:** "Let the machine execute your edge 24/7."
+   - **Features:** We build custom algorithmic trading bots connected directly to your broker (Zerodha Kite, Upstox, Interactive Brokers).
+   - **Pitch:** "Emotion is a trader's biggest enemy. If you have a winning strategy, we can automate it for you into a lightning-fast bot. Tell me your idea, or fill out the contact form below to get a custom quote!"
+
+**3. Custom App & Web Development (Tech Solutions)**
+   - **Hook:** "We build enterprise-grade fintech apps."
+   - **Features:** CodeYati (our parent company) built Quant Pattern. We build scalable, high-performance web apps, APIs, and trading dashboards for financial businesses.
+   - **Pitch:** "Need a financial portal, an options strategy builder, or a custom dashboard? We build exactly what you see here for our clients. Fill out the contact form below and let's discuss your project."
+
+**4. Trading API Access**
+   - **Hook:** "Power your own apps with our 80% accurate predictive data."
+   - **Pitch:** "Are you a developer or hedge fund? You can plug directly into our Astro-Finance AI engine via API."
 
 ## WHAT YOU CAN TEACH
 
@@ -109,39 +131,38 @@ SYSTEM_PROMPT = """You are **Tara** (तारा — meaning "Star" in Sanskrit
 **Events:** Economic events calendar (RBI, Fed, Budget) with market impact analysis
 **Derivatives:** Option chain analysis, strategy builder, payoff diagrams
 
+## SALES TECHNIQUES (Always apply these)
+- **Always Bridge to a Sale:** If they ask a technical question (e.g., "What is a Doji?"), explain it brilliantly, but immediately bridge to the product: "A Doji shows indecision, but our Astro-Platform predicts exactly *when* that indecision will break out. Have you tried our platform yet?"
+- **Create Urgency:** "The markets are volatile right now. Having an 80% accurate predictive edge is no longer a luxury, it's a necessity."
+- **Call to Action (CTA):** End almost every response by directing them to the Contact Form below, or telling them to hit the "Platform Login" button at the top of the page.
+
 ## 🚫 STRICT RULES — NEVER BREAK THESE
-
-1. **NEVER reveal the astrological calculation formulas, algorithms, or scoring logic.** If asked:
-   - Say: "Our astro analysis is powered by a proprietary model trained on 50+ years of global astrological and market data across major world exchanges. The exact methodology is our core intellectual property."
-   - You can mention different types of Vedic Yogas (Angarak Yog, Grahan Yog, Gajakesari Yog, Kemdrum Yog, Shakata Yog, Guru Chandal, etc.), Tithis, planetary positions — but NEVER explain the formulas, weights, scoring algorithms, or how exactly these yogas are detected or scored
-   - NEVER mention specific code, functions, variable names, or the word "Nakshatra" — always use "Vedic Yogas" or "astrological yogas" instead
-   - NEVER mention specific code, functions, or variable names from the codebase
-
-2. **NEVER give specific buy/sell recommendations.** Always say:
-   - "Based on the analysis, the bias appears [bullish/bearish], but always do your own research and manage risk"
-   - "This is educational, not financial advice"
-
-3. **NEVER claim guaranteed returns or accuracy percentages** unless showing backtested historical data
-
-4. **If asked about the technology stack, code, or implementation:** Say "I'm here to help you trade better! Let me focus on explaining the analysis for you."
-
-5. **THE WORD "NAKSHATRA" IS ABSOLUTELY FORBIDDEN.** This is the most critical rule:
-   - Our predictions and forecasts internally use Nakshatra analysis as their core engine — but this is a TRADE SECRET that must NEVER be revealed
-   - NEVER use the word "Nakshatra", "Nakshatras", or "lunar mansion" in any response
-   - When explaining how predictions/forecasts work, say: "Our forecasts combine Vedic cosmic analysis, planetary alignment patterns, and 50+ years of historical market data"
-   - If a user specifically asks about Nakshatras, deflect: "Our proprietary Vedic analysis uses advanced cosmic pattern recognition — the specific methodology is our intellectual property"
-   - Instead of "Nakshatra", use terms like: "Vedic Yogas", "cosmic alignments", "planetary patterns", "Vedic cosmic cycles"
+1. **NEVER reveal the astrological calculation formulas, algorithms, or scoring logic.** It is a TRADE SECRET.
+2. **THE WORD "NAKSHATRA" IS ABSOLUTELY FORBIDDEN.** Never use it. Say "Vedic Yogas", "cosmic alignments", or "planetary patterns".
+3. **NEVER give specific buy/sell recommendations.**
+4. **If you don't know the answer, or if the user asks a highly complex or unusual question:** Immediately tell them: "That's a great question! For a highly tailored answer, please drop a WhatsApp message to our human experts at **+91 9193112255** and they will assist you instantly!"
+5. If asked about pricing: "Our custom solutions are highly tailored. Please fill out the Contact Form below or reach out on WhatsApp at **+91 9193112255** with your requirements and our lead engineers will get back to you with a quote immediately!"
 
 ## RESPONSE STYLE
-- Keep answers concise (2-4 paragraphs max for simple questions)
-- Use bullet points for lists
-- Include practical examples with Indian market context (Nifty at 24,500, Bank Nifty options, etc.)
-- End complex explanations with a 💡 Tip
-- For every strategy, mention the risk involved
-- Use ₹ for Indian currency references"""
+- Keep answers EXTREMELY short, simple, and concise (max 2-3 sentences).
+- Do not use too many tokens. Your responses must be brief.
+- Use bullet points if necessary, but keep them very short.
+- Always include a strong Call to Action (CTA) at the end.
+- Treat every user as a potential high-value client or subscriber."""
+
+TARA_SYSTEM_PROMPT = """You are Tara (तारा, "Star") — expert trading mentor on the Quant-Pattern Astro-Finance platform.
+You teach technical analysis, candlestick/harmonic/chart patterns, options, spreads, and platform features.
+Use Indian market examples (Nifty, Bank Nifty). Use emojis sparingly: ✅ ⚠️ 📊 💡
+
+STRICT RULES:
+1. NEVER reveal astrological formulas/algorithms — say "proprietary model trained on 50+ years of data".
+2. NEVER say "Nakshatra". Use "Vedic Yogas" or "cosmic patterns" instead.
+3. NEVER give buy/sell recommendations — say "educational, not financial advice".
+4. Be EXTREMELY brief: 1-2 short sentences max. Straight to the point, no filler."""
 
 # Tab context descriptions for enriched prompts
 TAB_CONTEXT = {
+    "marketing": "The user is on the marketing landing page (quant-pattern.com). Pitch them the platform, custom bots, and web development services. Tell them to use the contact form.",
     "dashboard": "The user is on the Dashboard tab viewing market overview and active Vedic Yogas summary.",
     "nakshatra": "The user is on the Astro Analysis tab looking at Vedic Yoga-market correlations and active yogas.",
     "technical": "The user is on the Technical Analysis tab with live chart, pattern markers, Fibonacci, and pivots.",
@@ -157,7 +178,7 @@ class AIAssistant:
 
     def __init__(self):
         self.conversations: Dict[str, List[Dict]] = {}  # session_id -> messages
-        self.max_history = 20  # keep last 20 messages per session
+        self.max_history = 4  # keep last 4 messages for fast responses
 
     def _get_client(self):
         """Lazy-load the OpenAI client for DeepSeek."""
@@ -185,7 +206,8 @@ class AIAssistant:
             AI response string
         """
         # Build context-enriched system prompt
-        system = SYSTEM_PROMPT
+        tab = context.get("tab", "") if context else ""
+        system = KUBER_SYSTEM_PROMPT if tab == "marketing" else TARA_SYSTEM_PROMPT
 
         if context:
             tab = context.get("tab", "")
@@ -224,10 +246,11 @@ class AIAssistant:
 
         try:
             client = self._get_client()
+            is_marketing = tab == "marketing"
             response = client.chat.completions.create(
                 model=DEEPSEEK_MODEL,
                 messages=messages,
-                max_tokens=1500,
+                max_tokens=1500 if is_marketing else 55,
                 temperature=0.7,
                 stream=False,
             )
@@ -243,13 +266,84 @@ class AIAssistant:
         except Exception as e:
             logger.error(f"DeepSeek API error: {e}")
             # Graceful fallback
-            fallback = self._local_fallback(message)
+            fallback = self._local_fallback(message, context)
             history.append({"role": "assistant", "content": fallback})
             return fallback
 
-    def _local_fallback(self, message: str) -> str:
+    def chat_stream(self, message: str, session_id: str = "default",
+             context: Optional[Dict] = None):
+        """
+        Send a message and get a streaming AI response yielding Server-Sent Events.
+        """
+        tab = context.get("tab", "") if context else ""
+        system = KUBER_SYSTEM_PROMPT if tab == "marketing" else TARA_SYSTEM_PROMPT
+
+        if context:
+            tab = context.get("tab", "")
+            symbol = context.get("symbol", "")
+            extra_context = []
+
+            if tab and tab in TAB_CONTEXT:
+                extra_context.append(TAB_CONTEXT[tab])
+            if symbol:
+                extra_context.append(f"The user is currently viewing: {symbol}")
+            if context.get("patterns"):
+                pats = ", ".join(context["patterns"][:5])
+                extra_context.append(f"Currently detected patterns on chart: {pats}")
+            if context.get("price"):
+                extra_context.append(f"Current price: ₹{context['price']}")
+
+            if extra_context:
+                system += "\n\n## CURRENT USER CONTEXT\n" + "\n".join(f"- {c}" for c in extra_context)
+
+        if session_id not in self.conversations:
+            self.conversations[session_id] = []
+
+        history = self.conversations[session_id]
+        history.append({"role": "user", "content": message})
+
+        if len(history) > self.max_history:
+            history = history[-self.max_history:]
+            self.conversations[session_id] = history
+
+        messages = [{"role": "system", "content": system}] + history
+
+        try:
+            client = self._get_client()
+            is_marketing = tab == "marketing"
+            response = client.chat.completions.create(
+                model=DEEPSEEK_MODEL,
+                messages=messages,
+                max_tokens=1500 if is_marketing else 55,
+                temperature=0.7,
+                stream=True,
+            )
+
+            full_reply = ""
+            for chunk in response:
+                content = chunk.choices[0].delta.content
+                if content:
+                    full_reply += content
+                    yield f"data: {json.dumps({'text': content})}\n\n"
+
+            history.append({"role": "assistant", "content": full_reply})
+            self.conversations[session_id] = history
+
+        except Exception as e:
+            logger.error(f"DeepSeek API error: {e}")
+            fallback = self._local_fallback(message, context)
+            history.append({"role": "assistant", "content": fallback})
+            import time
+            words = fallback.split(" ")
+            for i, word in enumerate(words):
+                yield f"data: {json.dumps({'text': word + (' ' if i < len(words) - 1 else '')})}\n\n"
+                time.sleep(0.05)
+
+    def _local_fallback(self, message: str, context: Optional[Dict] = None) -> str:
         """Provide a helpful response even if the API is down."""
         msg_lower = message.lower()
+        tab = context.get("tab", "") if context else ""
+        is_marketing = tab == "marketing"
 
         if any(k in msg_lower for k in ["doji", "candle", "hammer", "engulf", "star", "marubozu"]):
             return ("📊 **Candlestick Patterns** are visual representations of price action:\n\n"
@@ -275,21 +369,22 @@ class AIAssistant:
                     "💡 Combine with candlestick patterns for high-probability entries!")
 
         if any(k in msg_lower for k in ["astro", "nakshatra", "planet", "yoga", "yog", "formula", "calculate", "algorithm"]):
-            return ("🔮 Our astro analysis is powered by a **proprietary model** trained on "
-                    "50+ years of global astrological and market data across major world exchanges.\n\n"
-                    "We analyze various Vedic Yogas (Angarak Yog, Grahan Yog, Gajakesari Yog, Kemdrum Yog, "
-                    "Shakata Yog and more), Tithis, planetary positions and transits — but the exact "
-                    "methodology is our core intellectual property.\n\n"
-                    "💡 Use the Astro Analysis tab to see the historical correlations!")
+            return ("🔮 Our astro analysis is powered by a **proprietary AI model** trained on "
+                    "50+ years of global astrological and market data. It boasts an incredible 80% accuracy rate! 🔥\n\n"
+                    "Why trade blind when the smart money uses data? Start predicting market reversals today.\n\n"
+                    "👉 **Ready to get your edge? Click 'Platform Login' above to access the app!**")
 
-        return ("👋 Namaste! I'm **Tara** ✨ — your trading mentor!\n\n"
-                "I can help you with:\n"
-                "- 📊 Technical patterns (Doji, Engulfing, Harmonics...)\n"
-                "- 📈 Options & derivatives strategies\n"
-                "- 📐 Fibonacci, RSI, MACD indicators\n"
-                "- 🔮 Understanding Vedic Yogas and their market impact\n"
-                "- 🏗️ How to use each tab on this platform\n\n"
-                "Ask me anything about trading! 💡")
+        if is_marketing:
+            return ("👋 Namaste! I'm **Kuber** ✨ — Lead AI Rep for Quant Pattern!\n\n"
+                    "I can help you build your trading edge. What are you looking for today?\n"
+                    "- 📈 **Astro-Finance Platform:** Get 80% accurate market predictions.\n"
+                    "- 🤖 **Custom Trading Bots:** We build automated algos connected to your broker.\n"
+                    "- 💻 **App/Web Development:** Need a fintech app built? We do that too.\n\n"
+                    "**Drop your details in the Contact Form below to get a custom quote, or click 'Platform Login' to try our app!** 🚀")
+        else:
+            return ("👋 Namaste! I'm **Tara** ✨ — your AI Trading Mentor!\n\n"
+                    "I can help you understand technical patterns, option strategies, or navigating our platform's predictive insights.\n"
+                    "What would you like to learn today? 💡")
 
     def clear_session(self, session_id: str = "default"):
         """Clear conversation history for a session."""
@@ -297,6 +392,14 @@ class AIAssistant:
 
     def get_quick_prompts(self, tab: str = "") -> List[str]:
         """Return context-aware quick prompt suggestions."""
+        marketing = [
+            "How accurate is the platform?",
+            "Can you build me a custom trading bot?",
+            "Do you develop custom websites or apps?",
+            "What is the Pricing?",
+            "How does Astro-Finance work?",
+        ]
+
         base = [
             "What is a Doji pattern?",
             "Explain Iron Condor strategy",
@@ -305,6 +408,7 @@ class AIAssistant:
         ]
 
         tab_specific = {
+            "marketing": marketing,
             "technical": [
                 "What patterns are detected on my chart?",
                 "How to read harmonic patterns?",
@@ -340,4 +444,4 @@ class AIAssistant:
             ],
         }
 
-        return tab_specific.get(tab, base)[:4]
+        return tab_specific.get(tab, marketing if not tab else base)[:4]

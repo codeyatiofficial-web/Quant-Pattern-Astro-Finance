@@ -104,19 +104,58 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                         price: currentPrice || 0,
                         patterns: detectedPatterns || [],
                     },
+                    stream: true,
                 }),
             });
-            const data = await res.json();
-            const reply: Message = { role: 'assistant', content: data.reply || 'Sorry, I could not process that.', timestamp: Date.now() };
-            setMessages(prev => [...prev, reply]);
+
+            if (!res.body) throw new Error("No response body");
+
+            setLoading(false); // Stop typing indicator as stream starts
+
+            // Add empty assistant message that we will populate
+            setMessages(prev => [...prev, { role: 'assistant', content: '', timestamp: Date.now() }]);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let accumulatedContent = '';
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop() || ''; // Keep last incomplete part
+
+                for (const part of parts) {
+                    if (part.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(part.slice(6));
+                            if (data.text) {
+                                accumulatedContent += data.text;
+                                setMessages(prev => {
+                                    const newMessages = [...prev];
+                                    newMessages[newMessages.length - 1] = {
+                                        ...newMessages[newMessages.length - 1],
+                                        content: accumulatedContent
+                                    };
+                                    return newMessages;
+                                });
+                            }
+                        } catch (e) {
+                            // Ignore parse errors for incomplete chunks
+                        }
+                    }
+                }
+            }
         } catch {
+            setLoading(false);
             setMessages(prev => [...prev, {
                 role: 'assistant',
                 content: '⚠️ Connection issue. Please try again!',
                 timestamp: Date.now(),
             }]);
-        } finally {
-            setLoading(false);
         }
     }, [loading, currentTab, currentSymbol, currentPrice, detectedPatterns]);
 

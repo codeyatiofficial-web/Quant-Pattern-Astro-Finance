@@ -6,6 +6,7 @@ import sys
 import os
 import logging
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
@@ -38,8 +39,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:8888",
         "https://app.quant-pattern.com",
-        "https://quant-pattern.com"
+        "https://quant-pattern.com",
+        "https://www.quant-pattern.com",
+        "https://admin.quant-pattern.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -2162,6 +2166,7 @@ class AIChatRequest(BaseModel):
     message: str
     session_id: str = "default"
     context: Optional[Dict[str, Any]] = None  # {tab, symbol, patterns, price}
+    stream: bool = False
 
 
 @app.post("/api/ai/chat")
@@ -2169,6 +2174,17 @@ async def ai_chat(req: AIChatRequest):
     """AI Trading Assistant — answers trading questions, explains patterns, guides newbies."""
     try:
         assistant = get_ai_assistant()
+        
+        if req.stream:
+            return StreamingResponse(
+                assistant.chat_stream(
+                    message=req.message,
+                    session_id=req.session_id,
+                    context=req.context,
+                ),
+                media_type="text/event-stream"
+            )
+            
         reply = assistant.chat(
             message=req.message,
             session_id=req.session_id,
@@ -2180,14 +2196,26 @@ async def ai_chat(req: AIChatRequest):
         traceback.print_exc()
         logger.error(f"AI chat error: {e}")
         # Return fallback response instead of 500
-        return {
-            "success": True,
-            "reply": ("👋 I'm having trouble connecting right now, but I can still help!\n\n"
+        fallback_msg = ("👋 I'm having trouble connecting right now, but I can still help!\n\n"
                       "Try asking about:\n"
                       "- 📊 Candlestick patterns (Doji, Hammer, Engulfing)\n"
                       "- 📈 Options strategies (Iron Condor, Spreads)\n"
                       "- 📐 Fibonacci, RSI, MACD indicators\n\n"
                       "Please try again in a moment! 💡")
+                      
+        if req.stream:
+            import json
+            import time
+            def fallback_generator():
+                words = fallback_msg.split(" ")
+                for i, word in enumerate(words):
+                    yield f"data: {json.dumps({'text': word + (' ' if i < len(words) - 1 else '')})}\n\n"
+                    time.sleep(0.05)
+            return StreamingResponse(fallback_generator(), media_type="text/event-stream")
+            
+        return {
+            "success": True,
+            "reply": fallback_msg
         }
 
 
@@ -2216,3 +2244,75 @@ def ai_clear_session(session_id: str = "default"):
         return {"success": True, "message": "Conversation cleared"}
     except Exception:
         return {"success": True, "message": "Session cleared"}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MARKETING SITE — Lead Capture API
+# ══════════════════════════════════════════════════════════════════════════════
+
+import json
+import threading
+
+LEADS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "leads.json")
+_leads_lock = threading.Lock()
+
+def _read_leads():
+    try:
+        with open(LEADS_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def _write_leads(leads):
+    with open(LEADS_FILE, "w") as f:
+        json.dump(leads, f, indent=2)
+
+
+class LeadSubmission(BaseModel):
+    email: str
+    mobile: str = ""
+    idea: str = ""
+
+
+@app.post("/api/leads")
+def submit_lead(lead: LeadSubmission):
+    """Store a new lead from the marketing site contact form."""
+    try:
+        entry = {
+            "email": lead.email,
+            "mobile": lead.mobile,
+            "idea": lead.idea,
+            "timestamp": datetime.now().isoformat(),
+            "source": "marketing-site"
+        }
+        with _leads_lock:
+            leads = _read_leads()
+            leads.append(entry)
+            _write_leads(leads)
+        logger.info(f"New lead: {lead.email}")
+        return {"success": True, "message": "Lead submitted successfully"}
+    except Exception as e:
+        logger.error(f"Lead submission error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save lead")
+
+
+@app.get("/api/leads")
+def get_leads():
+    """Retrieve all stored leads (admin endpoint)."""
+    try:
+        return {"success": True, "leads": _read_leads()}
+    except Exception as e:
+        logger.error(f"Lead retrieval error: {e}")
+        return {"success": True, "leads": []}
+
+
+@app.delete("/api/leads")
+def clear_leads():
+    """Clear all stored leads."""
+    try:
+        with _leads_lock:
+            _write_leads([])
+        return {"success": True, "message": "All leads cleared"}
+    except Exception as e:
+        logger.error(f"Lead clear error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to clear leads")
