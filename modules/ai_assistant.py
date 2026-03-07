@@ -250,7 +250,7 @@ class AIAssistant:
             response = client.chat.completions.create(
                 model=DEEPSEEK_MODEL,
                 messages=messages,
-                max_tokens=1500 if is_marketing else 55,
+                max_tokens=55, # Always use 55 tokens max
                 temperature=0.7,
                 stream=False,
             )
@@ -314,7 +314,7 @@ class AIAssistant:
             response = client.chat.completions.create(
                 model=DEEPSEEK_MODEL,
                 messages=messages,
-                max_tokens=1500 if is_marketing else 55,
+                max_tokens=55, # Always use 55 tokens max for extreme brevity
                 temperature=0.7,
                 stream=True,
             )
