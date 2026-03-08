@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quant Pattern — Stars & Markets Both Have Patterns. We Decode Them.</title>
+  <meta name="description"
+    content="Quant Pattern combines Vedic astrology with cutting-edge technical analysis to deliver 80% accurate market forecasts. Pioneering data-driven decision making for traders worldwide." />
+  <meta name="keywords"
+    content="quant pattern, astro trading, market forecast, technical analysis, vedic astrology, stock market prediction, data analytics, CodeYati" />
+  <link rel="icon" href="images/logo.png" type="image/png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <!--  Animated Star Background  -->
+  <div class="stars-container"></div>
+
+  <!--  NAVBAR  -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="#" class="nav-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 170" width="52" height="52">
+          <defs>
+            <linearGradient id="qGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#4ea8c7" />
+              <stop offset="100%" stop-color="#f4d1dc" />
+            </linearGradient>
+          </defs>
+          <g transform="translate(10,15)">
+            <path d="M60 20A70 70 0 1 0 140 120" fill="none" stroke="url(#qGrad)" stroke-width="12"
+              stroke-linecap="round" />
+            <rect x="45" y="80" width="12" height="35" fill="#f4d1dc" rx="3" />
+            <rect x="70" y="50" width="12" height="65" fill="#4ea8c7" rx="3" />
+            <rect x="95" y="65" width="12" height="50" fill="#34d399" rx="3" />
+            <path d="M25 120L135 15" fill="none" stroke="#6ee7b7" stroke-width="14" stroke-linecap="round" />
+            <polygon points="115,15 145,5 135,35" fill="#6ee7b7" />
+            <circle cx="15" cy="90" r="7" fill="#6ee7b7" />
+            <circle cx="45" cy="35" r="7" fill="#4ea8c7" />
+            <circle cx="115" cy="150" r="7" fill="#f4d1dc" />
+          </g>
+        </svg>
+        <span>Quant <span class="text-gradient-blue">Pattern</span></span>
+      </a>
+
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#performance">Performance</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#testimonials">Testimonials</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#contact">Get a Quote</a></li>
+        <li>
+          <!-- Theme Toggle -->
+          <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode" title="Switch theme">
+            <span class="theme-toggle-thumb">
+              <span id="themeIcon"></span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <a href="https://app.quant-pattern.com/" target="_blank" class="btn-primary" id="cta-nav">
+             Try App
+          </a>
+        </li>
+      </ul>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!--  HERO SECTION  -->
+  <section class="hero" id="hero">
+    <!-- Background Glows -->
+    <div class="hero-bg-glow hero-glow-1"></div>
+    <div class="hero-bg-glow hero-glow-2"></div>
+    <div class="hero-bg-glow hero-glow-3"></div>
+
+    <div class="container">
+      <!-- Hero Left -->
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="pulse-dot"></span>
+          Live Forecasts Active
+        </div>
+
+        <h1 class="hero-title">
+          Stars & Markets Both Have
+          <span class="line-break"><span class="text-gradient">Patterns.</span></span>
+          <span class="line-break">Our Job Is to <span class="text-gradient-gold">Decode Them.</span></span>
+        </h1>
+
+        <p class="hero-description">
+          Whether it's planetary transits or candlestick charts — hidden patterns drive every move.
+          Quant Pattern fuses <strong>Vedic astrology</strong> with <strong>advanced technical analysis</strong>
+          to give you forecasts that the market never saw coming.
+        </p>
+
+        <div class="hero-ctas">
+          <a href="https://app.quant-pattern.com/" target="_blank" class="btn-primary" id="cta-hero-primary">
+             Start Forecasting Free
+          </a>
+          <a href="#how-it-works" class="btn-outline" id="cta-hero-secondary">
+            See How It Works →
+          </a>
+        </div>
+
+        <div class="trust-badges"
+          style="margin-top: 16px; font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 16px; animation: fadeInUp 0.8s ease-out 0.7s both;">
+          <span> No credit card required</span>
+          <span> Setup in 2 mins</span>
+        </div>
+
+        <div class="hero-stats-mini">
+          <div class="hero-stat-item">
+            <div class="stat-number">80%</div>
+            <div class="stat-label">1-Year Accuracy</div>
+          </div>
+          <div class="hero-stat-item">
+            <div class="stat-number">1,200+</div>
+            <div class="stat-label">Trades Analyzed</div>
+          </div>
+          <div class="hero-stat-item">
+            <div class="stat-number">500+</div>
+            <div class="stat-label">Active Traders</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Right — Visual Card -->
+      <div class="hero-visual">
+        <div class="hero-chart-card">
+          <div class="prediction-badge"> Predicted Accurately</div>
+
+          <div class="chart-header">
+            <span class="chart-symbol">NIFTY 50</span>
+            <span class="chart-change"> +2.4%</span>
+          </div>
+
+          <!-- SVG Chart -->
+          <svg class="chart-svg" viewBox="0 0 420 160" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="chartGradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#f4d1dc" />
+                <stop offset="50%" stop-color="#f4d1dc" />
+                <stop offset="100%" stop-color="#f6d365" />
+              </linearGradient>
+              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f4d1dc" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="#f4d1dc" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <path class="chart-area"
+              d="M0,120 C30,100 60,110 90,85 C120,60 150,90 180,70 C210,50 240,80 270,45 C300,30 330,55 360,25 C380,15 400,28 420,20 L420,160 L0,160 Z" />
+            <path class="chart-line"
+              d="M0,120 C30,100 60,110 90,85 C120,60 150,90 180,70 C210,50 240,80 270,45 C300,30 330,55 360,25 C380,15 400,28 420,20" />
+            <!-- Prediction zone -->
+            <rect x="300" y="0" width="120" height="160" fill="rgba(246,211,101,0.05)" rx="4" />
+            <line x1="300" y1="0" x2="300" y2="160" stroke="rgba(246,211,101,0.3)" stroke-dasharray="4,4" />
+            <text x="340" y="14" fill="rgba(246,211,101,0.6)" font-size="9" font-family="Inter">FORECAST</text>
+          </svg>
+
+          <div class="chart-indicators">
+            <span class="indicator-tag astro"> Jupiter</span>
+            <span class="indicator-tag technical">RSI 68</span>
+            <span class="indicator-tag ai">AI Score 92</span>
+          </div>
+        </div>
+
+        <!-- Floating Zodiac -->
+        <div class="floating-element float-zodiac" style="top:-30px;left:-40px;"></div>
+        <div class="floating-element float-zodiac"
+          style="bottom:-20px;right:-30px;animation-direction:reverse;font-size:2rem;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!--  SOCIAL PROOF MARQUEE  -->
+  <div class="social-proof-ribbon">
+    <div class="marquee-track">
+      <span class="marquee-item"><span class="dot"></span> Trusted by 500+ Traders</span>
+      <span class="marquee-item"><span class="dot"></span> 80% Accuracy Over 12 Months</span>
+      <span class="marquee-item"><span class="dot"></span> Covering NSE, BSE, Forex & Crypto</span>
+      <span class="marquee-item"><span class="dot"></span> Vedic Astrology + AI Signals</span>
+      <span class="marquee-item"><span class="dot"></span> Real-Time Alerts & Forecasts</span>
+      <span class="marquee-item"><span class="dot"></span> Built by CodeYati — 25+ Years in Tech</span>
+      <span class="marquee-item"><span class="dot"></span> Custom Web & Mobile Solutions</span>
+      <span class="marquee-item"><span class="dot"></span> Data Analytics Pioneers</span>
+      <!-- Duplicate for seamless loop -->
+      <span class="marquee-item"><span class="dot"></span> Trusted by 500+ Traders</span>
+      <span class="marquee-item"><span class="dot"></span> 80% Accuracy Over 12 Months</span>
+      <span class="marquee-item"><span class="dot"></span> Covering NSE, BSE, Forex & Crypto</span>
+      <span class="marquee-item"><span class="dot"></span> Vedic Astrology + AI Signals</span>
+      <span class="marquee-item"><span class="dot"></span> Real-Time Alerts & Forecasts</span>
+      <span class="marquee-item"><span class="dot"></span> Built by CodeYati — 25+ Years in Tech</span>
+      <span class="marquee-item"><span class="dot"></span> Custom Web & Mobile Solutions</span>
+      <span class="marquee-item"><span class="dot"></span> Data Analytics Pioneers</span>
+    </div>
+  </div>
+
+  <!--  PERFORMANCE STATS  -->
+  <section class="section stats-section" id="performance">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card glass-card fade-in">
+          <div class="stat-icon"></div>
+          <div class="stat-value" data-count="80" data-suffix="%">0%</div>
+          <div class="stat-description">Forecast Accuracy</div>
+          <div class="stat-period">Last 12 Months</div>
+        </div>
+        <div class="stat-card glass-card fade-in">
+          <div class="stat-icon"></div>
+          <div class="stat-value" data-count="78" data-suffix="%">0%</div>
+          <div class="stat-description">Win Rate</div>
+          <div class="stat-period">Last 3 Months</div>
+        </div>
+        <div class="stat-card glass-card fade-in">
+          <div class="stat-icon"></div>
+          <div class="stat-value" data-count="1200" data-suffix="+">0+</div>
+          <div class="stat-description">Trades Analyzed</div>
+          <div class="stat-period">Since Launch</div>
+        </div>
+        <div class="stat-card glass-card fade-in">
+          <div class="stat-icon"></div>
+          <div class="stat-value" data-count="500" data-suffix="+">0+</div>
+          <div class="stat-description">Active Users</div>
+          <div class="stat-period">Growing Monthly</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  HOW IT WORKS  -->
+  <section class="section how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="section-label"> Our Process</div>
+      <h2 class="section-title fade-in">
+        How <span class="text-gradient-blue">Quant Pattern</span> Works
+      </h2>
+      <p class="section-subtitle fade-in" style="margin: 0 auto;">
+        We combine ancient celestial wisdom with modern quantitative methods to create forecasts no single approach can
+        match.
+      </p>
+
+      <div class="steps-container">
+        <div class="step-card glass-card fade-in">
+          <div class="step-number">01</div>
+          <div class="step-icon"></div>
+          <h3 class="step-title">Multi-Source Data Collection</h3>
+          <p class="step-description">
+            We ingest real-time market feeds, planetary ephemeris data, Vedic yogas, eclipses, retrogrades, and global
+            sentiment signals — all in one pipeline.
+          </p>
+        </div>
+
+        <div class="step-card glass-card fade-in">
+          <div class="step-number">02</div>
+          <div class="step-icon"></div>
+          <h3 class="step-title">Astro + Technical Analysis</h3>
+          <p class="step-description">
+            Our proprietary engine cross-references chart patterns (Head & Shoulders, MACD, RSI) with astrological
+            transits to find confluence zones of high-probability moves.
+          </p>
+        </div>
+
+        <div class="step-card glass-card fade-in">
+          <div class="step-number">03</div>
+          <div class="step-icon"></div>
+          <h3 class="step-title">Actionable Forecasts</h3>
+          <p class="step-description">
+            Get clear buy/sell signals, probability scores, and target prices — delivered via your dashboard with
+            real-time alerts. No guesswork, just data.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  TESTIMONIALS  -->
+  <section class="section testimonials" id="testimonials">
+    <div class="container">
+      <div class="section-label"> Trusted by Traders</div>
+      <h2 class="section-title fade-in">
+        What Our <span class="text-gradient-gold">Traders</span> Say
+      </h2>
+      <p class="section-subtitle fade-in" style="margin: 0 auto;">
+        From Dalal Street to Wall Street — professionals trust Quant Pattern to sharpen their edge.
+      </p>
+
+      <div class="testimonials-grid">
+        <!-- Trader 1: India -->
+        <div class="testimonial-card glass-card fade-in">
+          <div class="testimonial-header">
+            <img src="images/trader-rakesh.png" alt="Rakesh Mehta" class="testimonial-avatar" />
+            <div>
+              <div class="testimonial-name">Rakesh Mehta <span class="testimonial-flag"></span></div>
+              <div class="testimonial-role">Equity Trader, Mumbai</div>
+            </div>
+          </div>
+          <p class="testimonial-text">
+            "I was skeptical about mixing astrology with trading, but the results speak for themselves. Quant Pattern's
+            Nifty forecasts helped me close 3 winning swing trades this month alone. The astro-confluence signals are
+            uncanny."
+          </p>
+          <div class="testimonial-stars">    </div>
+        </div>
+
+        <!-- Trader 2: India -->
+        <div class="testimonial-card glass-card fade-in">
+          <div class="testimonial-header">
+            <img src="images/trader-priya.png" alt="Priya Sharma" class="testimonial-avatar" />
+            <div>
+              <div class="testimonial-name">Priya Sharma <span class="testimonial-flag"></span></div>
+              <div class="testimonial-role">Derivatives Analyst, Delhi</div>
+            </div>
+          </div>
+          <p class="testimonial-text">
+            "As an options trader, timing is everything. The eclipse and retrograde alerts from Quant Pattern have saved
+            me from two major reversals. Their backtested data gives me real confidence in every position."
+          </p>
+          <div class="testimonial-stars">    </div>
+        </div>
+
+        <!-- Trader 3: India -->
+        <div class="testimonial-card glass-card fade-in">
+          <div class="testimonial-header">
+            <img src="images/trader-suresh.png" alt="Suresh Iyer" class="testimonial-avatar" />
+            <div>
+              <div class="testimonial-name">Suresh Iyer <span class="testimonial-flag"></span></div>
+              <div class="testimonial-role">Commodities Trader, Chennai</div>
+            </div>
+          </div>
+          <p class="testimonial-text">
+            "I've been tracking gold and crude for 15 years. Nothing quite prepared me for how accurate the planetary
+            transit correlations are with commodity cycles. This platform is a game-changer for serious commodity
+            traders."
+          </p>
+          <div class="testimonial-stars">    </div>
+        </div>
+
+        <!-- Trader 4: USA -->
+        <div class="testimonial-card glass-card fade-in">
+          <div class="testimonial-header">
+            <img src="images/trader-james.png" alt="James Harrington" class="testimonial-avatar" />
+            <div>
+              <div class="testimonial-name">James Harrington <span class="testimonial-flag"></span></div>
+              <div class="testimonial-role">Portfolio Manager, New York</div>
+            </div>
+          </div>
+          <p class="testimonial-text">
+            "I manage a $50M fund and I'd never considered astro factors until I tested Quant Pattern's signals against
+            my S&P models. The 80% hit rate over 12 months is remarkable. I now use it as an overlay to my existing
+            quant models."
+          </p>
+          <div class="testimonial-stars">    </div>
+        </div>
+
+        <!-- Trader 5: Japan -->
+        <div class="testimonial-card glass-card fade-in">
+          <div class="testimonial-header">
+            <img src="images/trader-yuki.png" alt="Yuki Tanaka" class="testimonial-avatar" />
+            <div>
+              <div class="testimonial-name">Yuki Tanaka <span class="testimonial-flag"></span></div>
+              <div class="testimonial-role">Forex Strategist, Tokyo</div>
+            </div>
+          </div>
+          <p class="testimonial-text">
+            "The combination of Vedic astrology with Western technical indicators is unique. I use Quant Pattern for JPY
+            pairs and the win rate has been consistently above 75%. The dashboard is beautifully designed and
+            intuitive."
+          </p>
+          <div class="testimonial-stars">    </div>
+        </div>
+
+        <!-- Trader 6: UK -->
+        <div class="testimonial-card glass-card fade-in">
+          <div class="testimonial-header">
+            <img src="images/trader-oliver.png" alt="Oliver Chen" class="testimonial-avatar" />
+            <div>
+              <div class="testimonial-name">Oliver Chen <span class="testimonial-flag"></span></div>
+              <div class="testimonial-role">Hedge Fund Analyst, London</div>
+            </div>
+          </div>
+          <p class="testimonial-text">
+            "We ran Quant Pattern signals through our backtesting engine for 6 months. The Sharpe ratio improvement when
+            adding their astro-signals was statistically significant. This is quant meets cosmos, and it works."
+          </p>
+          <div class="testimonial-stars">    </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  DIGITAL SERVICES  -->
+  <section class="section services" id="services">
+    <div class="container">
+      <div class="section-label"> Our Digital Services</div>
+      <h2 class="section-title fade-in">
+        We Build <span class="text-gradient-blue">World-Class</span> Digital Products
+      </h2>
+      <p class="section-subtitle fade-in" style="margin: 0 auto;">
+        Quant Pattern is just one of our creations. As pioneers in data analytics and application development, we craft
+        custom digital solutions for businesses worldwide.
+      </p>
+
+      <div class="services-grid bento-grid">
+        <div class="service-card glass-card fade-in bento-featured">
+          <span class="service-icon"></span>
+          <h3 class="service-title">Web Development</h3>
+          <p class="service-description">
+            High-performance websites & web applications built with modern frameworks.
+          </p>
+          <ul class="service-features">
+            <li>React / Next.js / Vue</li>
+            <li>E-Commerce Platforms</li>
+            <li>Corporate Portals</li>
+            <li>SEO Optimized</li>
+          </ul>
+        </div>
+
+        <div class="service-card glass-card fade-in">
+          <span class="service-icon"></span>
+          <h3 class="service-title">Mobile Applications</h3>
+          <p class="service-description">
+            Native & cross-platform mobile apps for iOS and Android.
+          </p>
+          <ul class="service-features">
+            <li>React Native / Flutter</li>
+            <li>Trading Dashboards</li>
+            <li>Push Notifications</li>
+            <li>Offline Capable</li>
+          </ul>
+        </div>
+
+        <div class="service-card glass-card fade-in">
+          <span class="service-icon"></span>
+          <h3 class="service-title">Data Analytics Platforms</h3>
+          <p class="service-description">
+            Custom analytics dashboards and real-time data visualization tools.
+          </p>
+          <ul class="service-features">
+            <li>Real-Time Dashboards</li>
+            <li>Predictive Models</li>
+            <li>AI/ML Pipelines</li>
+            <li>Custom Visualizations</li>
+          </ul>
+        </div>
+
+        <div class="service-card glass-card fade-in">
+          <span class="service-icon"></span>
+          <h3 class="service-title">Custom Applications</h3>
+          <p class="service-description">
+            End-to-end custom software solutions tailored to your business needs.
+          </p>
+          <ul class="service-features">
+            <li>SaaS Products</li>
+            <li>API Development</li>
+            <li>Cloud Infrastructure</li>
+            <li>DevOps & CI/CD</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  LEAD CAPTURE FORM  -->
+  <section class="section contact-section" id="contact">
+    <div class="container">
+      <div class="section-label"> Get In Touch</div>
+      <h2 class="section-title fade-in">
+        Have a Project Idea? <span class="text-gradient-gold">Let's Talk.</span>
+      </h2>
+      <p class="section-subtitle fade-in" style="margin: 0 auto;">
+        Whether you need a market analytics platform, a mobile app, or a custom web solution — share your vision and
+        we'll send you a detailed quote.
+      </p>
+
+      <div class="contact-wrapper glass-card fade-in">
+        <!-- Form -->
+        <form id="leadForm" autocomplete="on">
+          <div id="formContent">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="email">Email Address *</label>
+                <input type="email" id="email" class="form-input" placeholder="you@company.com" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="mobile">Mobile Number *</label>
+                <input type="tel" id="mobile" class="form-input" placeholder="+91 98765 43210" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="idea">Your Business Idea / Project Brief *</label>
+              <textarea id="idea" class="form-textarea"
+                placeholder="Tell us about your project — what you need, your target audience, features, timeline..."
+                required></textarea>
+            </div>
+
+            <button type="submit" class="btn-primary submit-btn" id="submit-btn">
+               Send My Inquiry
+            </button>
+
+            <p class="form-note">
+               Your information is secure. We'll respond within 24 hours with a custom proposal.<br>
+              Or reach us directly: <a href="mailto:quantofficial@gmail.com"
+                style="color:var(--blue-light)">quantofficial@gmail.com</a> · <a href="tel:+919193112255"
+                style="color:var(--blue-light)">+91 9193112255</a>
+            </p>
+          </div>
+        </form>
+
+        <!-- Success State -->
+        <div class="form-success" id="formSuccess">
+          <div class="success-icon"></div>
+          <h3 class="success-title text-gradient">Inquiry Received!</h3>
+          <p class="success-text">
+            Thank you for reaching out. Our team will review your project and get back to you within 24 hours with a
+            detailed quote.
+          </p>
+          <a href="https://app.quant-pattern.com/" target="_blank" class="btn-primary"
+            style="margin-top: 24px; display: inline-flex;" id="cta-success">
+             Explore Quant Pattern
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  FOOTER  -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 170" width="48" height="48">
+              <defs>
+                <linearGradient id="qGradF" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4ea8c7" />
+                  <stop offset="100%" stop-color="#f4d1dc" />
+                </linearGradient>
+              </defs>
+              <g transform="translate(10,15)">
+                <path d="M60 20A70 70 0 1 0 140 120" fill="none" stroke="url(#qGradF)" stroke-width="12"
+                  stroke-linecap="round" />
+                <rect x="45" y="80" width="12" height="35" fill="#f4d1dc" rx="3" />
+                <rect x="70" y="50" width="12" height="65" fill="#4ea8c7" rx="3" />
+                <rect x="95" y="65" width="12" height="50" fill="#34d399" rx="3" />
+                <path d="M25 120L135 15" fill="none" stroke="#6ee7b7" stroke-width="14" stroke-linecap="round" />
+                <polygon points="115,15 145,5 135,35" fill="#6ee7b7" />
+                <circle cx="15" cy="90" r="7" fill="#6ee7b7" />
+                <circle cx="45" cy="35" r="7" fill="#4ea8c7" />
+                <circle cx="115" cy="150" r="7" fill="#f4d1dc" />
+              </g>
+            </svg>
+            <span>Quant <span class="text-gradient-blue">Pattern</span></span>
+          </a>
+          <p>
+            Pioneering the intersection of Vedic astrology and quantitative market analysis. Building the future of
+            data-driven trading decisions.
+          </p>
+          <p style="margin-top:12px;font-size:0.8rem;line-height:1.6;">
+             A-119-120, Upper Ground Floor, Front Portion,<br>
+            Sharda Puri, Ramesh Nagar, New Delhi-110015<br>
+             <a href="tel:+919193112255" style="color:var(--blue-light)">+91 9193112255</a><br>
+             <a href="mailto:quantofficial@gmail.com" style="color:var(--blue-light)">quantofficial@gmail.com</a>
+          </p>
+          <div class="footer-social">
+            <a href="#" class="social-icon" aria-label="Twitter"></a>
+            <a href="#" class="social-icon" aria-label="LinkedIn">in</a>
+            <a href="#" class="social-icon" aria-label="YouTube"></a>
+            <a href="#" class="social-icon" aria-label="Telegram"></a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Product</h4>
+          <ul class="footer-links">
+            <li><a href="https://app.quant-pattern.com/" target="_blank">Launch App</a></li>
+            <li><a href="#performance">Performance</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#testimonials">Testimonials</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Services</h4>
+          <ul class="footer-links">
+            <li><a href="#services">Web Development</a></li>
+            <li><a href="#services">Mobile Apps</a></li>
+            <li><a href="#services">Analytics Platforms</a></li>
+            <li><a href="#services">Custom Software</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Company</h4>
+          <ul class="footer-links">
+            <li><a href="#contact">Contact Us</a></li>
+            <li><a href="privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+            <li><a href="disclaimer.html">Disclaimer</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2025 Quant Pattern by CodeYati. All rights reserved.</span>
+        <span>Made with  in India</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script src="tara-chat.js"></script>
+  <script>
+    // Spotlight Effect for Glass Cards
+    document.addEventListener('mousemove', e => {
+      const cards = document.querySelectorAll('.glass-card');
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      }
+    });
+  </script>
+</body>
+
+</html>

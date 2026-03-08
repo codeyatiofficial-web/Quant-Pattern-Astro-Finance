@@ -8,7 +8,7 @@ import type { IChartApi, Time } from 'lightweight-charts';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
-// ── Interval / period config ─────────────────────────────────────────────────
+//  Interval / period config 
 const INTERVALS = [
     { key: '1m', label: '1m', period: '1d' },
     { key: '3m', label: '3m', period: '1d' },
@@ -24,17 +24,18 @@ const OVERLAY_CONFIG: Record<string, { color: string; label: string; width: numb
     sma20: { color: '#f59e0b', label: 'SMA 20', width: 1 },
     sma50: { color: '#3b82f6', label: 'SMA 50', width: 1 },
     ema9: { color: '#10b981', label: 'EMA 9', width: 1 },
-    ema21: { color: '#8b5cf6', label: 'EMA 21', width: 1 },
-    bb_upper: { color: '#6366f1', label: 'BB Upper', width: 1 },
-    bb_lower: { color: '#6366f1', label: 'BB Lower', width: 1 },
+    ema21: { color: 'var(--text-secondary)', label: 'EMA 21', width: 1 },
+    bb_upper: { color: 'var(--text-muted)', label: 'BB Upper', width: 1 },
+    bb_lower: { color: 'var(--text-muted)', label: 'BB Lower', width: 1 },
 };
 
 interface LiveChartProps {
     symbol: string;
     patterns?: any[];
+    globalPeriod?: string;
 }
 
-// ── Backtest popup component ─────────────────────────────────────────────────
+//  Backtest popup component 
 function BacktestPopup({ pattern, onClose }: { pattern: any; onClose: () => void }) {
     const bt = pattern?.backtest;
     if (!bt) return null;
@@ -46,34 +47,34 @@ function BacktestPopup({ pattern, onClose }: { pattern: any; onClose: () => void
             display: 'flex', alignItems: 'center', justifyContent: 'center',
         }} onClick={onClose}>
             <div onClick={e => e.stopPropagation()} style={{
-                background: '#1a1f35', border: '1px solid rgba(139,92,246,0.3)',
+                background: 'var(--bg-card)', border: '1px solid var(--border-active)',
                 borderRadius: 16, padding: 24, maxWidth: 520, width: '95%',
-                maxHeight: '80vh', overflowY: 'auto', color: '#e2e8f0',
+                maxHeight: '80vh', overflowY: 'auto', color: 'var(--text-primary)',
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>
                         <span style={{ color: pattern.bias === 'Bullish' ? '#4ade80' : pattern.bias === 'Bearish' ? '#f87171' : '#94a3b8' }}>
-                            {pattern.bias === 'Bullish' ? '▲' : pattern.bias === 'Bearish' ? '▼' : '●'}
+                            {pattern.bias === 'Bullish' ? '' : pattern.bias === 'Bearish' ? '' : ''}
                         </span>{' '}
                         {pattern.name}
                     </h3>
                     <button onClick={onClose} style={{
                         background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 8, padding: '4px 10px', color: '#94a3b8', cursor: 'pointer', fontSize: 13,
-                    }}>✕</button>
+                    }}></button>
                 </div>
 
                 {/* Stats grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
                     <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: bt.win_rate >= 60 ? '#4ade80' : bt.win_rate >= 40 ? '#fbbf24' : '#f87171' }}>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: bt.win_rate >= 60 ? '#4ade80' : bt.win_rate >= 40 ? 'var(--text-primary)' : '#f87171' }}>
                             {bt.win_rate}%
                         </div>
                         <div style={{ fontSize: 9, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: 1 }}>Win Rate</div>
                     </div>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: '#c4b5fd' }}>{total}</div>
-                        <div style={{ fontSize: 9, color: '#64748b', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: 1 }}>Total Trades</div>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)' }}>{total}</div>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: 1 }}>Total Trades</div>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
                         <div style={{ fontSize: 22, fontWeight: 900, color: (bt.avg_return || 0) >= 0 ? '#4ade80' : '#f87171' }}>
@@ -121,7 +122,7 @@ function BacktestPopup({ pattern, onClose }: { pattern: any; onClose: () => void
                                         background: t.result === 'Win' ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
                                         color: t.result === 'Win' ? '#4ade80' : '#f87171',
                                     }}>
-                                        {t.result === 'Win' ? '✅' : '❌'} {t.return}
+                                        {t.result === 'Win' ? '' : ''} {t.return}
                                     </span>
                                 </div>
                             ))}
@@ -133,7 +134,7 @@ function BacktestPopup({ pattern, onClose }: { pattern: any; onClose: () => void
     );
 }
 
-export default function LiveChart({ symbol, patterns }: LiveChartProps) {
+export default function LiveChart({ symbol, patterns, globalPeriod = '6mo' }: LiveChartProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const rsiContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -145,7 +146,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
         sma20: true, sma50: true, ema9: false, ema21: false, bb_upper: false, bb_lower: false,
     });
 
-    // ── Pattern detection state ──────────────────────────────────────────────
+    //  Pattern detection state 
     const [patternData, setPatternData] = useState<any>(null);
     const [patternLoading, setPatternLoading] = useState(false);
     const [showPatterns, setShowPatterns] = useState(true);
@@ -156,25 +157,33 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
     // Fetch chart data
     useEffect(() => {
         setChartLoading(true);
-        const intv = INTERVALS.find(i => i.key === activeInterval);
-        const period = intv?.period || '6mo';
-        fetch(`${API}/api/chart/ohlcv?symbol=${encodeURIComponent(symbol)}&interval=${activeInterval}&period=${period}`)
+        let fetchPeriod = '10y'; // Default to max for daily/weekly to ensure deep zoom
+        if (activeInterval === '1m') fetchPeriod = '7d';
+        else if (['3m', '5m', '15m'].includes(activeInterval)) fetchPeriod = '60d';
+        else if (activeInterval === '1h') fetchPeriod = '730d';
+        else fetchPeriod = 'max'; // 1d, 1wk, 1mo
+
+        fetch(`${API}/api/chart/ohlcv?symbol=${encodeURIComponent(symbol)}&interval=${activeInterval}&period=${fetchPeriod}`)
             .then(r => r.json())
             .then(d => { setChartData(d); setChartLoading(false); })
             .catch(() => setChartLoading(false));
-    }, [symbol, activeInterval]);
+    }, [symbol, activeInterval, globalPeriod]);
 
     // Fetch patterns when chart data is loaded
     useEffect(() => {
         if (!chartData) return;
         setPatternLoading(true);
-        const intv = INTERVALS.find(i => i.key === activeInterval);
-        const period = intv?.period || '6mo';
-        fetch(`${API}/api/chart/patterns?symbol=${encodeURIComponent(symbol)}&interval=${activeInterval}&period=${period}`)
+        let fetchPeriod = '10y'; // Default max for daily
+        if (activeInterval === '1m') fetchPeriod = '7d';
+        else if (['3m', '5m', '15m'].includes(activeInterval)) fetchPeriod = '60d';
+        else if (activeInterval === '1h') fetchPeriod = '730d';
+        else fetchPeriod = 'max'; // 1d, 1wk, 1mo
+
+        fetch(`${API}/api/chart/patterns?symbol=${encodeURIComponent(symbol)}&interval=${activeInterval}&period=${fetchPeriod}`)
             .then(r => r.json())
             .then(d => { setPatternData(d); setPatternLoading(false); })
             .catch(() => setPatternLoading(false));
-    }, [chartData, symbol, activeInterval]);
+    }, [chartData, symbol, activeInterval, globalPeriod]);
 
     // Render chart
     useEffect(() => {
@@ -186,7 +195,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
 
         const container = chartContainerRef.current;
 
-        // ── Main chart ────────────────────────────────────────────────────────
+        //  Main chart 
         const chart = createChart(container, {
             width: container.clientWidth,
             height: 420,
@@ -251,7 +260,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
             });
         }
 
-        // ── Pattern markers on chart ─────────────────────────────────────────
+        //  Pattern markers on chart 
         if (showPatterns) {
             let markers: any[] = [];
 
@@ -262,9 +271,9 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                     .map((p: any) => ({
                         time: p.time as Time,
                         position: p.bias === 'Bearish' ? 'aboveBar' as const : 'belowBar' as const,
-                        color: p.bias === 'Bearish' ? '#f87171' : p.bias === 'Bullish' ? '#4ade80' : '#fbbf24',
+                        color: p.bias === 'Bearish' ? '#f87171' : p.bias === 'Bullish' ? '#4ade80' : 'var(--text-primary)',
                         shape: p.bias === 'Bearish' ? 'arrowDown' as const : 'arrowUp' as const,
-                        text: p.name?.replace('Bullish ', '↑').replace('Bearish ', '↓').slice(0, 18) || 'Pattern',
+                        text: p.name?.replace('Bullish ', '').replace('Bearish ', '').slice(0, 18) || 'Pattern',
                     }));
                 markers = [...markers, ...activeMarkers];
             }
@@ -278,7 +287,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                         position: selectedPattern.bias === 'Bearish' ? 'aboveBar' as const : 'belowBar' as const,
                         color: t.result === 'Win' ? '#4ade80' : '#f87171',
                         shape: selectedPattern.bias === 'Bearish' ? 'arrowDown' as const : 'arrowUp' as const,
-                        text: `${t.result === 'Win' ? '✅' : '❌'} ${t.return}`
+                        text: `${t.result === 'Win' ? '' : ''} ${t.return}`
                     }));
                 markers = [...markers, ...histMarkers];
             }
@@ -297,15 +306,15 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
             }
         }
 
-        // ── Fibonacci horizontal lines ───────────────────────────────────────
+        //  Fibonacci horizontal lines 
         if (showFib && patternData?.fibonacci?.fib_levels) {
             const candles = chartData.candles;
             if (candles.length >= 2) {
                 const t1 = candles[0].time as Time;
                 const t2 = candles[candles.length - 1].time as Time;
                 const fibColors: Record<string, string> = {
-                    'Ret_23.6%': '#fbbf2440', 'Ret_38.2%': '#f59e0b60', 'Ret_50%': '#3b82f680',
-                    'Ret_61.8%': '#8b5cf680', 'Ret_78.6%': '#ec489960', 'Ret_100%': '#ef444460',
+                    'Ret_23.6%': 'rgba(156,163,175,0.4)', 'Ret_38.2%': '#f59e0b60', 'Ret_50%': '#3b82f680',
+                    'Ret_61.8%': 'rgba(156,163,175,0.8)', 'Ret_78.6%': '#ec489960', 'Ret_100%': '#ef444460',
                 };
 
                 Object.entries(patternData.fibonacci.fib_levels).forEach(([name, price]) => {
@@ -325,14 +334,14 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
             }
         }
 
-        // ── Pivot lines ──────────────────────────────────────────────────────
+        //  Pivot lines 
         if (showPivots && patternData?.fibonacci?.pivots) {
             const candles = chartData.candles;
             if (candles.length >= 2) {
                 const t1 = candles[0].time as Time;
                 const t2 = candles[candles.length - 1].time as Time;
                 const pivotColors: Record<string, string> = {
-                    P: '#fbbf24', R1: '#f87171', R2: '#ef4444', S1: '#4ade80', S2: '#22c55e',
+                    P: 'var(--text-primary)', R1: '#f87171', R2: '#ef4444', S1: '#4ade80', S2: '#22c55e',
                 };
                 Object.entries(patternData.fibonacci.pivots).forEach(([name, price]) => {
                     if (typeof price !== 'number') return;
@@ -350,7 +359,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
             }
         }
 
-        // ── Harmonic XABCD lines ─────────────────────────────────────────────
+        //  Harmonic XABCD lines 
         if (showPatterns && patternData?.harmonic?.xabcd_points?.length >= 4) {
             const xabcdLine = chart.addSeries(LineSeries, {
                 color: patternData.harmonic.name?.includes('Bullish') ? '#4ade80' : '#f87171',
@@ -369,7 +378,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
             }
         }
 
-        // ── RSI sub-chart ─────────────────────────────────────────────────────
+        //  RSI sub-chart 
         if (rsiContainerRef.current && chartData.indicators?.rsi?.length) {
             const rsiChart = createChart(rsiContainerRef.current, {
                 width: container.clientWidth,
@@ -389,7 +398,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
             rsiChartRef.current = rsiChart;
 
             const rsiSeries = rsiChart.addSeries(LineSeries, {
-                color: '#8b5cf6',
+                color: 'var(--text-secondary)',
                 lineWidth: 1,
                 priceLineVisible: false,
             });
@@ -446,7 +455,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
         };
     }, [chartData, overlays, patternData, showPatterns, showFib, showPivots, selectedPattern]);
 
-    // ── Helper: unique patterns for the panel ────────────────────────────────
+    //  Helper: unique patterns for the panel 
     const uniquePatterns = React.useMemo(() => {
         if (!patternData) return [];
         const items: any[] = [];
@@ -494,9 +503,9 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                         <button key={int.key} onClick={() => setActiveInterval(int.key)} style={{
                             padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700,
                             cursor: 'pointer',
-                            border: activeInterval === int.key ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                            background: activeInterval === int.key ? 'rgba(139,92,246,0.2)' : 'transparent',
-                            color: activeInterval === int.key ? '#c4b5fd' : '#64748b',
+                            border: activeInterval === int.key ? '1px solid var(--border-active)' : '1px solid transparent',
+                            background: activeInterval === int.key ? 'var(--bg-secondary)' : 'transparent',
+                            color: activeInterval === int.key ? 'var(--text-primary)' : 'var(--text-muted)',
                         }}>
                             {int.label}
                         </button>
@@ -524,7 +533,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                     background: showPatterns ? 'rgba(236,72,153,0.15)' : 'transparent',
                     color: showPatterns ? '#ec4899' : '#475569',
                 }}>
-                    🔍 Patterns
+                    Patterns
                 </button>
                 <button onClick={() => setShowFib(f => !f)} style={{
                     padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
@@ -532,7 +541,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                     background: showFib ? 'rgba(245,158,11,0.15)' : 'transparent',
                     color: showFib ? '#f59e0b' : '#475569',
                 }}>
-                    📐 Fibonacci
+                    Fibonacci
                 </button>
                 <button onClick={() => setShowPivots(p => !p)} style={{
                     padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: 'pointer',
@@ -540,7 +549,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                     background: showPivots ? 'rgba(6,182,212,0.15)' : 'transparent',
                     color: showPivots ? '#06b6d4' : '#475569',
                 }}>
-                    📊 Pivots
+                    Pivots
                 </button>
             </div>
 
@@ -555,7 +564,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                     <div ref={chartContainerRef} style={{ borderRadius: 8, overflow: 'hidden' }} />
                     {/* RSI sub-chart */}
                     <div style={{ marginTop: 2, position: 'relative' }}>
-                        <div style={{ position: 'absolute', top: 4, left: 8, fontSize: 9, fontWeight: 700, color: '#8b5cf6', zIndex: 1, pointerEvents: 'none' }}>RSI (14)</div>
+                        <div style={{ position: 'absolute', top: 4, left: 8, fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', zIndex: 1, pointerEvents: 'none' }}>RSI (14)</div>
                         <div ref={rsiContainerRef} style={{ borderRadius: 8, overflow: 'hidden' }} />
                     </div>
 
@@ -578,15 +587,15 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                                 border: `1px solid ${chartData.data_source === 'kite' ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
                                 letterSpacing: 0.5, textTransform: 'uppercase' as const,
                             }}>
-                                {chartData.data_source === 'kite' ? '⚡ KITE API' : '📊 yfinance'}
+                                {chartData.data_source === 'kite' ? ' KITE API' : ' yfinance'}
                             </div>
                             {patternLoading && (
-                                <span style={{ fontSize: 10, color: '#c4b5fd' }}>🔄 Scanning patterns…</span>
+                                <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}> Scanning patterns…</span>
                             )}
                         </div>
                     )}
 
-                    {/* ═══ PATTERN PANEL ═══ */}
+                    {/*  PATTERN PANEL  */}
                     {showPatterns && patternData && (
                         <div style={{
                             marginTop: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 12,
@@ -595,14 +604,14 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                             {/* Harmonic pattern card */}
                             {patternData.harmonic?.name && !['No Swing', 'Consolidation'].includes(patternData.harmonic.name) && (
                                 <div style={{ marginBottom: 12 }}>
-                                    <div style={{ fontSize: 10, fontWeight: 800, color: '#8b5cf6', textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 6 }}>
-                                        🔷 HARMONIC PATTERN
+                                    <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 6 }}>
+                                        HARMONIC PATTERN
                                     </div>
                                     <div onClick={() => setSelectedPattern({ ...patternData.harmonic, type: 'harmonic' })}
                                         style={{
                                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                             padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
-                                            background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
+                                            background: 'var(--bg-secondary)', border: '1px solid var(--border-active)',
                                         }}>
                                         <div>
                                             <div style={{ fontSize: 13, fontWeight: 800, color: patternData.harmonic.name?.includes('Bull') ? '#4ade80' : '#f87171' }}>
@@ -613,7 +622,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                                             </div>
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: 11, fontWeight: 800, color: '#c4b5fd' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)' }}>
                                                 {patternData.harmonic.completion_pct}%
                                             </div>
                                             <div style={{ fontSize: 9, color: '#64748b' }}>{patternData.harmonic.status}</div>
@@ -626,7 +635,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                             {patternData.chart_pattern?.name && !['Consolidation', 'Ranging'].includes(patternData.chart_pattern.name) && (
                                 <div style={{ marginBottom: 12 }}>
                                     <div style={{ fontSize: 10, fontWeight: 800, color: '#06b6d4', textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 6 }}>
-                                        📐 CHART PATTERN
+                                        CHART PATTERN
                                     </div>
                                     <div onClick={() => setSelectedPattern({ ...patternData.chart_pattern, type: 'chart' })}
                                         style={{
@@ -656,7 +665,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                             {showFib && patternData.fibonacci?.fib_levels && (
                                 <div style={{ marginBottom: 12 }}>
                                     <div style={{ fontSize: 10, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 6 }}>
-                                        📐 FIBONACCI LEVELS
+                                        FIBONACCI LEVELS
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 4 }}>
                                         {Object.entries(patternData.fibonacci.fib_levels)
@@ -679,7 +688,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                             {uniquePatterns.length > 0 && (
                                 <div>
                                     <div style={{ fontSize: 10, fontWeight: 800, color: '#ec4899', textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 6 }}>
-                                        🕯️ CANDLESTICK PATTERNS ({uniquePatterns.length} detected)
+                                        CANDLESTICK PATTERNS ({uniquePatterns.length} detected)
                                     </div>
                                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                         {uniquePatterns.slice(0, 12).map((p: any, i: number) => (
@@ -689,7 +698,7 @@ export default function LiveChart({ symbol, patterns }: LiveChartProps) {
                                                 background: p.bias === 'Bullish' ? 'rgba(74,222,128,0.12)' : p.bias === 'Bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)',
                                                 color: p.bias === 'Bullish' ? '#4ade80' : p.bias === 'Bearish' ? '#f87171' : '#94a3b8',
                                             }}>
-                                                {p.bias === 'Bullish' ? '▲' : p.bias === 'Bearish' ? '▼' : '●'} {p.name.replace('Bullish ', '').replace('Bearish ', '')}
+                                                {p.bias === 'Bullish' ? '' : p.bias === 'Bearish' ? '' : ''} {p.name.replace('Bullish ', '').replace('Bearish ', '')}
                                                 {p.backtest ? ` (${p.backtest.win_rate}%)` : ''}
                                             </button>
                                         ))}

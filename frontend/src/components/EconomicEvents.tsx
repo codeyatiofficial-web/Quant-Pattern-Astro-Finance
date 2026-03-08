@@ -134,10 +134,10 @@ export default function EconomicEvents() {
     };
 
     const SUBTABS = [
-        { key: 'upcoming', label: '📅 Upcoming Events' },
-        { key: 'backtest', label: '🔁 Event Backtest' },
-        { key: 'pulse', label: '🌐 Live Pulse' },
-        { key: 'news', label: '📰 Market News' },
+        { key: 'upcoming', label: ' Upcoming Events' },
+        { key: 'backtest', label: ' Event Backtest' },
+        { key: 'pulse', label: ' Live Pulse' },
+        { key: 'news', label: ' Market News' },
     ] as const;
 
     const SYMBOLS = ['^NSEI', '^NSEBANK', '^CNXIT', 'RELIANCE.NS', 'HDFCBANK.NS', 'TCS.NS'];
@@ -147,7 +147,7 @@ export default function EconomicEvents() {
     return (
         <div>
             {planModal}
-            <h1 className="section-title">📅 Economic Events</h1>
+            <h1 className="section-title"> Economic Events</h1>
             <p className="section-subtitle">400+ historical events from 2000 · Backtest market reactions · Live pulse & news</p>
 
             <div className="tab-list" style={{ marginBottom: 24 }}>
@@ -156,12 +156,12 @@ export default function EconomicEvents() {
                 ))}
             </div>
 
-            {/* ── UPCOMING EVENTS ─────────────────────────────── */}
+            {/*  UPCOMING EVENTS  */}
             {sub === 'upcoming' && (
                 <div>
                     <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
                         <button className="btn-primary" onClick={fetchEvents} disabled={evLoading}>
-                            {evLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Loading…</> : '🔄 Refresh (Next 30 Days)'}
+                            {evLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Loading…</> : ' Refresh (Next 30 Days)'}
                         </button>
                         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{events.length} events found</span>
                     </div>
@@ -182,14 +182,14 @@ export default function EconomicEvents() {
                                     }}>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                                                <span style={{ fontSize: 18 }}>{ev.emoji || '📅'}</span>
+                                                <span style={{ fontSize: 18 }}>{ev.emoji || ''}</span>
                                                 <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 14 }}>{ev.description || ev.name}</span>
-                                                {ev.urgency === 'imminent' && <span className="badge badge-bearish">⚡ Imminent</span>}
+                                                {ev.urgency === 'imminent' && <span className="badge badge-bearish"> Imminent</span>}
                                                 {ev.urgency === 'soon' && <span className="badge badge-moderate">Soon</span>}
                                             </div>
                                             <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-                                                <span>📆 {ev.date}</span>
-                                                <span style={{ color: col, fontWeight: 600 }}>● {ev.sub_event || ev.category}</span>
+                                                <span> {ev.date}</span>
+                                                <span style={{ color: col, fontWeight: 600 }}> {ev.sub_event || ev.category}</span>
                                                 {ev.historical_bias && <span>Historical: <strong style={{ color: 'var(--text-secondary)' }}>{ev.historical_bias}</strong></span>}
                                             </div>
                                         </div>
@@ -205,12 +205,12 @@ export default function EconomicEvents() {
                 </div>
             )}
 
-            {/* ── EVENT BACKTEST ───────────────────────────────── */}
+            {/*  EVENT BACKTEST  */}
             {sub === 'backtest' && (
                 <div>
                     <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
                         <h3 style={{ fontWeight: 700, marginBottom: 6, fontSize: 16 }}>
-                            📊 Event Category Backtest
+                             Event Category Backtest
                             <span style={{ fontSize: 10, color: '#f59e0b', verticalAlign: 'middle', marginLeft: 8, padding: '2px 6px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: 4 }}>PRO</span>
                         </h3>
                         <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
@@ -277,13 +277,13 @@ export default function EconomicEvents() {
                                 </select>
                             </div>
                             <button className="btn-primary" onClick={runBacktest} disabled={btLoading || !selectedCat} style={{ alignSelf: 'flex-end', minWidth: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                                {btLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} />Running…</> : <>▶ Backtest "{selectedCat}" {tier === 'free' && '🔒'}</>}
+                                {btLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} />Running…</> : <> Backtest "{selectedCat}" {tier === 'free' && ''}</>}
                             </button>
                         </div>
-                        {btError && <div className="alert-error">❌ {btError}</div>}
+                        {btError && <div className="alert-error"> {btError}</div>}
                     </div>
 
-                    {/* ── Backtest Results ── */}
+                    {/*  Backtest Results  */}
                     {btResult && (
                         <div>
                             {/* Header */}
@@ -313,7 +313,7 @@ export default function EconomicEvents() {
                                 <div className="grid-4">
                                     {[
                                         { label: 'Total Events', value: btResult.stats?.total_events, color: '' },
-                                        { label: 'Win Rate (Same Day ↑)', value: btResult.stats?.win_rate != null ? btResult.stats.win_rate.toFixed(1) + '%' : '—', color: (btResult.stats?.win_rate || 0) >= 50 ? '#10b981' : '#ef4444' },
+                                        { label: 'Win Rate (Same Day )', value: btResult.stats?.win_rate != null ? btResult.stats.win_rate.toFixed(1) + '%' : '—', color: (btResult.stats?.win_rate || 0) >= 50 ? '#10b981' : '#ef4444' },
                                         { label: 'Avg Same-Day Return', value: btResult.stats?.avg_same_day != null ? ((btResult.stats.avg_same_day > 0 ? '+' : '') + btResult.stats.avg_same_day.toFixed(3) + '%') : '—', color: (btResult.stats?.avg_same_day || 0) > 0 ? '#10b981' : '#ef4444' },
                                         { label: 'Max Gain / Max Loss', value: `+${btResult.stats?.max_gain?.toFixed(2)}% / ${btResult.stats?.max_loss?.toFixed(2)}%`, color: '#94a3b8' },
                                     ].map(m => (
@@ -337,9 +337,9 @@ export default function EconomicEvents() {
                                         </div>
                                     ))}
                                     <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        <span style={{ fontSize: 12, color: 'var(--accent-green)' }}>📈 Up Days:</span>
+                                        <span style={{ fontSize: 12, color: 'var(--accent-green)' }}> Up Days:</span>
                                         <span style={{ fontWeight: 700, color: '#10b981' }}>{btResult.stats?.up_count}</span>
-                                        <span style={{ fontSize: 12, color: 'var(--accent-red)', marginLeft: 10 }}>📉 Down Days:</span>
+                                        <span style={{ fontSize: 12, color: 'var(--accent-red)', marginLeft: 10 }}> Down Days:</span>
                                         <span style={{ fontWeight: 700, color: '#ef4444' }}>{btResult.stats?.down_count}</span>
                                     </div>
                                 </div>
@@ -349,7 +349,7 @@ export default function EconomicEvents() {
                             {btResult.events && btResult.events.length > 0 && (
                                 <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                                     <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontWeight: 700, fontSize: 15 }}>📋 Historical Occurrences ({btResult.events.length})</span>
+                                        <span style={{ fontWeight: 700, fontSize: 15 }}> Historical Occurrences ({btResult.events.length})</span>
                                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Data from 2000 · Yahoo Finance</span>
                                     </div>
                                     <div style={{ overflowX: 'auto', maxHeight: 500, overflowY: 'auto' }}>
@@ -378,7 +378,7 @@ export default function EconomicEvents() {
                                                         <td><ReturnPill v={e.t5_return} small /></td>
                                                         <td>
                                                             <span style={{ color: e.direction === 'Up' ? '#10b981' : e.direction === 'Down' ? '#ef4444' : '#94a3b8', fontWeight: 600, fontSize: 12 }}>
-                                                                {e.direction === 'Up' ? '▲' : e.direction === 'Down' ? '▼' : '→'} {e.direction}
+                                                                {e.direction === 'Up' ? '' : e.direction === 'Down' ? '' : '→'} {e.direction}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -393,11 +393,11 @@ export default function EconomicEvents() {
                 </div>
             )}
 
-            {/* ── LIVE PULSE ───────────────────────────────────── */}
+            {/*  LIVE PULSE  */}
             {sub === 'pulse' && (
                 <div>
                     <button className="btn-primary" onClick={fetchPulse} disabled={pulseLoading} style={{ marginBottom: 20 }}>
-                        {pulseLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Loading…</> : '🔄 Refresh Live Pulse'}
+                        {pulseLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Loading…</> : ' Refresh Live Pulse'}
                     </button>
                     {pulse && (
                         <div>
@@ -417,7 +417,7 @@ export default function EconomicEvents() {
                                                 ₹{pulse.live_quote.last_price?.toLocaleString('en-IN')}
                                             </div>
                                             <div style={{ fontSize: 16, fontWeight: 600, color: (pulse.live_quote.change ?? 0) >= 0 ? '#10b981' : '#ef4444' }}>
-                                                {(pulse.live_quote.change ?? 0) >= 0 ? '▲' : '▼'} {pulse.live_quote.change?.toFixed(2)} pts
+                                                {(pulse.live_quote.change ?? 0) >= 0 ? '' : ''} {pulse.live_quote.change?.toFixed(2)} pts
                                             </div>
                                         </div>
                                     ) : (
@@ -428,7 +428,7 @@ export default function EconomicEvents() {
                                 </div>
                                 {/* Upcoming events in next 7 days */}
                                 <div className="glass-card" style={{ padding: 24 }}>
-                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}>⚡ Events — Next 7 Days</div>
+                                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 14 }}> Events — Next 7 Days</div>
                                     {(pulse.upcoming_events || []).length === 0 ? (
                                         <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No major events in the next 7 days.</div>
                                     ) : (
@@ -438,7 +438,7 @@ export default function EconomicEvents() {
                                                 padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 13,
                                             }}>
                                                 <div>
-                                                    <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{e.emoji || '📅'} {e.description || e.name}</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{e.emoji || ''} {e.description || e.name}</div>
                                                     <div style={{ fontSize: 11, color: categoryColor(e.category), marginTop: 2 }}>{e.sub_event || e.category}</div>
                                                 </div>
                                                 <div style={{ textAlign: 'right', fontSize: 12 }}>
@@ -457,21 +457,21 @@ export default function EconomicEvents() {
                 </div>
             )}
 
-            {/* ── MARKET NEWS ──────────────────────────────────── */}
+            {/*  MARKET NEWS  */}
             {sub === 'news' && (
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
                         <button className="btn-primary" onClick={fetchNews} disabled={newsLoading}>
-                            {newsLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Fetching…</> : '🔄 Refresh Headlines'}
+                            {newsLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Fetching…</> : ' Refresh Headlines'}
                         </button>
                         {news?.aggregate && (
                             <div className="glass-card" style={{ padding: '8px 16px', display: 'inline-flex', alignItems: 'center', gap: 14 }}>
                                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Overall Sentiment:</span>
                                 <span style={{ fontWeight: 700, color: news.aggregate.overall_label === 'Bullish' ? '#10b981' : news.aggregate.overall_label === 'Bearish' ? '#ef4444' : '#94a3b8', fontSize: 13 }}>
-                                    {news.aggregate.overall_label === 'Bullish' ? '▲' : news.aggregate.overall_label === 'Bearish' ? '▼' : '→'} {news.aggregate.overall_label}
+                                    {news.aggregate.overall_label === 'Bullish' ? '' : news.aggregate.overall_label === 'Bearish' ? '' : '→'} {news.aggregate.overall_label}
                                 </span>
-                                <span style={{ fontSize: 12, color: '#10b981' }}>▲ {news.aggregate.bullish_count}</span>
-                                <span style={{ fontSize: 12, color: '#ef4444' }}>▼ {news.aggregate.bearish_count}</span>
+                                <span style={{ fontSize: 12, color: '#10b981' }}> {news.aggregate.bullish_count}</span>
+                                <span style={{ fontSize: 12, color: '#ef4444' }}> {news.aggregate.bearish_count}</span>
                                 <span style={{ fontSize: 12, color: '#94a3b8' }}>→ {news.aggregate.neutral_count}</span>
                             </div>
                         )}
@@ -481,7 +481,7 @@ export default function EconomicEvents() {
                             {news.headlines.map((h: any, i: number) => {
                                 const polarity = h.polarity ?? 0;
                                 const sentColor = polarity > 0.1 ? '#10b981' : polarity < -0.1 ? '#ef4444' : '#94a3b8';
-                                const sentLabel = polarity > 0.1 ? '▲ Bullish' : polarity < -0.1 ? '▼ Bearish' : '→ Neutral';
+                                const sentLabel = polarity > 0.1 ? ' Bullish' : polarity < -0.1 ? ' Bearish' : '→ Neutral';
                                 const barWidth = Math.min(Math.abs(polarity) * 200, 100);
                                 return (
                                     <div key={i} style={{
@@ -511,7 +511,7 @@ export default function EconomicEvents() {
                             })}
                         </div>
                     ) : (
-                        !newsLoading && <div className="alert-info">📰 Click Refresh Headlines to load live market news from Economic Times, MoneyControl &amp; LiveMint.</div>
+                        !newsLoading && <div className="alert-info"> Click Refresh Headlines to load live market news from Economic Times, MoneyControl &amp; LiveMint.</div>
                     )}
                 </div>
             )}

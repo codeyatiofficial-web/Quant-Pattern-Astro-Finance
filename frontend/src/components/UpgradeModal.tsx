@@ -2,14 +2,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePlan, PlanTier } from '../contexts/PlanContext';
 
-// ─── WhatsApp config ───────────────────────────────────────────────────────────
+//  WhatsApp config 
 const WA_NUMBER = '919193112255';
 const WA_MESSAGE = encodeURIComponent(
     'Hi! I want to subscribe to Quant-Pattern Premium to unlock extended historical analysis. Please share payment details.'
 );
 const WA_URL = `https://wa.me/${WA_NUMBER}?text=${WA_MESSAGE}`;
 
-// ─── Plans ────────────────────────────────────────────────────────────────────
+//  Plans 
 const PLANS = [
     {
         name: 'Free',
@@ -36,7 +36,7 @@ const PLANS = [
         name: 'Elite',
         price: '₹19,999',
         period: '/year',
-        color: '#f59e0b',
+        color: 'var(--text-primary)',
         tier: 'elite' as PlanTier,
         features: ['Max 30+ Years Historical Data', 'All Pro Features', 'Full Signal Backtesting', '1-Month AI Forecast', 'Custom Alerts', 'Dedicated WhatsApp Support'],
         cta: 'Upgrade to Elite',
@@ -45,7 +45,7 @@ const PLANS = [
     },
 ];
 
-// ─── Plan Status Banner (shown in app corner when plan is active) ─────────────
+//  Plan Status Banner (shown in app corner when plan is active) 
 export function PlanStatusBadge() {
     const { tier, expiresAt, deactivate } = usePlan();
     if (tier === 'free') return null;
@@ -57,12 +57,12 @@ export function PlanStatusBadge() {
     return (
         <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: tier === 'elite' ? 'linear-gradient(135deg,#f59e0b33,#b4530233)' : 'linear-gradient(135deg,#6366f133,#4f46e533)',
-            border: `1px solid ${tier === 'elite' ? '#f59e0b55' : '#6366f155'}`,
+            background: tier === 'elite' ? 'var(--bg-secondary)' : 'linear-gradient(135deg,#6366f133,#4f46e533)',
+            border: `1px solid ${tier === 'elite' ? 'var(--border-active)' : '#6366f155'}`,
             borderRadius: 30, padding: '5px 14px', fontSize: 12, fontWeight: 700,
-            color: tier === 'elite' ? '#fbbf24' : '#a5b4fc',
+            color: tier === 'elite' ? 'var(--text-primary)' : '#a5b4fc',
         }}>
-            {tier === 'elite' ? '🏆 Elite' : '🚀 Pro'}
+            {tier === 'elite' ? ' Elite' : ' Pro'}
             <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 500, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 8 }}>
                 {expiryText}
             </span>
@@ -74,7 +74,7 @@ export function PlanStatusBadge() {
     );
 }
 
-// ─── Upgrade Modal ────────────────────────────────────────────────────────────
+//  Upgrade Modal 
 export function UpgradeModal({ onClose }: { onClose: () => void }) {
     const { tier, expiresAt, activateCode } = usePlan();
     const [code, setCode] = useState('');
@@ -134,7 +134,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
 
                 {/* Header */}
                 <div style={{ padding: '32px 32px 18px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 40, marginBottom: 8 }}>🔐</div>
+                    <div style={{ fontSize: 40, marginBottom: 8 }}></div>
                     <h2 style={{ fontSize: 24, fontWeight: 800, color: 'white', marginBottom: 6 }}>
                         Unlock Extended Analysis
                     </h2>
@@ -168,7 +168,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                                         position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
                                         background: plan.color, color: 'white', fontSize: 10, fontWeight: 700,
                                         padding: '3px 12px', borderRadius: 20, letterSpacing: '0.5px',
-                                    }}>✓ ACTIVE</div>
+                                    }}> ACTIVE</div>
                                 )}
                                 <div style={{ color: plan.color, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{plan.name}</div>
                                 <div style={{ marginBottom: 14 }}>
@@ -178,7 +178,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', fontSize: 11, color: '#94a3b8', lineHeight: 1.9 }}>
                                     {plan.features.map(f => (
                                         <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                                            <span style={{ color: plan.color }}>✓</span> {f}
+                                            <span style={{ color: plan.color }}></span> {f}
                                         </li>
                                     ))}
                                 </ul>
@@ -188,11 +188,11 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                                         borderRadius: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
                                         background: `linear-gradient(135deg, ${plan.color}, ${plan.color}bb)`,
                                         color: 'white',
-                                    }}>📱 Buy via WhatsApp</a>
+                                    }}> Buy via WhatsApp</a>
                                 )}
                                 {isActive && (
                                     <div style={{ textAlign: 'center', fontSize: 12, color: plan.color, fontWeight: 700, padding: '4px 0 0' }}>
-                                        ✅ Plan Active
+                                        Plan Active
                                         <div style={{ fontSize: 10, opacity: 0.8, marginTop: 4, fontWeight: 500 }}>{expiryText}</div>
                                     </div>
                                 )}
@@ -206,7 +206,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                     })}
                 </div>
 
-                {/* ── Access Code Box ── */}
+                {/*  Access Code Box  */}
                 <div style={{
                     margin: '0 24px 24px',
                     background: 'rgba(99,102,241,0.06)',
@@ -214,10 +214,10 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                     borderRadius: 16, padding: '20px 22px',
                 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'white', marginBottom: 4 }}>
-                        🎟️ Have an Access Code?
+                        Have an Access Code?
                     </div>
                     <div style={{ fontSize: 12, color: '#64748b', marginBottom: 14 }}>
-                        Enter the code sent to you on WhatsApp after payment. Format: <code style={{ color: '#a78bfa' }}>QPRO-2025-XXXX</code> or <code style={{ color: '#f59e0b' }}>QELT-2025-XXXX</code>
+                        Enter the code sent to you on WhatsApp after payment. Format: <code style={{ color: '#a78bfa' }}>QPRO-2025-XXXX</code> or <code style={{ color: 'var(--text-primary)' }}>QELT-2025-XXXX</code>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
                         <input
@@ -243,7 +243,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                                 opacity: busy ? 0.7 : 1, whiteSpace: 'nowrap',
                             }}
                         >
-                            {busy ? '⏳ Checking…' : '✓ Activate'}
+                            {busy ? ' Checking…' : ' Activate'}
                         </button>
                     </div>
                     {msg && (
@@ -283,7 +283,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
     );
 }
 
-// ─── Hook used in all analysis components ─────────────────────────────────────
+//  Hook used in all analysis components 
 export function usePlanGate(FREE_LIMIT_YEARS = 1) {
     const { canAccess, tier } = usePlan();
     const [showModal, setShowModal] = useState(false);

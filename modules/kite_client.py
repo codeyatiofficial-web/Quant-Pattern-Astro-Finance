@@ -32,9 +32,11 @@ class KiteDataClient:
         self.api_secret = os.getenv("KITE_API_SECRET")
         self.kite = None
         self.instruments_df = None
+        self.circuit_breaker_until = None
         
         if self.api_key:
-            self.kite = KiteConnect(api_key=self.api_key)
+            # Add short timeout to prevent Dashboard hanging on network drops
+            self.kite = KiteConnect(api_key=self.api_key, timeout=7)
             self._load_token()
 
     def _load_token(self):
@@ -129,11 +131,19 @@ class KiteDataClient:
         if not self.kite or not self.kite.access_token:
             return False
             
+        # Circuit breaker fast-fail
+        if self.circuit_breaker_until and datetime.now() < self.circuit_breaker_until:
+            return False
+            
         try:
             # Profile call is lightweight and confirms auth validity
             self.kite.profile()
             return True
-        except Exception:
+        except Exception as e:
+            err_str = str(e).lower()
+            if "timeout" in err_str or "connection" in err_str or "reset" in err_str:
+                logging.warning(f"Kite API connection failed. Tripping fast-fail circuit breaker: {e}")
+                self.circuit_breaker_until = datetime.now() + timedelta(minutes=5)
             return False
 
     def fetch_historical_data(self, symbol: str, interval: str = "60minute", days_back: int = 3000) -> pd.DataFrame:
@@ -173,6 +183,10 @@ class KiteDataClient:
             except Exception as e:
                 logging.error(f"Kite historical fetch error for {current_start} to {current_end}: {e}")
                 # We stop chunking if an error (like rate limit, or out of subscription bounds) occurs.
+                err_str = str(e).lower()
+                if "timeout" in err_str or "connection" in err_str or "reset" in err_str:
+                    logging.warning(f"Kite historical fetch network drop. Tripping fast-fail circuit breaker: {e}")
+                    self.circuit_breaker_until = datetime.now() + timedelta(minutes=5)
                 break
                 
             current_end = current_start - timedelta(days=1)

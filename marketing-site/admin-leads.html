@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lead Submissions — Quant Pattern Admin</title>
+    <link rel="icon" href="images/logo.png" type="image/png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        .admin-page {
+            padding: 120px 0 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .admin-page h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .admin-page .sub {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 32px;
+        }
+
+        .leads-table-wrap {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid var(--border-glass);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        thead {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: var(--blue-light);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-glass);
+            color: var(--text-secondary);
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: rgba(102, 126, 234, 0.04);
+        }
+
+        .idea-cell {
+            max-width: 300px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .admin-stat {
+            padding: 20px 24px;
+            border-radius: 12px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .admin-stat .val {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--blue-light);
+        }
+
+        .admin-stat .lbl {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .actions-bar button {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-glass);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .actions-bar button:hover {
+            border-color: var(--border-glow);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .actions-bar .danger {
+            color: #ff5252;
+            border-color: rgba(255, 82, 82, 0.3);
+        }
+
+        .actions-bar .danger:hover {
+            background: rgba(255, 82, 82, 0.1);
+        }
+
+        .source-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: rgba(102, 126, 234, 0.15);
+            color: var(--blue-light);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="stars-container"></div>
+
+    <nav class="navbar scrolled" id="navbar">
+        <div class="container">
+            <a href="index.html" class="nav-logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 170" width="44" height="44">
+                    <defs>
+                        <linearGradient id="qGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#4ea8c7" />
+                            <stop offset="100%" stop-color="#f4d1dc" />
+                        </linearGradient>
+                    </defs>
+                    <g transform="translate(10,15)">
+                        <path d="M60 20A70 70 0 1 0 140 120" fill="none" stroke="url(#qGrad)" stroke-width="12"
+                            stroke-linecap="round" />
+                        <rect x="45" y="80" width="12" height="35" fill="#f4d1dc" rx="3" />
+                        <rect x="70" y="50" width="12" height="65" fill="#4ea8c7" rx="3" />
+                        <rect x="95" y="65" width="12" height="50" fill="#34d399" rx="3" />
+                        <path d="M25 120L135 15" fill="none" stroke="#6ee7b7" stroke-width="14"
+                            stroke-linecap="round" />
+                        <polygon points="115,15 145,5 135,35" fill="#6ee7b7" />
+                        <circle cx="15" cy="90" r="7" fill="#6ee7b7" />
+                        <circle cx="45" cy="35" r="7" fill="#4ea8c7" />
+                        <circle cx="115" cy="150" r="7" fill="#f4d1dc" />
+                    </g>
+                </svg>
+                <span>Quant <span class="text-gradient-blue">Pattern</span></span>
+            </a>
+            <a href="index.html" class="btn-primary">← Back to Home</a>
+        </div>
+    </nav>
+
+    <section class="admin-page">
+        <div class="container">
+            <h1>Lead Submissions</h1>
+            <p class="sub">All quote inquiries from the marketing site contact form. Data stored on server.</p>
+
+            <div class="stats-row" id="statsRow">
+                <div class="admin-stat glass-card">
+                    <div class="val" id="totalLeads">—</div>
+                    <div class="lbl">Total Leads</div>
+                </div>
+                <div class="admin-stat glass-card">
+                    <div class="val" id="todayLeads">—</div>
+                    <div class="lbl">Today</div>
+                </div>
+                <div class="admin-stat glass-card">
+                    <div class="val" id="weekLeads">—</div>
+                    <div class="lbl">This Week</div>
+                </div>
+            </div>
+
+            <div class="actions-bar">
+                <button onclick="exportCSV()" id="exportBtn">Export CSV</button>
+                <button onclick="refreshData()">Refresh</button>
+                <button class="danger" onclick="clearAll()" id="clearBtn">Clear All</button>
+            </div>
+
+            <div class="leads-table-wrap glass-card" id="tableWrap">
+                <div class="loading-state">⏳ Loading leads from server...</div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <span>© 2025 Quant Pattern by CodeYati. All rights reserved.</span>
+                <span>Admin Panel — Not for public access</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        const API = window.location.hostname === 'localhost'
+            ? 'http://localhost:8000'
+            : 'https://app.quant-pattern.com';
+
+        let allLeads = [];
+
+        async function refreshData() {
+            const wrap = document.getElementById('tableWrap');
+            wrap.innerHTML = '<div class="loading-state">⏳ Loading leads from server...</div>';
+
+            try {
+                const res = await fetch(`${API}/api/leads`);
+                const data = await res.json();
+                allLeads = data.leads || [];
+            } catch {
+                // Fallback to localStorage
+                allLeads = JSON.parse(localStorage.getItem('qp_leads') || '[]');
+            }
+
+            renderData();
+        }
+
+        function renderData() {
+            const leads = allLeads;
+            const now = new Date();
+            const todayStr = now.toISOString().slice(0, 10);
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+            // Stats
+            document.getElementById('totalLeads').textContent = leads.length;
+            document.getElementById('todayLeads').textContent = leads.filter(l => (l.timestamp || '').startsWith(todayStr)).length;
+            document.getElementById('weekLeads').textContent = leads.filter(l => new Date(l.timestamp) >= weekAgo).length;
+
+            // Table
+            const wrap = document.getElementById('tableWrap');
+            if (leads.length === 0) {
+                wrap.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">Empty</div>
+            <div>No leads received yet.</div>
+            <div style="margin-top:8px;font-size:0.8rem;">Leads will appear here when users submit the contact form.</div>
+          </div>
+        `;
+                return;
+            }
+
+            // Sort newest first
+            leads.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            let html = `<table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Email</th>
+            <th>Mobile</th>
+            <th>Business Idea / Brief</th>
+            <th>Submitted</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+            leads.forEach((lead, i) => {
+                const ts = lead.timestamp ? new Date(lead.timestamp).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+                html += `<tr>
+          <td>${leads.length - i}</td>
+          <td><a href="mailto:${lead.email || ''}" style="color:var(--blue-light)">${lead.email || '—'}</a></td>
+          <td><a href="tel:${lead.mobile || ''}" style="color:var(--blue-light)">${lead.mobile || '—'}</a></td>
+          <td class="idea-cell">${escapeHtml(lead.idea || '—')}</td>
+          <td style="white-space:nowrap">${ts}</td>
+        </tr>`;
+            });
+
+            html += `</tbody></table>`;
+            wrap.innerHTML = html;
+        }
+
+        function exportCSV() {
+            if (allLeads.length === 0) { alert('No leads to export.'); return; }
+
+            let csv = 'Email,Mobile,Business Idea,Submitted\n';
+            allLeads.forEach(l => {
+                csv += `"${l.email || ''}","${l.mobile || ''}","${(l.idea || '').replace(/"/g, '""')}","${l.timestamp || ''}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `quant-pattern-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function clearAll() {
+            if (!confirm('Are you sure you want to delete all leads? This cannot be undone.')) return;
+            try {
+                await fetch(`${API}/api/leads`, { method: 'DELETE' });
+            } catch {
+                localStorage.removeItem('qp_leads');
+            }
+            refreshData();
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Init
+        refreshData();
+    </script>
+</body>
+
+</html>

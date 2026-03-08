@@ -9,14 +9,14 @@ type Sub = 'live' | 'backtest' | 'forecast' | 'alignment';
 function SentimentDot({ score }: { score: number }) {
     const color = score > 0.05 ? 'var(--accent-green)' : score < -0.05 ? 'var(--accent-red)' : 'var(--text-muted)';
     const label = score > 0.05 ? 'Bullish' : score < -0.05 ? 'Bearish' : 'Neutral';
-    const icon = score > 0.05 ? '▲' : score < -0.05 ? '▼' : '●';
+    const icon = score > 0.05 ? '' : score < -0.05 ? '' : '';
     return <span style={{ color, fontWeight: 700, fontSize: 12 }}>{icon} {label} ({score.toFixed(3)})</span>;
 }
 
 function BiasChip({ bias, confidence }: { bias: string; confidence?: number }) {
     const color = bias === 'Bullish' ? 'var(--accent-green)' : bias === 'Bearish' ? 'var(--accent-red)' : 'var(--text-muted)';
     const bg = bias === 'Bullish' ? 'rgba(52,211,153,0.13)' : bias === 'Bearish' ? 'rgba(248,113,113,0.13)' : 'rgba(100,116,139,0.10)';
-    const icon = bias === 'Bullish' ? '▲' : bias === 'Bearish' ? '▼' : '●';
+    const icon = bias === 'Bullish' ? '' : bias === 'Bearish' ? '' : '';
     return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 6, background: bg, color, fontWeight: 700, fontSize: 12.5 }}>
             {icon} {bias}{confidence != null ? ` · ${confidence}%` : ''}
@@ -24,10 +24,10 @@ function BiasChip({ bias, confidence }: { bias: string; confidence?: number }) {
     );
 }
 
-// ── Symbol Catalogue with Full Display Names ───────────────────────────────────
+//  Symbol Catalogue with Full Display Names 
 const SYMBOL_GROUPS = [
     {
-        label: '🇮🇳 NSE Indices',
+        label: ' NSE Indices',
         market: 'NSE',
         symbols: [
             { v: '^NSEI', l: '^NSEI — Nifty 50' },
@@ -48,7 +48,7 @@ const SYMBOL_GROUPS = [
         ],
     },
     {
-        label: '🇮🇳 Nifty 50 Blue Chips',
+        label: ' Nifty 50 Blue Chips',
         market: 'NSE',
         symbols: [
             { v: 'RELIANCE.NS', l: 'RELIANCE.NS — Reliance Industries' },
@@ -86,7 +86,7 @@ const SYMBOL_GROUPS = [
         ],
     },
     {
-        label: '🥇 Precious Metals',
+        label: 'Precious Metals',
         market: 'NASDAQ',
         symbols: [
             { v: 'GC=F', l: 'GC=F — Gold Futures (COMEX)' },
@@ -98,7 +98,7 @@ const SYMBOL_GROUPS = [
         ],
     },
     {
-        label: '🛢️ Energy & Commodities',
+        label: ' Energy & Commodities',
         market: 'NASDAQ',
         symbols: [
             { v: 'CL=F', l: 'CL=F — Crude Oil WTI Futures' },
@@ -114,7 +114,7 @@ const SYMBOL_GROUPS = [
         ],
     },
     {
-        label: '💱 Forex (Currency Pairs)',
+        label: ' Forex (Currency Pairs)',
         market: 'NASDAQ',
         symbols: [
             { v: 'USDINR=X', l: 'USDINR — US Dollar / Indian Rupee' },
@@ -128,7 +128,7 @@ const SYMBOL_GROUPS = [
         ],
     },
     {
-        label: '🇺🇸 US & Global Indices',
+        label: ' US & Global Indices',
         market: 'NASDAQ',
         symbols: [
             { v: '^IXIC', l: '^IXIC — NASDAQ Composite' },
@@ -255,10 +255,10 @@ export default function SentimentVix() {
     }, [sub]);
 
     const SUBTABS = [
-        { key: 'live', label: '📰 Live Sentiment' },
-        { key: 'backtest', label: '🔁 Sentiment Backtest' },
-        { key: 'forecast', label: tier === 'elite' ? '🔮 1-Month Forecast' : tier === 'free' ? '🔮 1-Day Forecast' : '🔮 15-Day Forecast' },
-        { key: 'alignment', label: '🌌 Astro Alignment' },
+        { key: 'live', label: ' Live Sentiment' },
+        { key: 'backtest', label: ' Sentiment Backtest' },
+        { key: 'forecast', label: tier === 'elite' ? ' 1-Month Forecast' : tier === 'free' ? ' 1-Day Forecast' : ' 15-Day Forecast' },
+        { key: 'alignment', label: ' Astro Alignment' },
     ] as const;
 
     // Limit forecast based on tier
@@ -287,7 +287,7 @@ export default function SentimentVix() {
     return (
         <>
             <div className="fade-in">
-                <h1 className="section-title">💬 Sentiment &amp; Market Pulse</h1>
+                <h1 className="section-title"> Sentiment &amp; Market Pulse</h1>
                 <p className="section-subtitle">News sentiment scoring, 1-month forecasting, and astro-news alignment</p>
 
                 <div className="tab-list" style={{ marginBottom: 20 }}>
@@ -296,12 +296,12 @@ export default function SentimentVix() {
                     ))}
                 </div>
 
-                {/* ── LIVE SENTIMENT ── */}
+                {/*  LIVE SENTIMENT  */}
                 {sub === 'live' && (
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                             <button className="btn-primary" onClick={fetchLive} disabled={liveLoading}>
-                                {liveLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Fetching…</> : '🔄 Refresh Headlines'}
+                                {liveLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Fetching…</> : ' Refresh Headlines'}
                             </button>
                             {liveData?.overall_score !== undefined && (
                                 <div className="glass-card group transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-glow)]" style={{ padding: '8px 16px', display: 'inline-flex', alignItems: 'center', gap: 16 }}>
@@ -311,8 +311,8 @@ export default function SentimentVix() {
                                     </div>
                                     {liveData.counts && (
                                         <div className="font-quant" style={{ display: 'flex', gap: 10, fontSize: 13 }}>
-                                            <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}>▲ {liveData.counts.bullish ?? 0}</span>
-                                            <span style={{ color: 'var(--accent-red)', fontWeight: 700 }}>▼ {liveData.counts.bearish ?? 0}</span>
+                                            <span style={{ color: 'var(--accent-green)', fontWeight: 700 }}> {liveData.counts.bullish ?? 0}</span>
+                                            <span style={{ color: 'var(--accent-red)', fontWeight: 700 }}> {liveData.counts.bearish ?? 0}</span>
                                             <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>→ {liveData.counts.neutral ?? 0}</span>
                                         </div>
                                     )}
@@ -349,7 +349,7 @@ export default function SentimentVix() {
                     </div>
                 )}
 
-                {/* ── SENTIMENT BACKTEST ── */}
+                {/*  SENTIMENT BACKTEST  */}
                 {sub === 'backtest' && (
                     <div>
                         <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
@@ -358,10 +358,10 @@ export default function SentimentVix() {
                                 <div>
                                     <label className="form-label">Symbol</label>
                                     <select className="form-select" value={btSymbol} onChange={e => setBtSymbol(e.target.value)} style={{ width: 200 }}>
-                                        <optgroup label="🇮🇳 India — NSE">
+                                        <optgroup label=" India — NSE">
                                             {NSE_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
                                         </optgroup>
-                                        <optgroup label="🌍 Global / US">
+                                        <optgroup label=" Global / US">
                                             {GLOBAL_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
                                         </optgroup>
                                     </select>
@@ -372,16 +372,16 @@ export default function SentimentVix() {
                                         const p = e.target.value;
                                         if (guardPeriod(p)) setBtPeriod(p);
                                     }} style={{ width: 200 }}>
-                                        <option value="1y">1 year ✓ Free</option>
-                                        <option value="2y">🔒 2 years — Pro</option>
-                                        <option value="3y">🔒 3 years — Pro</option>
-                                        <option value="5y">🔒 5 years — Pro</option>
-                                        <option value="10y">🔒 10 years — Elite</option>
-                                        <option value="max">🔒 Max Available — Elite</option>
+                                        <option value="1y">1 year  Free</option>
+                                        <option value="2y"> 2 years — Pro</option>
+                                        <option value="3y"> 3 years — Pro</option>
+                                        <option value="5y"> 5 years — Pro</option>
+                                        <option value="10y"> 10 years — Elite</option>
+                                        <option value="max"> Max Available — Elite</option>
                                     </select>
                                 </div>
                                 <button className="btn-primary" onClick={fetchBacktest} disabled={btLoading}>
-                                    {btLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Running…</> : '▶ Run Backtest'}
+                                    {btLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Running…</> : ' Run Backtest'}
                                 </button>
                             </div>
                         </div>
@@ -428,7 +428,7 @@ export default function SentimentVix() {
                     </div>
                 )}
 
-                {/* ── FORECAST ── */}
+                {/*  FORECAST  */}
                 {sub === 'forecast' && (
                     <div>
                         {/* Controls */}
@@ -447,11 +447,11 @@ export default function SentimentVix() {
                                 <button className="btn-primary" onClick={() => fetchForecast(fcSymbol)} disabled={forecastLoading}>
                                     {forecastLoading
                                         ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Generating…</>
-                                        : `🔮 Generate ${tier === 'elite' ? '1-Month' : tier === 'free' ? '1-Day' : '15-Day'} Forecast`}
+                                        : ` Generate ${tier === 'elite' ? '1-Month' : tier === 'free' ? '1-Day' : '15-Day'} Forecast`}
                                 </button>
                             </div>
                             {forecastData?.error && (
-                                <div className="alert-error" style={{ marginTop: 14 }}>⚠️ {forecastData.error}</div>
+                                <div className="alert-error" style={{ marginTop: 14 }}> {forecastData.error}</div>
                             )}
                         </div>
 
@@ -462,7 +462,7 @@ export default function SentimentVix() {
                                 {tier === 'free' && (
                                     <div className="group transition-all duration-300" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 8, cursor: 'pointer' }} onClick={() => guardPeriod('15y')} >
                                         <div>
-                                            <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>🚀 Pro Plan</div>
+                                            <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}> Pro Plan</div>
                                             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Get full 15-Day AI Predictive Forecasts and Market Outlook</div>
                                         </div>
                                         <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none' }}>Upgrade to Pro</button>
@@ -470,7 +470,7 @@ export default function SentimentVix() {
                                 )}
                                 <div className="group transition-all duration-300" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.2)', borderRadius: 8, cursor: 'pointer' }} onClick={() => guardPeriod('30y')} >
                                     <div>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#a855f7', marginBottom: 2 }}>💎 Elite Plan</div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#a855f7', marginBottom: 2 }}> Elite Plan</div>
                                         <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Get max 30-Day AI Predictive Forecasts and Elite Analytics</div>
                                     </div>
                                     <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none' }}>Upgrade to Elite</button>
@@ -487,9 +487,9 @@ export default function SentimentVix() {
                                 </div>
                                 <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                                     {[
-                                        { label: '▲ Bullish days', value: displayOutlook.bullish_days, color: 'var(--accent-green)' },
-                                        { label: '▼ Bearish days', value: displayOutlook.bearish_days, color: 'var(--accent-red)' },
-                                        { label: '● Neutral days', value: displayOutlook.neutral_days, color: 'var(--text-muted)' },
+                                        { label: ' Bullish days', value: displayOutlook.bullish_days, color: 'var(--accent-green)' },
+                                        { label: ' Bearish days', value: displayOutlook.bearish_days, color: 'var(--accent-red)' },
+                                        { label: ' Neutral days', value: displayOutlook.neutral_days, color: 'var(--text-muted)' },
                                         { label: 'Avg Confidence', value: `${displayOutlook.avg_confidence?.toFixed(1)}%`, color: 'var(--accent-indigo)' },
                                         { label: 'Vol Regime', value: displayOutlook.vol_regime, color: 'var(--accent-gold)' },
                                     ].map(m => (
@@ -514,7 +514,7 @@ export default function SentimentVix() {
                                 {(Object.entries(weeks) as [string, any[]][]).map(([weekNum, days]) => (
                                     <div key={weekNum}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 8 }}>
-                                            📅 Week {weekNum} &nbsp;
+                                            Week {weekNum} &nbsp;
                                             <span style={{ fontWeight: 400 }}>
                                                 {days[0]?.date} → {days[days.length - 1]?.date}
                                             </span>
@@ -524,7 +524,7 @@ export default function SentimentVix() {
                                                 const bias = (d.bias || '').toLowerCase();
                                                 const borderColor = bias === 'bullish' ? 'var(--accent-green)' : bias === 'bearish' ? 'var(--accent-red)' : 'var(--border-subtle)';
                                                 const biasColor = bias === 'bullish' ? 'var(--accent-green)' : bias === 'bearish' ? 'var(--accent-red)' : 'var(--text-muted)';
-                                                const biasIcon = bias === 'bullish' ? '▲' : bias === 'bearish' ? '▼' : '●';
+                                                const biasIcon = bias === 'bullish' ? '' : bias === 'bearish' ? '' : '';
                                                 return (
                                                     <div key={i} className="group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" style={{
                                                         background: 'var(--bg-card)',
@@ -539,7 +539,7 @@ export default function SentimentVix() {
                                                         <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Conf: <span className="font-quant" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{d.confidence}%</span></div>
                                                         {d.nakshatra && (
                                                             <div style={{ marginTop: 6, fontSize: 10, color: 'var(--accent-violet)', fontWeight: 600 }}>
-                                                                🌙 {d.nakshatra}
+                                                                {d.nakshatra}
                                                             </div>
                                                         )}
                                                         {d.ruling_planet && (
@@ -565,7 +565,7 @@ export default function SentimentVix() {
                         {forecastData?.upcoming_events?.length > 0 && (
                             <div style={{ marginTop: 24 }}>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 10 }}>
-                                    📆 Upcoming Key Events This Month
+                                    Upcoming Key Events This Month
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                     {forecastData.upcoming_events.slice(0, 12).map((ev: any, i: number) => (
@@ -574,7 +574,7 @@ export default function SentimentVix() {
                                             background: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
                                             borderRadius: 10, padding: '10px 16px',
                                         }}>
-                                            <span style={{ fontSize: 18 }}>{ev.emoji ?? '📅'}</span>
+                                            <span style={{ fontSize: 18 }}>{ev.emoji ?? ''}</span>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{ev.description}</div>
                                                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{ev.category} · {ev.date}</div>
@@ -586,12 +586,12 @@ export default function SentimentVix() {
                             </div>
                         )}
 
-                        {forecastData?.error && <div className="alert-warn">⚠️ {forecastData.error}</div>}
+                        {forecastData?.error && <div className="alert-warn"> {forecastData.error}</div>}
 
                     </div>
                 )}
 
-                {/* ── ASTRO ALIGNMENT ── */}
+                {/*  ASTRO ALIGNMENT  */}
                 {sub === 'alignment' && (
                     <div>
                         <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
@@ -602,14 +602,14 @@ export default function SentimentVix() {
                                 <div>
                                     <label className="form-label">Symbol</label>
                                     <select className="form-select" value={alignSymbol} onChange={e => setAlignSymbol(e.target.value)} style={{ width: 180 }}>
-                                        <optgroup label="🇮🇳 India — NSE">{NSE_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
-                                        <optgroup label="🌍 Global / US">{GLOBAL_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
+                                        <optgroup label=" India — NSE">{NSE_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
+                                        <optgroup label=" Global / US">{GLOBAL_SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}</optgroup>
                                     </select>
                                 </div>
                                 <div>
                                     <label className="form-label">Period <span style={{ fontSize: 10, color: '#f59e0b' }}>(Pro)</span></label>
                                     <select className="form-select" value={alignPeriod} onChange={e => { if (guardPeriod(e.target.value)) setAlignPeriod(e.target.value); }} style={{ width: 110 }}>
-                                        {['1y', '3y', '5y', '10y', '15y', 'max'].map(p => <option key={p} value={p}>{p} {p !== '1y' && '🔒'}</option>)}
+                                        {['1y', '3y', '5y', '10y', '15y', 'max'].map(p => <option key={p} value={p}>{p} {p !== '1y' && ''}</option>)}
                                     </select>
                                 </div>
                                 <div>
@@ -634,7 +634,7 @@ export default function SentimentVix() {
                                     </select>
                                 </div>
                                 <button className="btn-primary" onClick={fetchAlignment} disabled={alignLoading}>
-                                    {alignLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Computing Matrix…</> : '✨ Correlate'}
+                                    {alignLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2 }} /> Computing Matrix…</> : ' Correlate'}
                                 </button>
                             </div>
                         </div>

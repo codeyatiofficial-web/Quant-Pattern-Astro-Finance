@@ -37,7 +37,7 @@ const US_SYMBOLS = new Set([
 
 function TendencyBadge({ t }: { t: string }) {
     const cls = t === 'Bullish' ? 'badge-bullish' : t === 'Bearish' ? 'badge-bearish' : 'badge-neutral';
-    const icon = t === 'Bullish' ? '▲' : t === 'Bearish' ? '▼' : '●';
+    const icon = t === 'Bullish' ? '' : t === 'Bearish' ? '' : '';
     return <span className={`badge ${cls}`}>{icon} {t}</span>;
 }
 
@@ -128,9 +128,9 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             });
             const data = await res.json();
             onAnalysisDone(data);
-            setStatus('✅ Analysis complete! Switching to results…');
+            setStatus(' Analysis complete! Switching to results…');
         } catch {
-            setStatus('❌ Error fetching data. Is the backend running?');
+            setStatus(' Error fetching data. Is the backend running?');
         }
         setAnalysing(false);
     };
@@ -140,46 +140,46 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     return (
         <div className="fade-in">
             {planModal}
-            {/* ── Page Header ── */}
+            {/*  Page Header  */}
             <div style={{ marginBottom: 24 }}>
-                <h1 className="section-title">📊 Market Intelligence Dashboard</h1>
+                <h1 className="section-title"> Market Intelligence Dashboard</h1>
                 <p className="section-subtitle">
                     AI-composite signals across planetary cycles, technicals, options & institutional flows
                 </p>
             </div>
 
-            {/* ── 1-WEEK COMPREHENSIVE FORECAST (All users) ── */}
+            {/*  1-WEEK COMPREHENSIVE FORECAST (All users)  */}
             <div style={{
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(59,130,246,0.05) 100%)',
-                border: '1px solid rgba(99,102,241,0.3)',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
                 borderRadius: 16,
                 padding: '20px 24px',
                 marginBottom: 24,
             }}>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 20 }}>🔮</span>
+                    <span style={{ fontSize: 20 }}></span>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-WEEK MARKET FORECAST</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>11 Signals: Cycles · Yogas · Lunar Phase · Transits · Technicals · Patterns · Options · FII/DII · News · Events · Weekday</div>
                     </div>
                     {weekForecast?.global_signals?.technical?.current_price && (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>₹<strong style={{ color: 'white', fontSize: 14 }}>{weekForecast.global_signals.technical.current_price.toLocaleString('en-IN')}</strong></span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>₹<strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>{weekForecast.global_signals.technical.current_price.toLocaleString('en-IN')}</strong></span>
                     )}
                 </div>
 
                 {weekLoading ? (
                     <div style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        gap: 16, padding: '40px 20px', background: 'rgba(99,102,241,0.03)',
-                        border: '1px dashed rgba(99,102,241,0.2)', borderRadius: 12, margin: '10px 0'
+                        gap: 16, padding: '40px 20px', background: 'var(--bg-secondary)',
+                        border: '1px dashed var(--border-subtle)', borderRadius: 12, margin: '10px 0'
                     }}>
                         <div style={{ position: 'relative', width: 48, height: 48 }}>
-                            <div className="spinner" style={{ width: 48, height: 48, borderWidth: 3, borderColor: 'rgba(99,102,241,0.2)', borderTopColor: '#6366f1' }} />
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 20 }}>🌌</div>
+                            <div className="spinner" style={{ width: 48, height: 48, borderWidth: 3, borderColor: 'var(--border-subtle)', borderTopColor: 'var(--accent-indigo)' }} />
+                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: 20 }}></div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#a5b4fc', marginBottom: 6, letterSpacing: 0.5 }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: 0.5 }}>
                                 INITIALIZING QUANTUM SCAN...
                             </div>
                             <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 450, lineHeight: 1.5 }}>
@@ -198,9 +198,9 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                     <div style={{ fontSize: 18, fontWeight: 900, color: ws.verdict_color }}>{ws.verdict}</div>
                                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Avg Score: <strong style={{ color: 'white' }}>{ws.avg_score}</strong></div>
                                     <div style={{ display: 'flex', gap: 6 }}>
-                                        <span style={{ fontSize: 10, background: 'rgba(74,222,128,0.15)', color: '#4ade80', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>📈 {ws.bull_days} Bull</span>
-                                        <span style={{ fontSize: 10, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>↔ {ws.neutral_days} Neutral</span>
-                                        <span style={{ fontSize: 10, background: 'rgba(248,113,113,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>📉 {ws.bear_days} Bear</span>
+                                        <span style={{ fontSize: 10, background: 'rgba(74,222,128,0.15)', color: '#4ade80', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}> {ws.bull_days} Bull</span>
+                                        <span style={{ fontSize: 10, background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>↔ {ws.neutral_days} Neutral</span>
+                                        <span style={{ fontSize: 10, background: 'rgba(248,113,113,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}> {ws.bear_days} Bear</span>
                                     </div>
                                     <span style={{ fontSize: 9, color: 'var(--text-muted)', marginLeft: 'auto' }}>{ws.total_signals} signals analyzed</span>
                                 </div>
@@ -210,19 +210,19 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                         {/* Global Signal Badges */}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
                             {weekForecast.global_signals?.technical?.text && weekForecast.global_signals.technical.text !== 'N/A' && (
-                                <span style={{ fontSize: 10, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: '3px 8px', color: '#a5b4fc' }}>📊 {weekForecast.global_signals.technical.text}</span>
+                                <span style={{ fontSize: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '3px 8px', color: 'var(--text-secondary)' }}> {weekForecast.global_signals.technical.text}</span>
                             )}
                             {weekForecast.global_signals?.options?.text && weekForecast.global_signals.options.text !== 'N/A' && (
-                                <span style={{ fontSize: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 8, padding: '3px 8px', color: '#c4b5fd' }}>⛓️ {weekForecast.global_signals.options.text}</span>
+                                <span style={{ fontSize: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '3px 8px', color: 'var(--text-secondary)' }}> {weekForecast.global_signals.options.text}</span>
                             )}
                             {weekForecast.global_signals?.institutional?.text && weekForecast.global_signals.institutional.text !== 'N/A' && (
-                                <span style={{ fontSize: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '3px 8px', color: '#6ee7b7' }}>🏦 {weekForecast.global_signals.institutional.text}</span>
+                                <span style={{ fontSize: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '3px 8px', color: '#6ee7b7' }}> {weekForecast.global_signals.institutional.text}</span>
                             )}
                             {weekForecast.news_sentiment?.text && weekForecast.news_sentiment.text !== 'N/A' && (
-                                <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '3px 8px', color: '#fcd34d' }}>📰 {weekForecast.news_sentiment.text}</span>
+                                <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '3px 8px', color: '#fcd34d' }}> {weekForecast.news_sentiment.text}</span>
                             )}
                             {weekForecast.chart_patterns?.patterns?.length > 0 && (
-                                <span style={{ fontSize: 10, background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)', borderRadius: 8, padding: '3px 8px', color: '#f9a8d4' }}>〽️ {weekForecast.chart_patterns.bullish_count}↑ {weekForecast.chart_patterns.bearish_count}↓ patterns</span>
+                                <span style={{ fontSize: 10, background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)', borderRadius: 8, padding: '3px 8px', color: '#f9a8d4' }}> {weekForecast.chart_patterns.bullish_count} {weekForecast.chart_patterns.bearish_count} patterns</span>
                             )}
                         </div>
 
@@ -232,8 +232,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 const isToday = idx === 0;
                                 return (
                                     <div key={day.date} style={{
-                                        background: isToday ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
-                                        border: `1px solid ${isToday ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                                        background: isToday ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                                        border: `1px solid ${isToday ? 'var(--border-active)' : 'var(--border-subtle)'}`,
                                         borderRadius: 12, padding: 14, position: 'relative',
                                     }}>
                                         {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-indigo)', color: 'white', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 6, letterSpacing: 1 }}>TODAY</div>}
@@ -251,7 +251,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 6 }}>
                                                 {Object.entries(day.signal_breakdown as Record<string, number>).filter(([, v]) => v !== 0).map(([key, val]) => {
                                                     const v = val as number;
-                                                    const label: Record<string, string> = { nakshatra: '🔄 Cycle', yogas: '🔮 Yoga', weekday: '📅 Day', tithi_paksha: '🌙 Phase', gochar: '🪐 Transit', events: '📋 Event', options: '⛓️ PCR', institutional: '🏦 FII', technical: '📊 Tech', chart_patterns: '〽️ Pattern', news: '📰 News' };
+                                                    const label: Record<string, string> = { nakshatra: ' Cycle', yogas: ' Yoga', weekday: ' Day', tithi_paksha: ' Phase', gochar: ' Transit', events: ' Event', options: ' PCR', institutional: ' FII', technical: ' Tech', chart_patterns: ' Pattern', news: ' News' };
                                                     return (
                                                         <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
                                                             <span style={{ color: 'var(--text-muted)' }}>{label[key] || key}</span>
@@ -266,8 +266,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                         {day.planetary_yogas?.length > 0 && (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
                                                 {day.planetary_yogas.slice(0, 2).map((y: any, j: number) => (
-                                                    <div key={j} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: y.impact === 'bullish' ? 'rgba(74,222,128,0.15)' : y.impact === 'bearish' ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.1)', color: y.impact === 'bullish' ? '#4ade80' : y.impact === 'bearish' ? '#f87171' : '#fbbf24', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                        <span>{y.icon}</span>
+                                                    <div key={j} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: y.impact === 'bullish' ? 'rgba(74,222,128,0.15)' : y.impact === 'bearish' ? 'rgba(248,113,113,0.15)' : 'var(--bg-secondary)', color: y.impact === 'bullish' ? '#4ade80' : y.impact === 'bearish' ? '#f87171' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 3 }}>
                                                         <span style={{ fontWeight: 700 }}>{y.name}</span>
                                                     </div>
                                                 ))}
@@ -278,8 +277,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                         {day.events?.length > 0 && (
                                             <div style={{ marginTop: 3 }}>
                                                 {day.events.slice(0, 1).map((ev: any, j: number) => (
-                                                    <div key={j} style={{ fontSize: 8, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                        <span>📋</span> {ev.name?.slice(0, 20)}
+                                                    <div key={j} style={{ fontSize: 8, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        {ev.name?.slice(0, 20)}
                                                     </div>
                                                 ))}
                                             </div>
@@ -291,8 +290,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
                         {/* Gochar / Transits row */}
                         {weekForecast.gochar_events?.length > 0 && (
-                            <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 10 }}>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: '#c4b5fd', marginBottom: 6 }}>🪐 Upcoming Planetary Transits</div>
+                            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 10 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}> Upcoming Planetary Transits</div>
                                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                                     {weekForecast.gochar_events.slice(0, 5).map((g: any, i: number) => (
                                         <span key={i} style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, background: g.tendency === 'Bullish' ? 'rgba(74,222,128,0.12)' : g.tendency === 'Bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: g.tendency === 'Bullish' ? '#4ade80' : g.tendency === 'Bearish' ? '#f87171' : '#94a3b8' }}>
@@ -305,9 +304,9 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
                         {!isElite && (
                             <div style={{ marginTop: 14, padding: '10px 16px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <span style={{ fontSize: 16 }}>⭐</span>
+                                <span style={{ fontSize: 16 }}></span>
                                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                    <strong style={{ color: '#fbbf24' }}>Upgrade to Elite</strong> for the full <strong>1-Month Composite Forecast</strong> with date picker, FII/DII institutional flows, options chain analysis, and seasonality scoring.
+                                    <strong style={{ color: 'var(--text-primary)' }}>Upgrade to Elite</strong> for the full <strong>1-Month Composite Forecast</strong> with date picker, FII/DII institutional flows, options chain analysis, and seasonality scoring.
                                 </div>
                             </div>
                         )}
@@ -317,7 +316,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 )}
             </div>
 
-            {/* ── ELITE: 1-Month Composite Forecast ── */}
+            {/*  ELITE: 1-Month Composite Forecast  */}
             {
                 isElite && (
 
@@ -336,11 +335,11 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                             background: 'linear-gradient(135deg,#f59e0b,#b45309)',
                             color: '#fff', fontSize: 10, fontWeight: 800,
                             padding: '3px 10px', borderRadius: 20, letterSpacing: 1.2,
-                        }}>⭐ ELITE</div>
+                        }}> ELITE</div>
 
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 18 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <span style={{ fontSize: 22 }}>🔭</span>
+                                <span style={{ fontSize: 22 }}></span>
                                 <div>
                                     <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-MONTH MARKET FORECAST</div>
                                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Composite: Astro · Technical · Institutional · Options · Macro · Seasonality</div>
@@ -375,7 +374,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 <button
                                     onClick={fetchForecast}
                                     className="btn-primary"
-                                    style={{ padding: '4px 12px', fontSize: 12, height: 'auto', minWidth: 'auto', background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', color: '#fbbf24' }}
+                                    style={{ padding: '4px 12px', fontSize: 12, height: 'auto', minWidth: 'auto', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
                                 >
                                     Recalculate
                                 </button>
@@ -452,15 +451,14 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                             borderRadius: 8, padding: '8px 12px',
                                             opacity: sig.direction === 'historical' ? 0.6 : 1
                                         }}>
-                                            <span style={{ fontSize: 16, flexShrink: 0 }}>{sig.icon}</span>
-                                            <div>
+                                            <div style={{ flex: 1 }}>
                                                 <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 2 }}>{sig.category}</div>
                                                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{sig.text}</div>
                                             </div>
                                             <span style={{
                                                 marginLeft: 'auto', flexShrink: 0, fontSize: 12,
-                                                color: sig.direction === 'bullish' ? '#4ade80' : sig.direction === 'bearish' ? '#f87171' : sig.direction === 'historical' ? '#6b7280' : '#fbbf24',
-                                            }}>{sig.direction === 'bullish' ? '▲' : sig.direction === 'bearish' ? '▼' : sig.direction === 'historical' ? '—' : '●'}</span>
+                                                color: sig.direction === 'bullish' ? '#4ade80' : sig.direction === 'bearish' ? '#f87171' : sig.direction === 'historical' ? '#6b7280' : 'var(--text-primary)',
+                                            }}>{sig.direction === 'bullish' ? '' : sig.direction === 'bearish' ? '' : sig.direction === 'historical' ? '—' : ''}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -470,7 +468,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 )
             }
 
-            {/* ── Today's Cosmic Snapshot ── */}
+            {/*  Today's Cosmic Snapshot  */}
             {
                 loading ? (
                     <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
@@ -479,22 +477,22 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     </div>
                 ) : insight ? (
                     <>
-                        {/* ── 4-card metrics row ── */}
+                        {/*  4-card metrics row  */}
                         <div className="grid-4" style={{ marginBottom: 18 }}>
                             <MetricCard
-                                icon="🔄"
+                                icon=""
                                 label="Current Cycle"
                                 value={<span className="gradient-text" style={{ fontSize: 20, fontWeight: 800 }}>{insight.current_nakshatra}</span>}
                                 sub={insight.nakshatra_sanskrit}
                             />
                             <MetricCard
-                                icon="⭐"
+                                icon=""
                                 label="Cycle Position"
                                 value={<span className="gradient-text" style={{ fontSize: 20, fontWeight: 800 }}>Phase {insight.pada}</span>}
                                 sub={insight.ruling_planet}
                             />
                             <MetricCard
-                                icon="📐"
+                                icon=""
                                 label="Sidereal Longitude"
                                 value={
                                     typeof insight.moon_longitude === 'number'
@@ -504,63 +502,63 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 sub="Moon sidereal position"
                             />
                             <MetricCard
-                                icon="📈"
+                                icon=""
                                 label="Historical Tendency"
                                 value={<TendencyBadge t={tendency} />}
                                 sub="Based on historical data"
                             />
                         </div>
 
-                        {/* ── Secondary info row ── */}
+                        {/*  Secondary info row  */}
                         {(insight.tithi_name || insight.yoga_name) && (
                             <div className="grid-3" style={{ marginBottom: 18 }}>
                                 {insight.tithi_name && (
-                                    <MetricCard icon="🌒" label="Lunar Phase" value={
+                                    <MetricCard icon="" label="Lunar Phase" value={
                                         <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-gold)' }}>{insight.tithi_name}</span>
                                     } sub={insight.paksha ?? ''} />
                                 )}
                                 {insight.yoga_name && (
-                                    <MetricCard icon="🔮" label="Signal Pattern" value={
+                                    <MetricCard icon="" label="Signal Pattern" value={
                                         <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent-purple)' }}>{insight.yoga_name}</span>
                                     } sub="Active pattern period" />
                                 )}
-                                <MetricCard icon="🌿" label="Signal Driver" value={
+                                <MetricCard icon="" label="Signal Driver" value={
                                     <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--accent-violet)' }}>{insight.ruling_planet}</span>
                                 } sub="Pattern driver" />
                             </div>
                         )}
 
-                        {/* ── Insight traits box ── */}
+                        {/*  Insight traits box  */}
                         {insight.favorable_for && (
                             <div className="glass-card" style={{ padding: '18px 22px', marginBottom: 16 }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px' }}>
                                     <div>
-                                        <span style={{ color: 'var(--accent-green)', fontWeight: 700, fontSize: 12.5 }}>✅ Favorable for</span>
+                                        <span style={{ color: 'var(--accent-green)', fontWeight: 700, fontSize: 12.5 }}> Favorable for</span>
                                         <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                                             {(insight.favorable_for || []).join(', ')}
                                         </p>
                                     </div>
                                     <div>
-                                        <span style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: 12.5 }}>❌ Unfavorable for</span>
+                                        <span style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: 12.5 }}> Unfavorable for</span>
                                         <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                                             {(insight.unfavorable_for || []).join(', ')}
                                         </p>
                                     </div>
                                     <div>
-                                        <span style={{ color: 'var(--accent-gold)', fontWeight: 700, fontSize: 12.5 }}>🎯 Financial Traits</span>
+                                        <span style={{ color: 'var(--accent-gold)', fontWeight: 700, fontSize: 12.5 }}> Financial Traits</span>
                                         <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                                             {(insight.financial_traits || []).join(', ')}
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                                         <div>
-                                            <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}>🔢 Lucky Numbers</span>
+                                            <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}> Lucky Numbers</span>
                                             <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)' }}>
                                                 {(insight.lucky_numbers || []).join(', ')}
                                             </p>
                                         </div>
                                         <div>
-                                            <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}>🎨 Lucky Colors</span>
+                                            <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 12.5 }}> Lucky Colors</span>
                                             <p style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)' }}>
                                                 {(insight.lucky_colors || []).join(', ')}
                                             </p>
@@ -570,10 +568,10 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                             </div>
                         )}
 
-                        {/* ── Cycle transition ── */}
+                        {/*  Cycle transition  */}
                         {insight.transition && (
                             <div className="alert-info" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <span style={{ fontSize: 18 }}>🔄</span>
+                                <span style={{ fontSize: 18 }}></span>
                                 <span>
                                     <strong>Cycle Transition Today:</strong>{' '}
                                     <span style={{ color: 'var(--accent-red)' }}>{insight.transition.from_nakshatra}</span>
@@ -586,23 +584,23 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                         )}
                     </>
                 ) : (
-                    <div className="alert-warn" style={{ marginBottom: 20 }}>⚠️ Could not load today's insight. Check backend connection.</div>
+                    <div className="alert-warn" style={{ marginBottom: 20 }}> Could not load today's insight. Check backend connection.</div>
                 )
             }
 
-            {/* ── Analysis Form Panel ── */}
+            {/*  Analysis Form Panel  */}
             <div className="glass-card" style={{ padding: 28 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-                    <span style={{ fontSize: 20 }}>📥</span>
+                    <span style={{ fontSize: 20 }}></span>
                     <div>
                         <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>Load Statistical Analysis</h2>
                         <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Choose a market, planet, and date range — then run the composite signal backtest</p>
                     </div>
                     {market === 'NASDAQ' && (
-                        <span className="badge badge-info" style={{ marginLeft: 'auto' }}>🇺🇸 US / Global Market</span>
+                        <span className="badge badge-info" style={{ marginLeft: 'auto' }}> US / Global Market</span>
                     )}
                     {market === 'NSE' && (
-                        <span className="badge badge-neutral" style={{ marginLeft: 'auto' }}>🇮🇳 NSE India</span>
+                        <span className="badge badge-neutral" style={{ marginLeft: 'auto' }}> NSE India</span>
                     )}
                 </div>
 
@@ -611,7 +609,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     <div>
                         <label className="form-label">Market Symbol</label>
                         <select className="form-select" value={symbol} onChange={e => setSymbol(e.target.value)}>
-                            <optgroup label="🇮🇳 India — NSE">
+                            <optgroup label=" India — NSE">
                                 <option value="^NSEI">^NSEI (Nifty 50)</option>
                                 <option value="^NSEBANK">^NSEBANK (Bank Nifty)</option>
                                 <option value="^CNXIT">^CNXIT (Nifty IT)</option>
@@ -620,7 +618,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 <option value="HDFCBANK.NS">HDFCBANK.NS (HDFC Bank)</option>
                                 <option value="INFY.NS">INFY.NS (Infosys)</option>
                             </optgroup>
-                            <optgroup label="🇺🇸 USA — NASDAQ / NYSE">
+                            <optgroup label=" USA — NASDAQ / NYSE">
                                 <option value="^IXIC">^IXIC (NASDAQ Composite)</option>
                                 <option value="^GSPC">^GSPC (S&amp;P 500)</option>
                                 <option value="^DJI">^DJI (Dow Jones)</option>
@@ -640,7 +638,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 <option value="HG=F">HG=F (Copper Futures)</option>
                                 <option value="ALI=F">ALI=F (Aluminium Futures)</option>
                             </optgroup>
-                            <optgroup label="🛢️ Energy">
+                            <optgroup label=" Energy">
                                 <option value="CL=F">CL=F (Crude Oil WTI)</option>
                                 <option value="BZ=F">BZ=F (Brent Crude Oil)</option>
                                 <option value="NG=F">NG=F (Natural Gas)</option>
@@ -699,15 +697,15 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     <button className="btn-primary" onClick={runAnalysis} disabled={analysing} style={{ minWidth: 220 }}>
                         {analysing
                             ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Analyzing…</>
-                            : <>🚀 Load & Analyze Data <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,0.2)', borderRadius: 4, marginLeft: 6 }}>PRO</span></>
+                            : <> Load & Analyze Data <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,0.2)', borderRadius: 4, marginLeft: 6 }}>PRO</span></>
                         }
                     </button>
                     {status && (
                         <span style={{
                             fontSize: 13,
                             fontWeight: 600,
-                            color: status.startsWith('✅') ? 'var(--accent-green)'
-                                : status.startsWith('❌') ? 'var(--accent-red)'
+                            color: status.startsWith('') ? 'var(--accent-green)'
+                                : status.startsWith('') ? 'var(--accent-red)'
                                     : 'var(--accent-cyan)',
                             display: 'flex', alignItems: 'center', gap: 6,
                         }}>

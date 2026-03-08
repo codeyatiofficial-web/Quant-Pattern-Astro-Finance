@@ -4,7 +4,7 @@ import { usePlanGate } from './UpgradeModal';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
-// ── Tiny helper components ──
+//  Tiny helper components 
 function Spinner() {
     return <div className="flex justify-center py-10"><div className="spinner w-8 h-8 border-4" /></div>;
 }
@@ -22,7 +22,7 @@ function Badge({ text, color }: { text: string; color: string }) {
     return <span className={`px-2.5 py-1 text-xs font-bold rounded-full border ${colors[color] || colors.blue}`}>{text}</span>;
 }
 
-// ── Sub-sections rendered by tab ──
+//  Sub-sections rendered by tab 
 type Tab = 'overview' | 'chain' | 'strategy' | 'backtest' | 'alerts';
 
 export default function DerivativesDashboard() {
@@ -44,33 +44,34 @@ export default function DerivativesDashboard() {
     useEffect(() => { fetchSnapshot(); }, [fetchSnapshot]);
 
     const tabs: { key: Tab; label: string }[] = [
-        { key: 'overview', label: '📊 Overview' },
-        { key: 'chain', label: '🔗 Options Chain' },
-        { key: 'strategy', label: '🎯 Strategy Wizard' },
-        { key: 'backtest', label: '📈 Backtesting' },
-        { key: 'alerts', label: '🔔 Alerts' },
+        { key: 'overview', label: ' Overview' },
+        { key: 'chain', label: ' Options Chain' },
+        { key: 'strategy', label: ' Strategy Wizard' },
+        { key: 'backtest', label: ' Backtesting' },
+        { key: 'alerts', label: ' Alerts' },
     ];
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 via-pink-500 to-purple-500">
+                    <h1 className="text-2xl font-bold text-[var(--text-primary)]">
                         Derivatives & Options Strategy
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
                         <p className="text-sm text-[var(--text-muted)]">NSE India — Options Chain · Strategy Recommender · Backtesting</p>
                         {snapshot && (
                             snapshot.kite_connected ? (
-                                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">● Kite Live</span>
+                                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"> Kite Live</span>
                             ) : (
-                                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">● Synthetic</span>
+                                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25"> Synthetic</span>
                             )
                         )}
                     </div>
                 </div>
                 <button onClick={fetchSnapshot} disabled={loading}
-                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-600 text-white text-sm font-semibold rounded-lg hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-50">
+                    style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
+                    className="px-4 py-2 text-sm font-semibold rounded-lg hover:shadow-lg hover:opacity-90 transition-all disabled:opacity-50">
                     {loading ? 'Loading…' : '↻ Refresh Data'}
                 </button>
             </div>
@@ -80,7 +81,7 @@ export default function DerivativesDashboard() {
                 {tabs.map(t => (
                     <button key={t.key} onClick={() => setTab(t.key)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${tab === t.key
-                            ? 'bg-gradient-to-r from-orange-500/20 to-pink-500/20 text-orange-400 font-bold shadow-sm'
+                            ? 'bg-[var(--bg-secondary)] text-[var(--text-primary)] font-bold shadow-sm border border-[var(--border-active)]'
                             : 'text-gray-400 hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]'}`}>
                         {t.label}
                     </button>
@@ -103,9 +104,9 @@ export default function DerivativesDashboard() {
     );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
+/* 
    OVERVIEW TAB
-   ═══════════════════════════════════════════════════════════════════ */
+    */
 function OverviewTab({ snapshot }: { snapshot: any }) {
     const { spot, pcr, max_pain, vix, forecast, fii_dii_30d, days_to_expiry } = snapshot;
     const fc = forecast;
@@ -125,7 +126,7 @@ function OverviewTab({ snapshot }: { snapshot: any }) {
 
             {/* Forecast signals */}
             <Card>
-                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3">🎯 Trend Forecast — 1 Month Ahead</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3"> Trend Forecast — 1 Month Ahead</h3>
                 <div className="flex items-center gap-3 mb-4">
                     <Badge text={fc?.forecast} color={fc?.forecast === 'BULLISH' ? 'green' : fc?.forecast === 'BEARISH' ? 'red' : 'yellow'} />
                     <span className="text-sm text-[var(--text-muted)]">Score: {fc?.score} · Confidence: {fc?.confidence}%</span>
@@ -133,7 +134,7 @@ function OverviewTab({ snapshot }: { snapshot: any }) {
                 <div className="space-y-2">
                     {fc?.signals?.map((s: any, i: number) => (
                         <div key={i} className={`flex items-start gap-2 text-sm p-2 rounded-lg ${s.type === 'bullish' ? 'bg-emerald-500/5' : s.type === 'bearish' ? 'bg-red-500/5' : 'bg-gray-500/5'}`}>
-                            <span>{s.type === 'bullish' ? '🟢' : s.type === 'bearish' ? '🔴' : '🟡'}</span>
+                            <span>{s.type === 'bullish' ? '🟢' : s.type === 'bearish' ? '' : '🟡'}</span>
                             <span className="text-[var(--text-secondary)]">{s.signal}</span>
                         </div>
                     ))}
@@ -142,7 +143,7 @@ function OverviewTab({ snapshot }: { snapshot: any }) {
 
             {/* FII/DII table */}
             <Card>
-                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3">💰 FII / DII Flow (Last 5 Days)</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3"> FII / DII Flow (Last 5 Days)</h3>
                 <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
                     <table className="w-full text-sm font-quant text-right">
                         <thead className="bg-[var(--bg-table-head)] border-b border-[var(--border-subtle)] text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-inter font-bold">
@@ -181,15 +182,15 @@ function KPI({ label, value, sub, color }: { label: string; value: string; sub: 
     return (
         <div className={`border rounded-xl p-4 text-center ${bgColors[color] || bgColors.blue} flex flex-col justify-center`}>
             <p className="text-[10px] font-inter text-[var(--text-muted)] mb-1 uppercase tracking-widest font-bold">{label}</p>
-            <p className="text-xl font-bold font-quant drop-shadow-[0_0_8px_currentColor] opacity-90">{value}</p>
+            <p className="text-xl font-bold font-quant opacity-90 text-[var(--text-primary)]">{value}</p>
             {sub && <p className="text-[10px] font-inter text-[var(--text-muted)] mt-1">{sub}</p>}
         </div>
     );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
+/* 
    OPTIONS CHAIN TAB
-   ═══════════════════════════════════════════════════════════════════ */
+    */
 function ChainTab({ chain, spot }: { chain: any[]; spot: number }) {
     const [showGreeks, setShowGreeks] = useState(false);
     if (!chain?.length) return <p className="text-center text-gray-400 py-8">No chain data</p>;
@@ -198,7 +199,7 @@ function ChainTab({ chain, spot }: { chain: any[]; spot: number }) {
     return (
         <Card>
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-[var(--text-primary)]">🔗 Options Chain Heatmap</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)]"> Options Chain Heatmap</h3>
                 <label className="flex items-center gap-2 text-sm text-[var(--text-muted)] cursor-pointer">
                     <input type="checkbox" checked={showGreeks} onChange={e => setShowGreeks(e.target.checked)} className="accent-orange-500" />
                     Show Greeks
@@ -234,7 +235,7 @@ function ChainTab({ chain, spot }: { chain: any[]; spot: number }) {
                                     <td className="text-right text-[var(--text-secondary)]">{row.CE.iv}%</td>
                                     <td className="text-right text-emerald-400 font-medium">{row.CE.price}</td>
                                     {showGreeks && <><td className="text-right text-[var(--text-muted)]">{row.CE.delta}</td><td className="text-right text-[var(--text-muted)]">{row.CE.theta}</td></>}
-                                    <td className={`text-center font-bold ${isATM ? 'text-orange-400' : 'text-[var(--text-primary)]'}`}>{row.strike.toLocaleString()} {isATM && '⬅'}</td>
+                                    <td className={`text-center font-bold ${isATM ? 'text-orange-400' : 'text-[var(--text-primary)]'}`}>{row.strike.toLocaleString()} {isATM && ''}</td>
                                     <td className="text-right text-red-400 font-medium">{row.PE.price}</td>
                                     <td className="text-right text-[var(--text-secondary)]">{row.PE.iv}%</td>
                                     <td className={`text-right ${row.PE.change_oi > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{row.PE.change_oi > 0 ? '+' : ''}{row.PE.change_oi.toLocaleString()}</td>
@@ -250,9 +251,9 @@ function ChainTab({ chain, spot }: { chain: any[]; spot: number }) {
     );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
+/* 
    STRATEGY WIZARD TAB
-   ═══════════════════════════════════════════════════════════════════ */
+    */
 function StrategyTab({ snapshot }: { snapshot: any }) {
     const [risk, setRisk] = useState('moderate');
     const [marketView, setMarketView] = useState('ALL'); // ALL, BULLISH, BEARISH, NEUTRAL
@@ -302,7 +303,7 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
         <div className="space-y-6">
             <Card>
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
-                    <h3 className="text-lg font-bold text-[var(--text-primary)]">🎯 Strategy Selector Wizard</h3>
+                    <h3 className="text-lg font-bold text-[var(--text-primary)]"> Strategy Selector Wizard</h3>
                     <div className="flex gap-2">
                         {['BULLISH', 'BEARISH', 'NEUTRAL', 'ALL'].map(view => (
                             <button key={view} onClick={() => setMarketView(view)}
@@ -344,7 +345,7 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
             ) : (
                 <div className="grid gap-4">
                     {displayedRecs.map((rec: any, i: number) => (
-                        <Card key={i} className="hover:border-[var(--border-focus)] transition-all bg-gradient-to-br from-[var(--bg-card)] to-transparent relative overflow-hidden">
+                        <Card key={i} className="hover:border-[var(--border-focus)] transition-all bg-[var(--bg-card)] relative overflow-hidden">
 
                             {/* Accent line based on category */}
                             <div className={`absolute left-0 top-0 bottom-0 w-1 ${rec.category === 'BULLISH' ? 'bg-emerald-500' :
@@ -365,22 +366,22 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
                                             {rec.trade_description || rec.description}
                                         </p>
                                         <div className="flex gap-4 text-[13px] mt-2 font-quant">
-                                            <span className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]">Max Profit: {typeof rec.max_profit === 'number' ? `₹${rec.max_profit.toLocaleString()}` : rec.max_profit}</span>
-                                            <span className="text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.2)]">Max Risk: {typeof rec.max_loss === 'number' ? `₹${rec.max_loss.toLocaleString()}` : rec.max_loss}</span>
+                                            <span className="text-emerald-500 font-bold">Max Profit: {typeof rec.max_profit === 'number' ? `₹${rec.max_profit.toLocaleString()}` : rec.max_profit}</span>
+                                            <span className="text-red-500 font-bold">Max Risk: {typeof rec.max_loss === 'number' ? `₹${rec.max_loss.toLocaleString()}` : rec.max_loss}</span>
                                         </div>
                                     </div>
 
                                     {/* 35-yr Expert Insight */}
                                     {rec.expert_insight && (
                                         <div className="mb-3 p-2 pl-3 border-l-2 border-indigo-500 bg-indigo-500/5 text-sm">
-                                            <span className="font-bold text-indigo-400 text-xs uppercase tracking-wider block mb-1">✨ Expert Insight</span>
+                                            <span className="font-bold text-indigo-400 text-xs uppercase tracking-wider block mb-1"> Expert Insight</span>
                                             <span className="text-[var(--text-secondary)] italic leading-relaxed">{rec.expert_insight}</span>
                                         </div>
                                     )}
 
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-muted)] mt-2">
-                                        <span>🎯 {rec.best_when}</span>
-                                        <span>📊 IV: {rec.iv_preference}</span>
+                                        <span> {rec.best_when}</span>
+                                        <span> IV: {rec.iv_preference}</span>
                                     </div>
                                     {rec.reasons?.length > 0 && (
                                         <div className="mt-2 space-y-1">
@@ -401,18 +402,18 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
                                     }
                                 }}
                                     className="w-full md:w-auto px-4 py-2 bg-[var(--bg-primary)] text-[var(--text-primary)] hover:text-[var(--text-focus)] text-xs font-bold rounded border border-[var(--border-subtle)] hover:border-[var(--text-focus)] transition-all whitespace-nowrap">
-                                    {selectedPayoff?.strategy_key === rec.key ? 'Hide Payoff ↑' : 'View Payoff & Greeks ↓'}
+                                    {selectedPayoff?.strategy_key === rec.key ? 'Hide Payoff ' : 'View Payoff & Greeks '}
                                 </button>
                             </div>
 
                             {/* Inline Payoff Detail */}
                             {selectedPayoff && selectedPayoff.strategy_key === rec.key && (
                                 <div className="mt-6 pt-6 border-t border-[var(--border-subtle)] animate-in slide-in-from-top-4 fade-in duration-300">
-                                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3">📈 Payoff Profile</h3>
+                                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-3"> Payoff Profile</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 font-quant">
                                         <div className="text-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Max Profit</p><p className="text-lg font-bold text-emerald-400">₹{typeof selectedPayoff.max_profit === 'number' ? selectedPayoff.max_profit.toLocaleString() : selectedPayoff.max_profit}</p></div>
                                         <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Max Loss</p><p className="text-lg font-bold text-red-400">₹{typeof selectedPayoff.max_loss === 'number' ? selectedPayoff.max_loss.toLocaleString() : selectedPayoff.max_loss}</p></div>
-                                        <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Breakeven</p><p className="text-lg font-bold text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]">₹{selectedPayoff.breakeven?.toLocaleString() ?? '-'}</p></div>
+                                        <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Breakeven</p><p className="text-lg font-bold text-blue-500">₹{selectedPayoff.breakeven?.toLocaleString() ?? '-'}</p></div>
                                         <div className="text-center p-3 bg-purple-500/10 rounded-lg border border-purple-500/20"><p className="text-[10px] font-inter uppercase tracking-widest text-[var(--text-muted)] font-bold">Capital Req.</p><p className="text-lg font-bold text-purple-400">₹{selectedPayoff.capital_required?.toLocaleString() ?? '-'}</p></div>
                                     </div>
                                     <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2 mt-6">Execution Legs:</h4>
@@ -445,9 +446,9 @@ function StrategyTab({ snapshot }: { snapshot: any }) {
     );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
+/* 
    BACKTESTING TAB
-   ═══════════════════════════════════════════════════════════════════ */
+    */
 function BacktestTab() {
     const [strategy, setStrategy] = useState('bull_call_spread');
     const [years, setYears] = useState(1);
@@ -484,7 +485,7 @@ function BacktestTab() {
     return (
         <div className="space-y-6">
             <Card>
-                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">📈 Strategy Backtester</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4"> Strategy Backtester</h3>
                 <div className="flex flex-wrap gap-4 items-end">
                     <div>
                         <label className="block text-xs text-[var(--text-muted)] mb-1">Strategy</label>
@@ -500,16 +501,16 @@ function BacktestTab() {
                             if (guardYears(v)) setYears(v);
                         }}
                             className="bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]">
-                            <option value={1}>1 Year ✓ Free</option>
-                            <option value={2}>🔒 2 Years — Pro</option>
-                            <option value={3}>🔒 3 Years — Pro</option>
-                            <option value={5}>🔒 5 Years — Pro</option>
-                            <option value={10}>🔒 10 Years — Elite</option>
-                            <option value={15}>🔒 15 Years — Elite</option>
-                            <option value={99}>🔒 Max Available — Elite</option>
+                            <option value={1}>1 Year  Free</option>
+                            <option value={2}> 2 Years — Pro</option>
+                            <option value={3}> 3 Years — Pro</option>
+                            <option value={5}> 5 Years — Pro</option>
+                            <option value={10}> 10 Years — Elite</option>
+                            <option value={15}> 15 Years — Elite</option>
+                            <option value={99}> Max Available — Elite</option>
                         </select>
                     </div>
-                    <button onClick={runBacktest} disabled={loading} className="px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50">
+                    <button onClick={runBacktest} disabled={loading} className="px-4 py-2 bg-[var(--accent-indigo)] text-white text-sm font-semibold rounded-lg disabled:opacity-50">
                         {loading ? 'Running…' : 'Run Backtest'}
                     </button>
                     <button onClick={runAll} disabled={loading} className="px-4 py-2 bg-[var(--bg-card-hover)] text-[var(--text-primary)] text-sm font-semibold rounded-lg border border-[var(--border-subtle)] disabled:opacity-50">
@@ -553,7 +554,7 @@ function BacktestTab() {
                                         <td className="text-right">{t.exit_price?.toFixed(0)}</td>
                                         <td className={`text-right font-semibold ${t.pnl > 0 ? 'text-emerald-400' : 'text-red-400'}`}>₹{t.pnl?.toFixed(0)}</td>
                                         <td className={`text-right ${t.spot_move_pct > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{t.spot_move_pct?.toFixed(1)}%</td>
-                                        <td className="text-center">{t.win ? '✅' : '❌'}</td>
+                                        <td className="text-center">{t.win ? '' : ''}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -565,7 +566,7 @@ function BacktestTab() {
             {/* Compare All Results */}
             {allResults.length > 0 && !loading && (
                 <Card>
-                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4">📊 Strategy Comparison (Ranked by Sharpe)</h3>
+                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-4"> Strategy Comparison (Ranked by Sharpe)</h3>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead><tr className="text-[var(--text-muted)] border-b border-[var(--border-subtle)]">
@@ -575,7 +576,7 @@ function BacktestTab() {
                             <tbody>
                                 {allResults.map((r: any, i: number) => (
                                     <tr key={i} className={`border-b border-[var(--border-subtle)]/30 hover:bg-[var(--bg-card-hover)] ${i === 0 ? 'bg-emerald-500/5' : ''}`}>
-                                        <td className="py-2 font-medium text-[var(--text-primary)]">{i === 0 && '🏆 '}{r.strategy_key?.replace(/_/g, ' ')}</td>
+                                        <td className="py-2 font-medium text-[var(--text-primary)]">{i === 0 && ' '}{r.strategy_key?.replace(/_/g, ' ')}</td>
                                         <td className={`text-right ${r.win_rate > 55 ? 'text-emerald-400' : 'text-red-400'}`}>{r.win_rate}%</td>
                                         <td className={`text-right font-semibold ${r.sharpe_ratio > 1 ? 'text-emerald-400' : 'text-amber-400'}`}>{r.sharpe_ratio}</td>
                                         <td className={`text-right ${r.roi_pct > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.roi_pct}%</td>
@@ -593,9 +594,9 @@ function BacktestTab() {
     );
 }
 
-/* ═══════════════════════════════════════════════════════════════════
+/* 
    ALERTS TAB
-   ═══════════════════════════════════════════════════════════════════ */
+    */
 function AlertsTab() {
     const [alerts, setAlerts] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -621,7 +622,7 @@ function AlertsTab() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-[var(--text-primary)]">🔔 Real-Time Derivatives Alerts</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)]"> Real-Time Derivatives Alerts</h3>
                 <button onClick={fetch_alerts} disabled={loading}
                     className="px-3 py-1.5 text-xs font-semibold bg-[var(--bg-card-hover)] text-[var(--text-primary)] rounded-lg border border-[var(--border-subtle)]">
                     {loading ? 'Checking…' : '↻ Refresh'}
@@ -647,7 +648,7 @@ function AlertsTab() {
                             <Badge text={a.category} color="blue" />
                         </div>
                         <p className="text-sm font-medium text-[var(--text-primary)]">{a.message}</p>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">💡 {a.action}</p>
+                        <p className="text-xs text-[var(--text-muted)] mt-1"> {a.action}</p>
                     </div>
                 ))}
             </div>

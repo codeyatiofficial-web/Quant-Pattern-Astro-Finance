@@ -5,7 +5,7 @@ import LiveChart from './LiveChart';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
-// ── Color helpers ─────────────────────────────────────────────────────────────
+//  Color helpers 
 const pct_color = (v: number | null) =>
     v == null ? 'var(--text-muted)' : v >= 55 ? 'var(--accent-green)' : v >= 45 ? 'var(--accent-gold)' : 'var(--accent-red)';
 const ret_color = (v: number | null) =>
@@ -14,7 +14,7 @@ const ret_color = (v: number | null) =>
 function Badge({ v }: { v: string }) {
     const map: Record<string, string> = {
         Bullish: '#10b981', Bearish: '#ef4444', Neutral: '#94a3b8',
-        Win: '#10b981', Loss: '#ef4444', Triggered: '#8b5cf6', Forming: '#f59e0b', Completing: '#f97316',
+        Win: '#10b981', Loss: '#ef4444', Triggered: 'var(--text-secondary)', Forming: '#f59e0b', Completing: '#f97316',
     };
     const c = Object.entries(map).find(([k]) => v?.includes(k))?.[1] ?? '#94a3b8';
     return (
@@ -34,7 +34,7 @@ function IndicatorPill({ label, value, good, bad }: { label: string; value: any;
     );
 }
 
-// ── Pattern card ─────────────────────────────────────────────────────────────
+//  Pattern card 
 function PatternCard({ pat }: { pat: any }) {
     const [open, setOpen] = useState(false);
     const wr = pat.win_rate;
@@ -47,7 +47,7 @@ function PatternCard({ pat }: { pat: any }) {
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontSize: 14, fontWeight: 700 }}>
-                            {isHarmonic ? '〽️' : isCandle ? '🕯' : '📊'} {pat.pattern_name || pat.name}
+                            {isHarmonic ? '' : isCandle ? '' : ''} {pat.pattern_name || pat.name}
                         </span>
                         <Badge v={pat.bias || 'Neutral'} />
                         <Badge v={pat.status || 'Monitoring'} />
@@ -74,9 +74,9 @@ function PatternCard({ pat }: { pat: any }) {
 
             {/* PRZ / Target / Stop */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
-                {pat.prz && <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 8, padding: '6px 12px' }}>
-                    <div style={{ fontSize: 9, color: '#a78bfa', fontWeight: 700 }}>PRZ / Entry</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#c4b5fd' }}>{pat.prz}</div>
+                {pat.prz && <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '6px 12px' }}>
+                    <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700 }}>PRZ / Entry</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{pat.prz}</div>
                 </div>}
                 {pat.target && <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '6px 12px' }}>
                     <div style={{ fontSize: 9, color: '#6ee7b7', fontWeight: 700 }}>Target</div>
@@ -90,11 +90,11 @@ function PatternCard({ pat }: { pat: any }) {
 
             {/* Volume confirmation & indicators */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                {pat.vol_label && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>📊 Vol: <strong style={{ color: 'white' }}>{pat.vol_label}</strong></span>}
+                {pat.vol_label && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}> Vol: <strong style={{ color: 'white' }}>{pat.vol_label}</strong></span>}
                 {pat.rsi != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>RSI: <strong style={{ color: pat.rsi > 70 ? 'var(--accent-red)' : pat.rsi < 30 ? 'var(--accent-green)' : 'white' }}>{pat.rsi}</strong></span>}
-                {pat.macd_bull != null && <span style={{ fontSize: 10, color: pat.macd_bull ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.macd_bull ? '📈 MACD Bull' : '📉 MACD Bear'}</span>}
-                {pat.obv_rising != null && <span style={{ fontSize: 10, color: pat.obv_rising ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.obv_rising ? '📊 OBV Rising' : '📊 OBV Falling'}</span>}
-                {pat.price_above_vwap != null && <span style={{ fontSize: 10, color: pat.price_above_vwap ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.price_above_vwap ? '✅ Above VWAP' : '❌ Below VWAP'}</span>}
+                {pat.macd_bull != null && <span style={{ fontSize: 10, color: pat.macd_bull ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.macd_bull ? ' MACD Bull' : ' MACD Bear'}</span>}
+                {pat.obv_rising != null && <span style={{ fontSize: 10, color: pat.obv_rising ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.obv_rising ? ' OBV Rising' : ' OBV Falling'}</span>}
+                {pat.price_above_vwap != null && <span style={{ fontSize: 10, color: pat.price_above_vwap ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.price_above_vwap ? ' Above VWAP' : ' Below VWAP'}</span>}
                 {pat.sharpe_like != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Sharpe: <strong style={{ color: 'white' }}>{pat.sharpe_like}</strong></span>}
                 {pat.max_drawdown != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Max DD: <strong style={{ color: 'var(--accent-red)' }}>{pat.max_drawdown?.toFixed(1)}%</strong></span>}
             </div>
@@ -103,7 +103,7 @@ function PatternCard({ pat }: { pat: any }) {
             {pat.ratios && (
                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                     {Object.entries(pat.ratios).map(([k, v]: [string, any]) => (
-                        <span key={k} style={{ fontSize: 10, background: 'rgba(139,92,246,0.1)', borderRadius: 6, padding: '2px 6px', color: '#a78bfa' }}>{k}: {v}</span>
+                        <span key={k} style={{ fontSize: 10, background: 'var(--bg-secondary)', borderRadius: 6, padding: '2px 6px', color: 'var(--text-secondary)' }}>{k}: {v}</span>
                     ))}
                 </div>
             )}
@@ -112,7 +112,7 @@ function PatternCard({ pat }: { pat: any }) {
             {pat.trades?.length > 0 && (
                 <div style={{ marginTop: 10 }}>
                     <button onClick={() => setOpen(!open)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}>
-                        {open ? '▲ Hide' : '▼ Show'} Backtest Trades ({pat.trades.length})
+                        {open ? ' Hide' : ' Show'} Backtest Trades ({pat.trades.length})
                     </button>
                     {open && (
                         <div style={{ overflowX: 'auto', marginTop: 8 }}>
@@ -142,7 +142,7 @@ function PatternCard({ pat }: { pat: any }) {
     );
 }
 
-// ─── Fibonacci Panel ──────────────────────────────────────────────────────────
+//  Fibonacci Panel 
 function FibPanel({ fib }: { fib: any }) {
     if (!fib || !fib.fib_levels) return null;
     const levels = Object.entries(fib.fib_levels);
@@ -150,7 +150,7 @@ function FibPanel({ fib }: { fib: any }) {
 
     return (
         <div className="glass-card" style={{ padding: 20, marginBottom: 16 }}>
-            <h4 style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}>📐 Fibonacci Levels</h4>
+            <h4 style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}> Fibonacci Levels</h4>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                 <span style={{ fontSize: 11, color: '#94a3b8' }}>Swing High: <strong style={{ color: '#f59e0b' }}>{fib.swing_high?.toLocaleString('en-IN')}</strong></span>
                 <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>Swing Low: <strong style={{ color: '#a78bfa' }}>{fib.swing_low?.toLocaleString('en-IN')}</strong></span>
@@ -158,7 +158,7 @@ function FibPanel({ fib }: { fib: any }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 6, marginBottom: 14 }}>
                 {levels.slice(0, 24).map(([k, v]: any) => (
                     <div key={k} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 6, padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 10, color: k.startsWith('Ext') ? '#f59e0b' : '#94a3b8' }}>{k.replace('Ret_', '').replace('Ext_', '🅴 ')}</span>
+                        <span style={{ fontSize: 10, color: k.startsWith('Ext') ? '#f59e0b' : '#94a3b8' }}>{k.replace('Ret_', '').replace('Ext_', ' ')}</span>
                         <span style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>{Number(v)?.toLocaleString('en-IN')}</span>
                     </div>
                 ))}
@@ -167,7 +167,7 @@ function FibPanel({ fib }: { fib: any }) {
                 <div>
                     <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>Floor Trader Pivots</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {[['R2', '#ef4444'], ['R1', '#f97316'], ['P', '#10b981'], ['S1', '#6366f1'], ['S2', '#8b5cf6']].map(([k, c]) => (
+                        {[['R2', '#ef4444'], ['R1', '#f97316'], ['P', '#10b981'], ['S1', 'var(--text-secondary)'], ['S2', 'var(--text-muted)']].map(([k, c]) => (
                             <div key={k} style={{ background: `${c}15`, border: `1px solid ${c}33`, borderRadius: 8, padding: '6px 10px' }}>
                                 <div style={{ fontSize: 9, color: c as string, fontWeight: 700 }}>{k}</div>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: 'white' }}>{pivots[k]?.toLocaleString('en-IN')}</div>
@@ -180,7 +180,7 @@ function FibPanel({ fib }: { fib: any }) {
     );
 }
 
-// ─── Week Prediction Panel ────────────────────────────────────────────────────
+//  Week Prediction Panel 
 function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, guardPeriod: (p: string) => void }) {
     if (!pred || pred.error || !pred.days) return null;
     const colors: Record<string, string> = { Bullish: '#10b981', Bearish: '#ef4444', Neutral: '#94a3b8' };
@@ -193,7 +193,7 @@ function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, 
         <>
             <div className="glass-card" style={{ padding: 20, marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-                    <h4 style={{ fontWeight: 700, fontSize: 14 }}>🔮 {title}</h4>
+                    <h4 style={{ fontWeight: 700, fontSize: 14 }}> {title}</h4>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <Badge v={pred.bias} />
                         <span style={{ fontSize: 11, color: '#94a3b8' }}>Current: <strong style={{ color: 'white' }}>{pred.current_price?.toLocaleString()}</strong></span>
@@ -224,7 +224,7 @@ function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, 
                     {tier === 'free' && (
                         <div className="group transition-all duration-300" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 8, cursor: 'pointer' }} onClick={() => guardPeriod('15y')} >
                             <div>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}>🚀 Pro Plan</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 2 }}> Pro Plan</div>
                                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Get full 1-Week AI Technical Predictions (5-Days)</div>
                             </div>
                             <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none' }}>Upgrade to Pro</button>
@@ -232,7 +232,7 @@ function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, 
                     )}
                     <div className="group transition-all duration-300" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14, background: 'rgba(168, 85, 247, 0.05)', border: '1px solid rgba(168, 85, 247, 0.2)', borderRadius: 8, cursor: 'pointer' }} onClick={() => guardPeriod('30y')} >
                         <div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: '#a855f7', marginBottom: 2 }}>💎 Elite Plan</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#a855f7', marginBottom: 2 }}> Elite Plan</div>
                             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Get max 2-Week AI Technical Predictions (10-Days)</div>
                         </div>
                         <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none' }}>Upgrade to Elite</button>
@@ -243,7 +243,7 @@ function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, 
     );
 }
 
-// ─── Timeframe Tab ────────────────────────────────────────────────────────────
+//  Timeframe Tab 
 function TimeframePane({ label, data, isNSE }: { label: string; data: any; isNSE: boolean }) {
     if (!data) return null;
 
@@ -256,13 +256,13 @@ function TimeframePane({ label, data, isNSE }: { label: string; data: any; isNSE
             {(data.total_candles || data.data_range) && (
                 <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                     {data.total_candles && (
-                        <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '3px 10px', color: '#a5b4fc', fontWeight: 600 }}>
-                            📊 {data.total_candles.toLocaleString()} candles analyzed
+                        <span style={{ fontSize: 11, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '3px 10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            {data.total_candles.toLocaleString()} candles analyzed
                         </span>
                     )}
                     {data.data_range && (
                         <span style={{ fontSize: 11, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '3px 10px', color: '#fcd34d' }}>
-                            📅 {data.data_range}
+                            {data.data_range}
                         </span>
                     )}
                 </div>
@@ -272,25 +272,25 @@ function TimeframePane({ label, data, isNSE }: { label: string; data: any; isNSE
             {ind && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
                     <IndicatorPill label="Price" value={`${isNSE ? '₹' : ''}${ind.current_price?.toLocaleString()}`} />
-                    <IndicatorPill label="RSI" value={`${ind.rsi} ${ind.rsi_signal === 'Overbought' ? '🔴' : ind.rsi_signal === 'Oversold' ? '🟢' : '⚪'}`}
+                    <IndicatorPill label="RSI" value={`${ind.rsi} ${ind.rsi_signal === 'Overbought' ? '' : ind.rsi_signal === 'Oversold' ? '🟢' : ''}`}
                         good={ind.rsi_signal === 'Oversold'} bad={ind.rsi_signal === 'Overbought'} />
-                    <IndicatorPill label="MACD" value={ind.macd_bull ? '📈 Bullish' : '📉 Bearish'}
+                    <IndicatorPill label="MACD" value={ind.macd_bull ? ' Bullish' : ' Bearish'}
                         good={ind.macd_bull === true} bad={ind.macd_bull === false} />
                     <IndicatorPill label="Boll%" value={`${ind.boll_position?.toFixed(0)}%`}
                         good={ind.boll_position < 30} bad={ind.boll_position > 70} />
                     <IndicatorPill label="Vol Ratio" value={`${ind.vol_ratio}x`}
                         good={ind.vol_ratio >= 1.3} bad={ind.vol_ratio < 0.7} />
                     <IndicatorPill label="ATR" value={ind.atr?.toLocaleString('en-IN')} />
-                    <IndicatorPill label="OBV" value={ind.obv_rising ? '↑ Rising' : '↓ Falling'}
+                    <IndicatorPill label="OBV" value={ind.obv_rising ? ' Rising' : ' Falling'}
                         good={ind.obv_rising === true} bad={ind.obv_rising === false} />
-                    {ind.price_above_vwap != null && <IndicatorPill label="VWAP" value={ind.price_above_vwap ? '✅ Above' : '❌ Below'}
+                    {ind.price_above_vwap != null && <IndicatorPill label="VWAP" value={ind.price_above_vwap ? ' Above' : ' Below'}
                         good={ind.price_above_vwap === true} bad={ind.price_above_vwap === false} />}
                 </div>
             )}
 
             {data.error && (
                 <div style={{ color: 'var(--accent-red)', fontSize: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 8, marginBottom: 10 }}>
-                    ⚠️ {data.error}
+                    {data.error}
                 </div>
             )}
 
@@ -305,8 +305,8 @@ function TimeframePane({ label, data, isNSE }: { label: string; data: any; isNSE
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-export default function TechnicalAnalysis({ active }: { active: boolean }) {
+//  Main Component 
+export default function TechnicalAnalysis({ active, onSymbolChange }: { active: boolean; onSymbolChange?: (s: string) => void }) {
     const [symbol, setSymbol] = useState('^NSEI');
     const [market, setMarket] = useState('NSE');
     const [period, setPeriod] = useState('1y');
@@ -314,6 +314,11 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('');
+
+    // Notify parent when symbol changes
+    useEffect(() => {
+        onSymbolChange?.(symbol);
+    }, [symbol, onSymbolChange]);
 
     const { guardPeriod, modal: planModal, tier } = usePlanGate(1);
 
@@ -351,14 +356,14 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
     const tfLabels = Object.keys(scans);
 
     const TF_COLORS: Record<string, string> = {
-        '1m': '#8b5cf6', '5m': '#6366f1', '15m': '#3b82f6',
+        '1m': 'var(--text-secondary)', '5m': 'var(--text-muted)', '15m': '#3b82f6',
         '1h': '#10b981', 'Daily': '#f59e0b', 'Weekly': '#f97316',
     };
 
     return (
         <div>
             {planModal}
-            <h1 className="section-title">🔬 Technical Analysis</h1>
+            <h1 className="section-title"> Technical Analysis</h1>
             <p className="section-subtitle">
                 Harmonics (Gartley/Bat/Butterfly/Crab/Cypher/ABCD) · 25+ Candlestick Patterns · Fibonacci · VWAP · OBV · MACD · RSI · ATR · 1-Week Forecast
             </p>
@@ -369,7 +374,7 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
                     <div style={{ minWidth: 200 }}>
                         <label className="form-label">Symbol</label>
                         <select className="form-select" value={symbol} onChange={e => setSymbol(e.target.value)}>
-                            <optgroup label="🇮🇳 India — NSE">
+                            <optgroup label=" India — NSE">
                                 <option value="^NSEI">^NSEI (Nifty 50)</option>
                                 <option value="^NSEBANK">^NSEBANK (Bank Nifty)</option>
                                 <option value="^CNXIT">^CNXIT (Nifty IT)</option>
@@ -388,7 +393,7 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
                                 <option value="BAJFINANCE.NS">BAJFINANCE.NS</option>
                                 <option value="AXISBANK.NS">AXISBANK.NS</option>
                             </optgroup>
-                            <optgroup label="🇺🇸 USA — NASDAQ / NYSE">
+                            <optgroup label=" USA — NASDAQ / NYSE">
                                 <option value="^IXIC">^IXIC (NASDAQ Composite)</option>
                                 <option value="^GSPC">^GSPC (S&amp;P 500)</option>
                                 <option value="^DJI">^DJI (Dow Jones)</option>
@@ -408,7 +413,7 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
                                 <option value="HG=F">HG=F (Copper)</option>
                                 <option value="ALI=F">ALI=F (Aluminium)</option>
                             </optgroup>
-                            <optgroup label="🛢️ Energy &amp; Commodities">
+                            <optgroup label=" Energy &amp; Commodities">
                                 <option value="CL=F">CL=F (Crude Oil WTI)</option>
                                 <option value="BZ=F">BZ=F (Brent Crude)</option>
                                 <option value="NG=F">NG=F (Natural Gas)</option>
@@ -434,40 +439,41 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
                     <div style={{ minWidth: 130 }}>
                         <label className="form-label">Market</label>
                         <select className="form-select" value={derivedMarket} disabled style={{ opacity: 0.7 }}>
-                            <option value="NSE">NSE 🇮🇳</option>
-                            <option value="NASDAQ">NASDAQ 🌍</option>
+                            <option value="NSE">NSE </option>
+                            <option value="NASDAQ">NASDAQ </option>
                         </select>
                     </div>
                     <div style={{ minWidth: 130 }}>
                         <label className="form-label">Backtest Period <span style={{ fontSize: 10, color: '#f59e0b' }}>(Pro)</span></label>
                         <select className="form-select" value={period} onChange={e => { if (guardPeriod(e.target.value)) setPeriod(e.target.value); }}>
-                            {PERIODS.map(p => <option key={p} value={p}>{p} {p !== '1y' && '🔒'}</option>)}
+                            {PERIODS.map(p => <option key={p} value={p}>{p} {p !== '1y' && ''}</option>)}
                         </select>
                     </div>
                     <button className="btn-primary" onClick={runScan} disabled={loading} style={{ minWidth: 220, alignSelf: 'flex-end' }}>
-                        {loading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Scanning All Timeframes…</> : '🔬 Run Full Technical Scan'}
+                        {loading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Scanning All Timeframes…</> : ' Run Full Technical Scan'}
                     </button>
                 </div>
 
                 {/* What's included */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {['〽️ Harmonic (7 types)', '🕯 Candlestick (25+)', '📊 Chart Patterns',
-                        '📐 Fibonacci + Pivots', '📈 MACD + RSI', '📊 OBV + VWAP',
-                        '⚡ Volume Confirm', '🔮 1-Week Forecast'].map(t => (
-                            <span key={t} style={{ fontSize: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 14, padding: '3px 10px', color: '#c4b5fd' }}>{t}</span>
+                    {[' Harmonic (7 types)', ' Candlestick (25+)', ' Chart Patterns',
+                        ' Fibonacci + Pivots', ' MACD + RSI', ' OBV + VWAP',
+                        ' Volume Confirm', ' 1-Week Forecast'].map(t => (
+                            <span key={t} style={{ fontSize: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 14, padding: '3px 10px', color: 'var(--text-secondary)' }}>{t}</span>
                         ))}
                 </div>
 
-                {error && <div className="alert-error" style={{ marginTop: 14 }}>❌ {error}</div>}
+                {error && <div className="alert-error" style={{ marginTop: 14 }}> {error}</div>}
             </div>
 
 
 
 
 
-            {/* ── Live Chart ─────────────────────────────────────────────── */}
+            {/*  Live Chart  */}
             <LiveChart
                 symbol={symbol}
+                globalPeriod={period}
                 patterns={result ? Object.values(result.scans || {}).flatMap((s: any) => (s.patterns || []).map((p: any) => ({
                     name: p.name,
                     date: p.last_occurrences?.[0]?.date,
@@ -477,16 +483,16 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
 
             {result && (
                 <div>
-                    {/* ── 1-Week Prediction ────────────────────────────────────── */}
+                    {/*  1-Week Prediction  */}
                     <WeekPrediction pred={result.week_prediction} tier={tier} guardPeriod={guardPeriod} />
 
-                    {/* ── Fibonacci Levels ─────────────────────────────────────── */}
+                    {/*  Fibonacci Levels  */}
                     <FibPanel fib={result.fibonacci} />
 
-                    {/* ── Astro Triggers ───────────────────────────────────────── */}
+                    {/*  Astro Triggers  */}
                     {result.astro_confluence?.length > 0 && (
                         <div className="glass-card" style={{ padding: 20, marginBottom: 16 }}>
-                            <h4 style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>⚡ Upcoming AI Signal Triggers (7 Days)</h4>
+                            <h4 style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}> Upcoming AI Signal Triggers (7 Days)</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {result.astro_confluence.map((t: any, i: number) => (
                                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
@@ -503,11 +509,11 @@ export default function TechnicalAnalysis({ active }: { active: boolean }) {
                         </div>
                     )}
 
-                    {/* ── Multi-Timeframe Tabs ─────────────────────────────────── */}
+                    {/*  Multi-Timeframe Tabs  */}
                     {tfLabels.length > 0 && (
                         <div className="glass-card" style={{ padding: 24 }}>
                             <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>
-                                📊 Multi-Timeframe Pattern Scan — {result.symbol}
+                                Multi-Timeframe Pattern Scan — {result.symbol}
                             </h3>
 
                             {/* Timeframe selector */}

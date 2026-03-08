@@ -3,7 +3,7 @@
  * PlanContext — Subscription Access Code System
  *
  * HOW IT WORKS FOR THE OWNER (YOU):
- * ─────────────────────────────────
+ * 
  * Underneath are 50 unique codes for Pro and Elite.
  * When a customer pays, send them ONE unused code.
  * The app will store it and timestamp it. It auto-expires in exactly 1 year.
@@ -14,11 +14,11 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-// ─── MASTER CODES (Lifetime access, no expiration) ───────────────────────────
+//  MASTER CODES (Lifetime access, no expiration) 
 const MASTER_PRO = 'QMASTER-PRO-LIFE';
 const MASTER_ELITE = 'QMASTER-ELITE-LIFE';
 
-// ─── 50 PRO CODES (Unlocks 15 Years) ──────────────────────────────────────────
+//  50 PRO CODES (Unlocks 15 Years) 
 const PRO_CODES: string[] = [
     'QPRO-2025-A1', 'QPRO-2025-A2', 'QPRO-2025-A3', 'QPRO-2025-A4', 'QPRO-2025-A5',
     'QPRO-2025-B1', 'QPRO-2025-B2', 'QPRO-2025-B3', 'QPRO-2025-B4', 'QPRO-2025-B5',
@@ -32,7 +32,7 @@ const PRO_CODES: string[] = [
     'QPRO-2025-J1', 'QPRO-2025-J2', 'QPRO-2025-J3', 'QPRO-2025-J4', 'QPRO-2025-J5',
 ];
 
-// ─── 50 ELITE CODES (Unlocks 30+ Years) ───────────────────────────────────────
+//  50 ELITE CODES (Unlocks 30+ Years) 
 const ELITE_CODES: string[] = [
     'QELT-2025-X1', 'QELT-2025-X2', 'QELT-2025-X3', 'QELT-2025-X4', 'QELT-2025-X5',
     'QELT-2025-X6', 'QELT-2025-X7', 'QELT-2025-X8', 'QELT-2025-X9', 'QELT-2025-X10',
@@ -46,7 +46,7 @@ const ELITE_CODES: string[] = [
     'QELT-2025-V6', 'QELT-2025-V7', 'QELT-2025-V8', 'QELT-2025-V9', 'QELT-2025-V10',
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
+// 
 
 export type PlanTier = 'free' | 'pro' | 'elite';
 
@@ -125,7 +125,7 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     const activateCode = useCallback((code: string): { success: boolean; tier: PlanTier; message: string } => {
         const detected = detectTier(code);
         if (!detected) {
-            return { success: false, tier: 'free', message: '❌ Invalid code.' };
+            return { success: false, tier: 'free', message: ' Invalid code.' };
         }
 
         const now = Date.now();
@@ -145,15 +145,15 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
             setExpiresAt(null);
             return {
                 success: true, tier: detected,
-                message: '👑 Lifetime Master Code activated!',
+                message: ' Lifetime Master Code activated!',
             };
         } else {
             setExpiresAt(now + ONE_YEAR_MS);
             return {
                 success: true, tier: detected,
                 message: detected === 'elite'
-                    ? '🏆 Elite plan activated for 1 Year! All premium features unlocked.'
-                    : '🚀 Pro plan activated for 1 Year! Up to 15-year historical data unlocked.',
+                    ? ' Elite plan activated for 1 Year! All premium features unlocked.'
+                    : ' Pro plan activated for 1 Year! Up to 15-year historical data unlocked.',
             };
         }
     }, []);

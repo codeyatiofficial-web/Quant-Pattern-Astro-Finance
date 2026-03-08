@@ -40,6 +40,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:8888",
+        "http://localhost:8080",
         "https://app.quant-pattern.com",
         "https://quant-pattern.com",
         "https://www.quant-pattern.com",
@@ -235,7 +236,7 @@ def kite_callback_get(request_token: str = None, action: str = None, status: str
               // Auto-redirect to the frontend after 2 seconds
               var frontendUrl = window.location.hostname === 'localhost'
                   ? 'http://localhost:3000'
-                  : window.location.origin;
+                  : 'https://app.quant-pattern.com';
               setTimeout(function() {{ window.location.href = frontendUrl; }}, 2000);
             </script>
             </head>
@@ -244,10 +245,10 @@ def kite_callback_get(request_token: str = None, action: str = None, status: str
                 <h2>✅ Kite API Connected!</h2>
                 <p>Your session is now active. Live market data is enabled.</p>
                 <p class='hint'>Redirecting to dashboard in 2 seconds…</p>
-                <p><a id='dashLink' href='http://localhost:3000'>← Back to Dashboard</a></p>
+                <p><a id='dashLink' href='https://app.quant-pattern.com'>← Back to Dashboard</a></p>
                 <script>
                   document.getElementById('dashLink').href = window.location.hostname === 'localhost'
-                      ? 'http://localhost:3000' : '/';
+                      ? 'http://localhost:3000' : 'https://app.quant-pattern.com';
                 </script>
               </div>
             </body>

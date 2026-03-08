@@ -8,7 +8,7 @@ const API = typeof window !== 'undefined' && window.location.hostname === 'local
 
 function Logo() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" className="w-[160px] sm:w-[190px] h-auto max-h-[50px]">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" className="w-[200px] sm:w-[240px] h-auto max-h-[64px] transition-all">
       <defs>
         <linearGradient id="qGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4ea8c7" />
@@ -28,7 +28,7 @@ function Logo() {
         <path d="M 15 90 L 45 35" fill="none" stroke="#4ea8c7" strokeWidth="2" opacity="0.5" />
       </g>
       <text x="185" y="115" fontFamily="Inter, sans-serif" fontWeight="800" fontSize="76" style={{ fill: 'var(--text-primary)' }} letterSpacing="-1">
-        quant-pattern
+        Quant-Pattern
       </text>
       <text x="188" y="160" fontFamily="Inter, sans-serif" fontWeight="600" fontSize="23" style={{ fill: 'var(--text-muted)' }} letterSpacing="4.5">
         PRECISION IN PATTERNS | DATA-DRIVEN TRADING
@@ -90,14 +90,14 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
       });
       const data = await res.json();
       if (data.success) {
-        setTokenStatus('✅ ' + data.message);
+        setTokenStatus(' ' + data.message);
         setKiteConnected(true);
         setTimeout(() => { setShowTokenModal(false); setTokenStatus(null); setTokenInput(''); }, 1500);
       } else {
-        setTokenStatus('⚠️ ' + (data.message || 'Token invalid or expired'));
+        setTokenStatus(' ' + (data.message || 'Token invalid or expired'));
       }
     } catch (e) {
-      setTokenStatus('❌ Network error — is backend running on port 8000?');
+      setTokenStatus(' Network error — is backend running on port 8000?');
     }
   };
 
@@ -184,12 +184,12 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
             </div>
           </div>
 
-          {/* Row 2: Desktop tab bar */}
-          <div className="nav-desktop-tabs">
+          <div className="nav-desktop-tabs" style={{ paddingBottom: 12 }}>
             <div style={{
-              display: 'inline-flex', gap: 4, alignItems: 'center',
-              background: 'var(--bg-card)', padding: '5px 6px', borderRadius: 14,
+              display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'space-between',
+              background: 'var(--bg-card)', padding: '8px 8px', borderRadius: 16,
               border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-card)',
+              width: '100%', overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch'
             }}>
               {ALL_LINKS.map((link) => {
                 const Icon = link.icon;
@@ -197,10 +197,11 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
                 const locked = (link.eliteOnly && !isElite) || (link.proOnly && isFree);
                 return (
                   <button key={link.key} onClick={() => handleNavClick(link)} style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '7px 14px', borderRadius: 10, fontSize: 12.5, fontWeight: active ? 700 : 500,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '10px 16px', borderRadius: 12, fontSize: 13.5, fontWeight: active ? 700 : 500,
                     whiteSpace: 'nowrap', cursor: 'pointer', border: 'none', transition: 'all 0.3s ease',
-                    background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.1) 100%)' : 'transparent',
+                    flex: '1 1 auto', minWidth: 'min-content',
+                    background: active ? 'var(--bg-secondary)' : 'transparent',
                     color: locked ? 'var(--text-muted)' : active ? 'var(--text-primary)' : 'var(--text-muted)',
                     boxShadow: active ? 'inset 0 -2px 0 var(--accent-indigo)' : 'none',
                     opacity: locked ? 0.65 : 1,

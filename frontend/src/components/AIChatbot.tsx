@@ -16,11 +16,11 @@ interface AIChatbotProps {
     detectedPatterns?: string[];
 }
 
-// ── Simple markdown renderer ─────────────────────────────────────────────────
+//  Simple markdown renderer 
 function renderMarkdown(text: string) {
     return text.split('\n').map((line, i) => {
         // Headers
-        if (line.startsWith('### ')) return <h4 key={i} style={{ fontSize: 13, fontWeight: 800, color: '#c4b5fd', margin: '8px 0 4px' }}>{line.slice(4)}</h4>;
+        if (line.startsWith('### ')) return <h4 key={i} style={{ fontSize: 13, fontWeight: 800, color: '#93c5fd', margin: '8px 0 4px' }}>{line.slice(4)}</h4>;
         if (line.startsWith('## ')) return <h3 key={i} style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0', margin: '8px 0 4px' }}>{line.slice(3)}</h3>;
 
         // Bullet points
@@ -153,7 +153,7 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
             setLoading(false);
             setMessages(prev => [...prev, {
                 role: 'assistant',
-                content: '⚠️ Connection issue. Please try again!',
+                content: ' Connection issue. Please try again!',
                 timestamp: Date.now(),
             }]);
         }
@@ -166,20 +166,20 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
 
     return (
         <>
-            {/* ── Floating Chat Bubble ─────────────────────────────────────── */}
+            {/*  Floating Chat Bubble  */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 style={{
                     position: 'fixed', bottom: 24, right: 24, zIndex: 9990,
                     width: 56, height: 56, borderRadius: '50%',
-                    background: isOpen ? 'rgba(139,92,246,0.3)' : 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%)',
-                    border: '2px solid rgba(139,92,246,0.4)',
+                    background: isOpen ? 'rgba(59,130,246,0.3)' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #3b82f6 100%)',
+                    border: '2px solid rgba(59,130,246,0.4)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: isOpen ? 'none' : '0 4px 24px rgba(139,92,246,0.4), 0 0 40px rgba(99,102,241,0.2)',
+                    boxShadow: isOpen ? 'none' : '0 4px 24px rgba(59,130,246,0.4), 0 0 40px rgba(37,99,235,0.2)',
                     transition: 'all 0.3s ease',
                 }}
             >
-                <span style={{ fontSize: 24 }}>{isOpen ? '✕' : ''}</span>
+                <span style={{ fontSize: 24 }}>{isOpen ? '' : ''}</span>
                 {!isOpen && (
                     <img src="/tara-avatar.png" alt="Tara" style={{
                         width: 48, height: 48, borderRadius: '50%', objectFit: 'cover',
@@ -192,41 +192,41 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
             {!isOpen && messages.length === 0 && (
                 <div style={{
                     position: 'fixed', bottom: 70, right: 20, zIndex: 9991,
-                    background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(139,92,246,0.3)',
+                    background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(59,130,246,0.3)',
                     borderRadius: 12, padding: '8px 14px', maxWidth: 200,
                     animation: 'fadeInUp 0.5s ease',
                 }}>
-                    <div style={{ fontSize: 11, color: '#c4b5fd', fontWeight: 700 }}>✨ Tara — AI Trading Mentor</div>
+                    <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700 }}> Tara — AI Trading Mentor</div>
                     <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Ask me about patterns, strategies & AI signals!</div>
                 </div>
             )}
 
-            {/* ── Chat Window ──────────────────────────────────────────────── */}
+            {/*  Chat Window  */}
             {isOpen && (
                 <div style={{
                     position: 'fixed', bottom: 90, right: 24, zIndex: 9991,
                     width: 400, maxWidth: 'calc(100vw - 32px)',
                     height: 520, maxHeight: 'calc(100vh - 120px)',
-                    background: '#0f1225', border: '1px solid rgba(139,92,246,0.25)',
+                    background: '#0f1225', border: '1px solid rgba(59,130,246,0.25)',
                     borderRadius: 20, display: 'flex', flexDirection: 'column',
-                    boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 60px rgba(139,92,246,0.1)',
+                    boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 60px rgba(59,130,246,0.1)',
                     overflow: 'hidden',
                 }}>
                     {/* Header */}
                     <div style={{
                         padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         borderBottom: '1px solid rgba(255,255,255,0.06)',
-                        background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(99,102,241,0.05))',
+                        background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(37,99,235,0.05))',
                     }}>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <img src="/tara-avatar.png" alt="Tara" style={{
                                     width: 32, height: 32, borderRadius: '50%', objectFit: 'cover',
-                                    border: '2px solid rgba(139,92,246,0.3)',
+                                    border: '2px solid rgba(59,130,246,0.3)',
                                 }} />
                                 <div>
                                     <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0' }}>
-                                        Tara ✨
+                                        Tara
                                     </div>
                                     <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>
                                         तारा • Vedic Trading Mentor
@@ -238,8 +238,8 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                             {currentTab && (
                                 <span style={{
                                     fontSize: 9, padding: '2px 8px', borderRadius: 6,
-                                    background: 'rgba(139,92,246,0.15)', color: '#c4b5fd',
-                                    border: '1px solid rgba(139,92,246,0.2)', fontWeight: 700,
+                                    background: 'rgba(59,130,246,0.15)', color: '#93c5fd',
+                                    border: '1px solid rgba(59,130,246,0.2)', fontWeight: 700,
                                     textTransform: 'uppercase' as const, letterSpacing: 0.5,
                                 }}>
                                     {currentTab}
@@ -265,12 +265,12 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                             <div style={{ textAlign: 'center', padding: '30px 10px' }}>
                                 <img src="/tara-avatar.png" alt="Tara" style={{
                                     width: 80, height: 80, borderRadius: '50%', objectFit: 'cover',
-                                    border: '3px solid rgba(139,92,246,0.3)',
-                                    boxShadow: '0 0 20px rgba(139,92,246,0.2)',
+                                    border: '3px solid rgba(59,130,246,0.3)',
+                                    boxShadow: '0 0 20px rgba(59,130,246,0.2)',
                                     marginBottom: 12,
                                 }} />
                                 <div style={{ fontSize: 15, fontWeight: 800, color: '#e2e8f0', marginBottom: 4 }}>
-                                    Namaste! I&apos;m Tara ✨
+                                    Namaste! I&apos;m Tara
                                 </div>
                                 <div style={{ fontSize: 11, color: '#64748b', marginBottom: 16, lineHeight: 1.6 }}>
                                     Your AI Trading Mentor • तारा<br />
@@ -284,13 +284,13 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                                         <button key={i} onClick={() => sendMessage(p)} style={{
                                             padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600,
                                             cursor: 'pointer', textAlign: 'left',
-                                            background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)',
-                                            color: '#c4b5fd', transition: 'all 0.2s',
+                                            background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)',
+                                            color: '#93c5fd', transition: 'all 0.2s',
                                         }}
-                                            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(139,92,246,0.2)'; }}
-                                            onMouseLeave={e => { (e.target as HTMLElement).style.background = 'rgba(139,92,246,0.08)'; }}
+                                            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(59,130,246,0.2)'; }}
+                                            onMouseLeave={e => { (e.target as HTMLElement).style.background = 'rgba(59,130,246,0.08)'; }}
                                         >
-                                            💬 {p}
+                                            {p}
                                         </button>
                                     ))}
                                 </div>
@@ -306,10 +306,10 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                                 <div style={{
                                     maxWidth: '85%', padding: '10px 14px', borderRadius: 14,
                                     background: msg.role === 'user'
-                                        ? 'linear-gradient(135deg, rgba(139,92,246,0.3), rgba(99,102,241,0.2))'
+                                        ? 'linear-gradient(135deg, rgba(59,130,246,0.3), rgba(37,99,235,0.2))'
                                         : 'rgba(255,255,255,0.04)',
                                     border: msg.role === 'user'
-                                        ? '1px solid rgba(139,92,246,0.3)'
+                                        ? '1px solid rgba(59,130,246,0.3)'
                                         : '1px solid rgba(255,255,255,0.06)',
                                     borderBottomRightRadius: msg.role === 'user' ? 4 : 14,
                                     borderBottomLeftRadius: msg.role === 'assistant' ? 4 : 14,
@@ -333,7 +333,7 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                                         {[0, 1, 2].map(j => (
                                             <div key={j} style={{
                                                 width: 6, height: 6, borderRadius: '50%',
-                                                background: '#8b5cf6',
+                                                background: '#3b82f6',
                                                 animation: `bounce 1.2s infinite ${j * 0.2}s`,
                                             }} />
                                         ))}
@@ -363,12 +363,12 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                                 disabled={loading}
                                 style={{
                                     flex: 1, padding: '10px 14px', borderRadius: 12, fontSize: 12,
-                                    border: '1px solid rgba(139,92,246,0.2)',
+                                    border: '1px solid rgba(59,130,246,0.2)',
                                     background: 'rgba(255,255,255,0.04)', color: '#e2e8f0',
                                     outline: 'none',
                                 }}
-                                onFocus={e => e.target.style.borderColor = 'rgba(139,92,246,0.5)'}
-                                onBlur={e => e.target.style.borderColor = 'rgba(139,92,246,0.2)'}
+                                onFocus={e => e.target.style.borderColor = 'rgba(59,130,246,0.5)'}
+                                onBlur={e => e.target.style.borderColor = 'rgba(59,130,246,0.2)'}
                             />
                             <button
                                 type="submit"
@@ -377,24 +377,24 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                                     padding: '10px 16px', borderRadius: 12, fontSize: 14,
                                     border: 'none', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
                                     background: loading || !input.trim()
-                                        ? 'rgba(139,92,246,0.15)'
-                                        : 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                                        ? 'rgba(59,130,246,0.15)'
+                                        : 'linear-gradient(135deg, #3b82f6, #2563eb)',
                                     color: '#fff', fontWeight: 700,
                                     opacity: loading || !input.trim() ? 0.5 : 1,
                                     transition: 'all 0.2s',
                                 }}
                             >
-                                ↑
+
                             </button>
                         </form>
                         <div style={{ fontSize: 9, color: '#475569', textAlign: 'center', marginTop: 6 }}>
-                            Powered by Tara ✨ • Not financial advice
+                            Powered by Tara  • Not financial advice
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ── Animations ──────────────────────────────────────────────── */}
+            {/*  Animations  */}
             <style jsx global>{`
                 @keyframes bounce {
                     0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }

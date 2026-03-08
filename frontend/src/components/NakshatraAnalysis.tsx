@@ -1,11 +1,11 @@
 'use client';
 import React, { useState } from 'react';
 
-/* ── Tiny helpers ── */
+/*  Tiny helpers  */
 function ReturnPill({ v }: { v: number | null }) {
     if (v == null) return <span className="num" style={{ color: 'var(--text-muted)' }}>—</span>;
     const cls = v > 0 ? 'bull' : v < 0 ? 'bear' : 'flat';
-    const arrow = v > 0 ? '▲' : v < 0 ? '▼' : '●';
+    const arrow = v > 0 ? '' : v < 0 ? '' : '';
     return (
         <span className={`return-pill ${cls}`}>
             {arrow} {v > 0 ? '+' : ''}{v.toFixed(4)}%
@@ -30,14 +30,14 @@ function WinBar({ v }: { v: number | null }) {
 
 function TendencyBadge({ t }: { t: string }) {
     const cls = t === 'Bullish' ? 'badge-bullish' : t === 'Bearish' ? 'badge-bearish' : 'badge-neutral';
-    const icon = t === 'Bullish' ? '▲' : t === 'Bearish' ? '▼' : '●';
+    const icon = t === 'Bullish' ? '' : t === 'Bearish' ? '' : '';
     return <span className={`badge ${cls}`}>{icon} {t}</span>;
 }
 
 function RankBadge({ i }: { i: number }) {
     if (i > 2) return <span className="rank-badge" style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</span>;
     const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : 'rank-3';
-    const label = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+    const label = i === 0 ? '1' : i === 1 ? '2' : '3';
     return <span className={`rank-badge ${cls}`}>{label}</span>;
 }
 
@@ -49,12 +49,12 @@ function NumCell({ v, decimals = 4, suffix = '%' }: { v: number | null; decimals
 type SubTab = 'all' | 'rise' | 'no_rise' | 'tithi' | 'stats' | 'planets';
 
 const SUBTABS: { key: SubTab; label: string; emoji: string }[] = [
-    { key: 'all', label: 'All Days', emoji: '📊' },
-    { key: 'rise', label: 'Intraday Cycle', emoji: '🌅' },
-    { key: 'no_rise', label: 'Off-Cycle', emoji: '📉' },
-    { key: 'tithi', label: 'By Lunar Phase', emoji: '📅' },
-    { key: 'stats', label: 'Statistical Tests', emoji: '🔬' },
-    { key: 'planets', label: 'Signal Driver', emoji: '⚡' },
+    { key: 'all', label: 'All Days', emoji: '' },
+    { key: 'rise', label: 'Intraday Cycle', emoji: '' },
+    { key: 'no_rise', label: 'Off-Cycle', emoji: '' },
+    { key: 'tithi', label: 'By Lunar Phase', emoji: '' },
+    { key: 'stats', label: 'Statistical Tests', emoji: '' },
+    { key: 'planets', label: 'Signal Driver', emoji: '' },
 ];
 
 export default function NakshatraAnalysis({ data }: { data: any }) {
@@ -63,10 +63,10 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
     if (!data) {
         return (
             <div style={{ padding: '40px 0' }}>
-                <h1 className="section-title">📊 Cycle Pattern Analysis</h1>
+                <h1 className="section-title"> Cycle Pattern Analysis</h1>
                 <p className="section-subtitle">Load data from the Dashboard to run analysis.</p>
                 <div className="alert-warn" style={{ maxWidth: 500 }}>
-                    ⚠️ Please run analysis from the <strong>Dashboard</strong> tab first.
+                    Please run analysis from the <strong>Dashboard</strong> tab first.
                 </div>
             </div>
         );
@@ -82,22 +82,22 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
 
     return (
         <div className="fade-in">
-            {/* ── Header ── */}
+            {/*  Header  */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                 <div>
-                    <h1 className="section-title">📊 Cycle Pattern Analysis</h1>
+                    <h1 className="section-title"> Cycle Pattern Analysis</h1>
                     <p className="section-subtitle">
                         <span className="pulse-dot" style={{ marginRight: 7 }} />
                         {data.observations?.toLocaleString()} trading days analysed
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <span className="stat-tag">🔬 ANOVA: <strong style={{ marginLeft: 3 }}>{data.anova?.result ?? '—'}</strong></span>
+                    <span className="stat-tag"> ANOVA: <strong style={{ marginLeft: 3 }}>{data.anova?.result ?? '—'}</strong></span>
                     <span className="stat-tag">χ² Test: <strong style={{ marginLeft: 3 }}>{data.chi2?.result ?? '—'}</strong></span>
                 </div>
             </div>
 
-            {/* ── Sub-tabs ── */}
+            {/*  Sub-tabs  */}
             <div className="tab-list" style={{ marginBottom: 20 }}>
                 {SUBTABS.map(s => (
                     <button key={s.key} className={`tab-btn ${sub === s.key ? 'active' : ''}`} onClick={() => setSub(s.key)}>
@@ -106,7 +106,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                 ))}
             </div>
 
-            {/* ── Cycle Pattern / Phase tables ── */}
+            {/*  Cycle Pattern / Phase tables  */}
             {(isNak || isTithi) && (
                 <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                     <div style={{ overflowX: 'auto', maxHeight: 620, overflowY: 'auto' }}>
@@ -186,12 +186,12 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                 </div>
             )}
 
-            {/* ── Statistical Tests ── */}
+            {/*  Statistical Tests  */}
             {sub === 'stats' && (
                 <div className="grid-2" style={{ gap: 20 }}>
                     {[
                         {
-                            title: '🔬 ANOVA Test',
+                            title: ' ANOVA Test',
                             sub: 'Are mean returns significantly different across cycle patterns?',
                             result: data.anova?.result,
                             fields: [
@@ -203,7 +203,7 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                             interpretation: data.anova?.interpretation,
                         },
                         {
-                            title: '📐 Chi-Square Test',
+                            title: ' Chi-Square Test',
                             sub: 'Is market direction independent of cycle pattern?',
                             result: data.chi2?.result,
                             fields: [
@@ -235,12 +235,12 @@ export default function NakshatraAnalysis({ data }: { data: any }) {
                 </div>
             )}
 
-            {/* ── Planet / Element ── */}
+            {/*  Planet / Element  */}
             {sub === 'planets' && (
                 <div className="grid-2" style={{ gap: 20 }}>
                     {[
-                        { title: '⚡ Signal Driver Returns', rows: data.planet_analysis || [], nameKey: 'ruling_planet' },
-                        { title: '🔥 Element Returns', rows: data.element_analysis || [], nameKey: 'element' },
+                        { title: ' Signal Driver Returns', rows: data.planet_analysis || [], nameKey: 'ruling_planet' },
+                        { title: ' Element Returns', rows: data.element_analysis || [], nameKey: 'element' },
                     ].map((section, si) => (
                         <div key={si} className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
                             <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border-subtle)' }}>

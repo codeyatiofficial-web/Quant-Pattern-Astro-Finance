@@ -7,10 +7,16 @@ NEVER reveals astrological calculation logic — keeps it proprietary.
 import os
 import json
 import logging
+import threading
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+# ── Live market snapshot cache (avoid hammering yfinance on every msg) ────────
+_market_cache: Dict[str, dict] = {}
+_cache_lock = threading.Lock()
+CACHE_TTL_SECONDS = 60  # refresh every 60s
 
 # DeepSeek API configuration (OpenAI-compatible)
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-77bec0623d2249e6bbb16603d03ba0dc")
@@ -150,15 +156,27 @@ KUBER_SYSTEM_PROMPT = """You are **Kuber** (कुबेर — the ancient Vedi
 - Always include a strong Call to Action (CTA) at the end.
 - Treat every user as a potential high-value client or subscriber."""
 
-TARA_SYSTEM_PROMPT = """You are Tara (तारा, "Star") — expert trading mentor on the Quant-Pattern Astro-Finance platform.
-You teach technical analysis, candlestick/harmonic/chart patterns, options, spreads, and platform features.
-Use Indian market examples (Nifty, Bank Nifty). Use emojis sparingly: ✅ ⚠️ 📊 💡
+TARA_SYSTEM_PROMPT = """You are Tara (तारा, "Star") — expert AI trading mentor on the Quant-Pattern Astro-Finance platform.
 
-STRICT RULES:
-1. NEVER reveal astrological formulas/algorithms — say "proprietary model trained on 50+ years of data".
-2. NEVER say "Nakshatra". Use "Vedic Yogas" or "cosmic patterns" instead.
-3. NEVER give buy/sell recommendations — say "educational, not financial advice".
-4. Be EXTREMELY brief: 1-2 short sentences max. Straight to the point, no filler."""
+## YOUR CAPABILITIES
+You have LIVE ACCESS to real-time market data. When a user asks about prices, levels, or market conditions, ALWAYS reference the LIVE MARKET DATA section provided below in your context. Quote exact numbers — never say "I don't have access to live data".
+
+## WHAT YOU DO
+1. Answer questions about current price, trend, RSI, MACD, support/resistance with REAL numbers from context
+2. Teach technical analysis: candlestick/harmonic/chart patterns, options, spreads, and indicators
+3. Provide practical trade setup ideas: entry zones, stop loss, target levels (based on the technicals in your context)
+4. Explain detected patterns and what they mean for the next move
+5. Use Indian market examples (Nifty, Bank Nifty) when relevant
+
+## RESPONSE RULES
+- Be data-driven: cite exact prices, RSI values, support/resistance from your context
+- Keep responses concise but complete: 3-5 sentences with key numbers
+- Use bullet points for multi-part answers
+- Use emojis sparingly: ✅ ⚠️ 📊 💡
+- NEVER say "I don't have access to live data" — you DO have it
+- NEVER reveal astrological formulas/algorithms — say "proprietary model"
+- NEVER say "Nakshatra". Use "Vedic Yogas" or "cosmic patterns" instead
+- Add disclaimer: "Educational, not financial advice" when giving trade setups"""
 
 # Tab context descriptions for enriched prompts
 TAB_CONTEXT = {
@@ -178,7 +196,128 @@ class AIAssistant:
 
     def __init__(self):
         self.conversations: Dict[str, List[Dict]] = {}  # session_id -> messages
-        self.max_history = 4  # keep last 4 messages for fast responses
+        self.max_history = 6  # keep last 6 messages for better conversational context
+
+    # ═══════════════════════════════════════════════════════════════════════
+    #  LIVE MARKET DATA SNAPSHOT — gives Tara real-time intelligence
+    # ═══════════════════════════════════════════════════════════════════════
+
+    def _fetch_live_snapshot(self, symbol: str) -> str:
+        """Fetch live price, technicals, and key levels for a symbol.
+        Returns a formatted string ready to inject into the AI system prompt.
+        Uses a 60-second cache to avoid excessive API calls."""
+        if not symbol:
+            symbol = "^NSEI"  # Default to Nifty 50
+
+        global _market_cache
+        cache_key = symbol.upper()
+        now = datetime.now()
+
+        # Check cache
+        with _cache_lock:
+            cached = _market_cache.get(cache_key)
+            if cached and (now - cached["_ts"]).total_seconds() < CACHE_TTL_SECONDS:
+                return cached["_text"]
+
+        try:
+            import yfinance as yf
+            import numpy as np
+
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period="3mo", interval="1d", auto_adjust=True)
+            if hist.empty or len(hist) < 20:
+                return f"[Could not fetch data for {symbol}]"
+
+            # Flatten multi-index if present
+            if hasattr(hist.columns, 'levels'):
+                hist.columns = hist.columns.get_level_values(0)
+
+            close = hist["Close"]
+            current = float(close.iloc[-1])
+            prev_close = float(close.iloc[-2]) if len(close) > 1 else current
+            change = current - prev_close
+            change_pct = (change / prev_close) * 100 if prev_close else 0
+
+            high_today = float(hist["High"].iloc[-1])
+            low_today = float(hist["Low"].iloc[-1])
+            volume = int(hist["Volume"].iloc[-1]) if "Volume" in hist.columns else 0
+
+            # RSI (14)
+            delta = close.diff()
+            gain = delta.clip(lower=0).rolling(14).mean()
+            loss = (-delta.clip(upper=0)).rolling(14).mean()
+            rs = gain / loss
+            rsi = float((100 - 100 / (1 + rs)).iloc[-1]) if not rs.empty else 50.0
+
+            # MACD
+            ema12 = close.ewm(span=12, adjust=False).mean()
+            ema26 = close.ewm(span=26, adjust=False).mean()
+            macd_line = float((ema12 - ema26).iloc[-1])
+            signal_line = float((ema12 - ema26).ewm(span=9, adjust=False).mean().iloc[-1])
+            macd_bull = macd_line > signal_line
+
+            # Moving averages
+            sma20 = float(close.rolling(20).mean().iloc[-1])
+            sma50 = float(close.rolling(50).mean().iloc[-1]) if len(close) >= 50 else sma20
+            ema9 = float(close.ewm(span=9, adjust=False).mean().iloc[-1])
+
+            # Support / Resistance (recent 20-day S/R)
+            recent = hist.tail(20)
+            support = float(recent["Low"].min())
+            resistance = float(recent["High"].max())
+
+            # 52-week high/low
+            full_year = hist.tail(252) if len(hist) >= 252 else hist
+            week52_high = float(full_year["High"].max())
+            week52_low = float(full_year["Low"].min())
+
+            # Bollinger Bands
+            bb_mid = sma20
+            bb_std = float(close.rolling(20).std().iloc[-1])
+            bb_upper = bb_mid + 2 * bb_std
+            bb_lower = bb_mid - 2 * bb_std
+
+            # Trend determination
+            if current > sma20 > sma50:
+                trend = "UPTREND (price > SMA20 > SMA50)"
+            elif current < sma20 < sma50:
+                trend = "DOWNTREND (price < SMA20 < SMA50)"
+            else:
+                trend = "SIDEWAYS / CONSOLIDATION"
+
+            # RSI interpretation
+            rsi_signal = "OVERBOUGHT" if rsi > 70 else "OVERSOLD" if rsi < 30 else "NEUTRAL"
+
+            # Format currency, auto detect INR or USD
+            is_indian = not any(s in symbol for s in ["USD", "^GSPC", "^DJI", "^IXIC", "AAPL", "MSFT", "TSLA", "NVDA", "AMZN", "GOOGL", "META", "GC=F", "SI=F", "CL=F"])
+            curr_sym = "₹" if is_indian else "$"
+
+            snapshot = (
+                f"## LIVE MARKET DATA (as of {now.strftime('%d %b %Y, %I:%M %p IST')})\n"
+                f"Symbol: {symbol}\n"
+                f"Current Price: {curr_sym}{current:,.2f} ({'+' if change >= 0 else ''}{change:,.2f}, {'+' if change_pct >= 0 else ''}{change_pct:.2f}%)\n"
+                f"Day Range: {curr_sym}{low_today:,.2f} – {curr_sym}{high_today:,.2f}\n"
+                f"Volume: {volume:,}\n"
+                f"52-Week Range: {curr_sym}{week52_low:,.2f} – {curr_sym}{week52_high:,.2f}\n"
+                f"\n"
+                f"## KEY TECHNICALS\n"
+                f"Trend: {trend}\n"
+                f"RSI(14): {rsi:.1f} — {rsi_signal}\n"
+                f"MACD: {macd_line:.2f} (Signal: {signal_line:.2f}) — {'BULLISH crossover' if macd_bull else 'BEARISH crossover'}\n"
+                f"EMA 9: {curr_sym}{ema9:,.2f} | SMA 20: {curr_sym}{sma20:,.2f} | SMA 50: {curr_sym}{sma50:,.2f}\n"
+                f"Bollinger Bands: {curr_sym}{bb_lower:,.2f} – {curr_sym}{bb_upper:,.2f}\n"
+                f"20-Day Support: {curr_sym}{support:,.2f} | Resistance: {curr_sym}{resistance:,.2f}\n"
+            )
+
+            # Cache it
+            with _cache_lock:
+                _market_cache[cache_key] = {"_ts": now, "_text": snapshot}
+
+            return snapshot
+
+        except Exception as e:
+            logger.warning(f"AI live snapshot failed for {symbol}: {e}")
+            return f"[Live data temporarily unavailable for {symbol}]"
 
     def _get_client(self):
         """Lazy-load the OpenAI client for DeepSeek."""
@@ -211,21 +350,21 @@ class AIAssistant:
 
         if context:
             tab = context.get("tab", "")
-            symbol = context.get("symbol", "")
+            symbol = context.get("symbol", "") or "^NSEI"
             extra_context = []
 
             if tab and tab in TAB_CONTEXT:
                 extra_context.append(TAB_CONTEXT[tab])
-            if symbol:
-                extra_context.append(f"The user is currently viewing: {symbol}")
             if context.get("patterns"):
                 pats = ", ".join(context["patterns"][:5])
                 extra_context.append(f"Currently detected patterns on chart: {pats}")
-            if context.get("price"):
-                extra_context.append(f"Current price: ₹{context['price']}")
 
             if extra_context:
                 system += "\n\n## CURRENT USER CONTEXT\n" + "\n".join(f"- {c}" for c in extra_context)
+
+            # Inject live market snapshot — this is the key data Tara needs
+            live_snapshot = self._fetch_live_snapshot(symbol)
+            system += f"\n\n{live_snapshot}"
 
         # Get or create conversation history
         if session_id not in self.conversations:
@@ -246,11 +385,10 @@ class AIAssistant:
 
         try:
             client = self._get_client()
-            is_marketing = tab == "marketing"
             response = client.chat.completions.create(
                 model=DEEPSEEK_MODEL,
                 messages=messages,
-                max_tokens=55, # Always use 55 tokens max
+                max_tokens=200,
                 temperature=0.7,
                 stream=False,
             )
@@ -280,21 +418,21 @@ class AIAssistant:
 
         if context:
             tab = context.get("tab", "")
-            symbol = context.get("symbol", "")
+            symbol = context.get("symbol", "") or "^NSEI"
             extra_context = []
 
             if tab and tab in TAB_CONTEXT:
                 extra_context.append(TAB_CONTEXT[tab])
-            if symbol:
-                extra_context.append(f"The user is currently viewing: {symbol}")
             if context.get("patterns"):
                 pats = ", ".join(context["patterns"][:5])
                 extra_context.append(f"Currently detected patterns on chart: {pats}")
-            if context.get("price"):
-                extra_context.append(f"Current price: ₹{context['price']}")
 
             if extra_context:
                 system += "\n\n## CURRENT USER CONTEXT\n" + "\n".join(f"- {c}" for c in extra_context)
+
+            # Inject live market snapshot
+            live_snapshot = self._fetch_live_snapshot(symbol)
+            system += f"\n\n{live_snapshot}"
 
         if session_id not in self.conversations:
             self.conversations[session_id] = []
@@ -310,11 +448,10 @@ class AIAssistant:
 
         try:
             client = self._get_client()
-            is_marketing = tab == "marketing"
             response = client.chat.completions.create(
                 model=DEEPSEEK_MODEL,
                 messages=messages,
-                max_tokens=55, # Always use 55 tokens max for extreme brevity
+                max_tokens=200,
                 temperature=0.7,
                 stream=True,
             )

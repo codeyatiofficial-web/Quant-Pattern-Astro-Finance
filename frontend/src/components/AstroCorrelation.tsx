@@ -10,104 +10,104 @@ function ReturnCell({ v }: { v: number | null }) {
     return <span style={{ color, fontWeight: 600 }}>{v > 0 ? '+' : ''}{v.toFixed(3)}%</span>;
 }
 
-// ── Comprehensive signal type groups ─────────────────────────────────────────────
+//  Comprehensive signal type groups 
 const EVENT_GROUPS = [
     {
-        group: '⚙️ Cycle Motion',
+        group: ' Cycle Motion',
         desc: 'Planetary speed & direction states',
         color: '#6366f1',
         events: [
             { value: 'Retrograde', label: '↩ Retrograde Cycle', note: 'Planet moving backward' },
             { value: 'Direct', label: '→ Direct Cycle', note: 'Planet moving forward' },
-            { value: 'High Speed', label: '⚡ High Velocity', note: 'Top 20% orbital velocity' },
-            { value: 'Exalted', label: '⬆️ Peak Strength', note: 'Planet at maximum strength' },
-            { value: 'Debilitated', label: '⬇️ Low Strength', note: 'Planet at minimum strength' },
-            { value: 'Own House', label: '🏠 Home Position', note: 'Planet in home sign' },
+            { value: 'High Speed', label: ' High Velocity', note: 'Top 20% orbital velocity' },
+            { value: 'Exalted', label: ' Peak Strength', note: 'Planet at maximum strength' },
+            { value: 'Debilitated', label: ' Low Strength', note: 'Planet at minimum strength' },
+            { value: 'Own House', label: ' Home Position', note: 'Planet in home sign' },
         ],
     },
     {
-        group: '🔥 Stress Signals',
+        group: ' Stress Signals',
         desc: 'Challenging planetary combinations',
         color: '#ef4444',
         events: [
-            { value: 'Angarak_Yoga', label: '🔥 Stress Signal A1', note: 'Mars + Rahu combination' },
-            { value: 'Guru_Chandal_Yoga', label: '☠️ Stress Signal A2', note: 'Jupiter + Rahu combination' },
-            { value: 'Vish_Yoga', label: '☠️ Stress Signal A3', note: 'Moon + Saturn combination' },
-            { value: 'Yama_Yoga', label: '⚔️ Stress Signal A4', note: 'Mars + Saturn combination' },
-            { value: 'Surya_Shani_Yoga', label: '☀️🪐 Stress Signal A5', note: 'Sun + Saturn combination' },
-            { value: 'Surya_Mangal_Yoga', label: '☀️♂️ Stress Signal A6', note: 'Sun + Mars combination' },
-            { value: 'Chandra_Mangal_Yoga', label: '🌙♂️ Stress Signal A7', note: 'Moon + Mars combination' },
-            { value: 'Chandra_Shani_Yoga', label: '🌙🪐 Stress Signal A8', note: 'Moon + Saturn combination' },
-            { value: 'Chandal_Venus', label: '♀️🐍 Stress Signal A9', note: 'Venus + Rahu combination' },
-            { value: 'Shani_Rahu', label: '🪐🐍 Stress Signal A10', note: 'Saturn + Rahu combination' },
-            { value: 'Shani_Ketu', label: '🪐🔱 Stress Signal A11', note: 'Saturn + Ketu combination' },
+            { value: 'Angarak_Yoga', label: ' Stress Signal A1', note: 'Mars + Rahu combination' },
+            { value: 'Guru_Chandal_Yoga', label: ' Stress Signal A2', note: 'Jupiter + Rahu combination' },
+            { value: 'Vish_Yoga', label: ' Stress Signal A3', note: 'Moon + Saturn combination' },
+            { value: 'Yama_Yoga', label: ' Stress Signal A4', note: 'Mars + Saturn combination' },
+            { value: 'Surya_Shani_Yoga', label: ' Stress Signal A5', note: 'Sun + Saturn combination' },
+            { value: 'Surya_Mangal_Yoga', label: ' Stress Signal A6', note: 'Sun + Mars combination' },
+            { value: 'Chandra_Mangal_Yoga', label: ' Stress Signal A7', note: 'Moon + Mars combination' },
+            { value: 'Chandra_Shani_Yoga', label: ' Stress Signal A8', note: 'Moon + Saturn combination' },
+            { value: 'Chandal_Venus', label: ' Stress Signal A9', note: 'Venus + Rahu combination' },
+            { value: 'Shani_Rahu', label: ' Stress Signal A10', note: 'Saturn + Rahu combination' },
+            { value: 'Shani_Ketu', label: ' Stress Signal A11', note: 'Saturn + Ketu combination' },
         ],
     },
     {
-        group: '✨ Momentum Signals',
+        group: ' Momentum Signals',
         desc: 'Favorable compound combinations',
         color: '#10b981',
         events: [
-            { value: 'Budh_Aditya_Yoga', label: '☿☀️ Momentum Signal B1', note: 'Mercury + Sun combination' },
-            { value: 'Gajakesari_Yoga', label: '🐘 Momentum Signal B2', note: 'Moon + Jupiter (same sign)' },
-            { value: 'Gajakesari_Kendra', label: '🐘🔲 Momentum Signal B3', note: 'Jupiter in Kendra to Moon' },
-            { value: 'Shukra_Guru_Yoga', label: '♀️♃️ Momentum Signal B4', note: 'Venus + Jupiter combination' },
-            { value: 'Guru_Mangal_Yoga', label: '♃️♂️ Momentum Signal B5', note: 'Jupiter + Mars combination' },
-            { value: 'Bhrigu_Mangal_Yoga', label: '♀️♂️ Momentum Signal B6', note: 'Venus + Mars combination' },
-            { value: 'Clash_Of_Gurus', label: '⚖️ Momentum Signal B7', note: 'Jupiter + Venus (same sign)' },
-            { value: 'Budh_Shani_Yoga', label: '☿🪐 Momentum Signal B8', note: 'Mercury + Saturn combination' },
-            { value: 'Guru_Ketu', label: '♃️🔱 Momentum Signal B9', note: 'Jupiter + Ketu combination' },
+            { value: 'Budh_Aditya_Yoga', label: ' Momentum Signal B1', note: 'Mercury + Sun combination' },
+            { value: 'Gajakesari_Yoga', label: ' Momentum Signal B2', note: 'Moon + Jupiter (same sign)' },
+            { value: 'Gajakesari_Kendra', label: ' Momentum Signal B3', note: 'Jupiter in Kendra to Moon' },
+            { value: 'Shukra_Guru_Yoga', label: ' Momentum Signal B4', note: 'Venus + Jupiter combination' },
+            { value: 'Guru_Mangal_Yoga', label: ' Momentum Signal B5', note: 'Jupiter + Mars combination' },
+            { value: 'Bhrigu_Mangal_Yoga', label: ' Momentum Signal B6', note: 'Venus + Mars combination' },
+            { value: 'Clash_Of_Gurus', label: ' Momentum Signal B7', note: 'Jupiter + Venus (same sign)' },
+            { value: 'Budh_Shani_Yoga', label: ' Momentum Signal B8', note: 'Mercury + Saturn combination' },
+            { value: 'Guru_Ketu', label: ' Momentum Signal B9', note: 'Jupiter + Ketu combination' },
         ],
     },
     {
-        group: '👑 Strength Signals',
+        group: ' Strength Signals',
         desc: 'High-strength planetary placements',
         color: '#f59e0b',
         events: [
-            { value: 'Shasha_Yoga', label: '🪐 Strength Signal C1', note: 'Saturn at peak power' },
-            { value: 'Malavya_Yoga', label: '♀️ Strength Signal C2', note: 'Venus at peak power' },
-            { value: 'Ruchaka_Yoga', label: '♂️ Strength Signal C3', note: 'Mars at peak power' },
-            { value: 'Hamsa_Yoga', label: '♃️ Strength Signal C4', note: 'Jupiter at peak power' },
-            { value: 'Bhadra_Yoga', label: '☿ Strength Signal C5', note: 'Mercury at peak power' },
-            { value: 'Neech_Bhang_Raj_Yoga', label: '♻️ Strength Signal C6', note: 'Weakness reversal pattern' },
+            { value: 'Shasha_Yoga', label: ' Strength Signal C1', note: 'Saturn at peak power' },
+            { value: 'Malavya_Yoga', label: ' Strength Signal C2', note: 'Venus at peak power' },
+            { value: 'Ruchaka_Yoga', label: ' Strength Signal C3', note: 'Mars at peak power' },
+            { value: 'Hamsa_Yoga', label: ' Strength Signal C4', note: 'Jupiter at peak power' },
+            { value: 'Bhadra_Yoga', label: ' Strength Signal C5', note: 'Mercury at peak power' },
+            { value: 'Neech_Bhang_Raj_Yoga', label: ' Strength Signal C6', note: 'Weakness reversal pattern' },
         ],
     },
     {
-        group: '🌑 Volatility Events',
+        group: ' Volatility Events',
         desc: 'High-volatility astronomical formations',
         color: '#dc2626',
         events: [
-            { value: 'Solar_Eclipse', label: '🌑 Volatility Event D1', note: 'Solar eclipse formation' },
-            { value: 'Lunar_Eclipse', label: '🌕 Volatility Event D2', note: 'Lunar eclipse formation' },
-            { value: 'Grahan_Yoga', label: '🎗 Volatility Event D3', note: 'Near-node planetary alignment' },
-            { value: 'Kaal_Sarp_Dosh', label: '🐍 Volatility Event D4', note: 'All planets hemmed by nodes' },
-            { value: 'Sarp_Dosh', label: '🐍 Volatility Event D5', note: '2+ malefics in same sign' },
-            { value: 'Rahu_Ketu_Axis_Sun', label: '☀️🐍 Volatility Event D6', note: 'Sun on nodal axis' },
-            { value: 'Rahu_Ketu_Axis_Moon', label: '🌙🐍 Volatility Event D7', note: 'Moon on nodal axis' },
-            { value: 'Rahu_Ketu_Axis_Mars', label: '♂️🐍 Volatility Event D8', note: 'Mars on nodal axis' },
+            { value: 'Solar_Eclipse', label: ' Volatility Event D1', note: 'Solar eclipse formation' },
+            { value: 'Lunar_Eclipse', label: ' Volatility Event D2', note: 'Lunar eclipse formation' },
+            { value: 'Grahan_Yoga', label: ' Volatility Event D3', note: 'Near-node planetary alignment' },
+            { value: 'Kaal_Sarp_Dosh', label: ' Volatility Event D4', note: 'All planets hemmed by nodes' },
+            { value: 'Sarp_Dosh', label: ' Volatility Event D5', note: '2+ malefics in same sign' },
+            { value: 'Rahu_Ketu_Axis_Sun', label: ' Volatility Event D6', note: 'Sun on nodal axis' },
+            { value: 'Rahu_Ketu_Axis_Moon', label: ' Volatility Event D7', note: 'Moon on nodal axis' },
+            { value: 'Rahu_Ketu_Axis_Mars', label: ' Volatility Event D8', note: 'Mars on nodal axis' },
         ],
     },
     {
-        group: '🌙 Phase Events',
+        group: ' Phase Events',
         desc: 'Lunar cycle formations',
         color: '#8b5cf6',
         events: [
-            { value: 'Amavasya_Defect', label: '🌑 Phase Event E1', note: 'New Moon formation' },
-            { value: 'Purnima_Yoga', label: '🌕 Phase Event E2', note: 'Full Moon formation' },
-            { value: 'Paksha_Sandi', label: '🍓 Phase Event E3', note: 'Waxing/waning boundary' },
-            { value: 'Paap_Kartari_Moon', label: '🌙⚔️ Phase Event E4', note: 'Moon hemmed by malefics' },
+            { value: 'Amavasya_Defect', label: ' Phase Event E1', note: 'New Moon formation' },
+            { value: 'Purnima_Yoga', label: ' Phase Event E2', note: 'Full Moon formation' },
+            { value: 'Paksha_Sandi', label: ' Phase Event E3', note: 'Waxing/waning boundary' },
+            { value: 'Paap_Kartari_Moon', label: ' Phase Event E4', note: 'Moon hemmed by malefics' },
         ],
     },
     {
-        group: '🔥 Suppression Signals',
+        group: ' Suppression Signals',
         desc: 'Planets weakened by proximity to Sun',
         color: '#f97316',
         events: [
-            { value: 'Mercury_Combust', label: '☿🔥 Suppression F1', note: 'Mercury suppressed' },
-            { value: 'Venus_Combust', label: '♀️🔥 Suppression F2', note: 'Venus suppressed' },
-            { value: 'Mars_Combust', label: '♂️🔥 Suppression F3', note: 'Mars suppressed' },
-            { value: 'Jupiter_Combust', label: '♃️🔥 Suppression F4', note: 'Jupiter suppressed' },
-            { value: 'Saturn_Combust', label: '🪐🔥 Suppression F5', note: 'Saturn suppressed' },
+            { value: 'Mercury_Combust', label: ' Suppression F1', note: 'Mercury suppressed' },
+            { value: 'Venus_Combust', label: ' Suppression F2', note: 'Venus suppressed' },
+            { value: 'Mars_Combust', label: ' Suppression F3', note: 'Mars suppressed' },
+            { value: 'Jupiter_Combust', label: ' Suppression F4', note: 'Jupiter suppressed' },
+            { value: 'Saturn_Combust', label: ' Suppression F5', note: 'Saturn suppressed' },
             { value: 'Multiple_Retrograde', label: '↩↩ Suppression F6', note: '3+ planets retrograde simultaneously' },
         ],
     },
@@ -233,14 +233,14 @@ export default function AstroCorrelation() {
     return (
         <div>
             {planModal}
-            <h1 className="section-title">🔬 Signal Correlation Engine</h1>
+            <h1 className="section-title"> Signal Correlation Engine</h1>
             <p className="section-subtitle">
                 Backtesting 44 proprietary signal patterns · Cycle & Volatility reactions across markets
             </p>
 
             <div className="tab-list" style={{ marginBottom: 20 }}>
-                <button className={`tab-btn ${sub === 'backtest' ? 'active' : ''}`} onClick={() => setSub('backtest')}>📊 Market Backtest</button>
-                <button className={`tab-btn ${sub === 'vix' ? 'active' : ''}`} onClick={() => setSub('vix')}>🌡️ VIX Backtest</button>
+                <button className={`tab-btn ${sub === 'backtest' ? 'active' : ''}`} onClick={() => setSub('backtest')}> Market Backtest</button>
+                <button className={`tab-btn ${sub === 'vix' ? 'active' : ''}`} onClick={() => setSub('vix')}> VIX Backtest</button>
             </div>
 
             {sub === 'backtest' && (
@@ -256,7 +256,7 @@ export default function AstroCorrelation() {
                             <div style={{ minWidth: 150 }}>
                                 <label className="form-label">Symbol</label>
                                 <select className="form-select" value={symbol} onChange={e => setSymbol(e.target.value)}>
-                                    <optgroup label="🇮🇳 NSE Indices">
+                                    <optgroup label=" NSE Indices">
                                         <option value="^NSEI">^NSEI — Nifty 50</option>
                                         <option value="^NSEBANK">^NSEBANK — Bank Nifty</option>
                                         <option value="^CNXIT">^CNXIT — Nifty IT</option>
@@ -268,7 +268,7 @@ export default function AstroCorrelation() {
                                         <option value="^CNXENERGY">^CNXENERGY — Nifty Energy</option>
                                         <option value="^INDIAVIX">^INDIAVIX — India VIX</option>
                                     </optgroup>
-                                    <optgroup label="🇮🇳 Nifty 50 Stocks">
+                                    <optgroup label=" Nifty 50 Stocks">
                                         <option value="RELIANCE.NS">RELIANCE.NS</option>
                                         <option value="TCS.NS">TCS.NS</option>
                                         <option value="HDFCBANK.NS">HDFCBANK.NS</option>
@@ -313,7 +313,7 @@ export default function AstroCorrelation() {
                                         <option value="BAJAJFINSV.NS">BAJAJFINSV.NS</option>
                                         <option value="INDUSINDBK.NS">INDUSINDBK.NS</option>
                                     </optgroup>
-                                    <optgroup label="🇺🇸 USA — NASDAQ / NYSE">
+                                    <optgroup label=" USA — NASDAQ / NYSE">
                                         <option value="^IXIC">^IXIC — NASDAQ Composite</option>
                                         <option value="^GSPC">^GSPC — S&amp;P 500</option>
                                         <option value="^DJI">^DJI — Dow Jones</option>
@@ -333,7 +333,7 @@ export default function AstroCorrelation() {
                                         <option value="HG=F">HG=F — Copper</option>
                                         <option value="ALI=F">ALI=F — Aluminium</option>
                                     </optgroup>
-                                    <optgroup label="🛢️ Energy &amp; Commodities">
+                                    <optgroup label=" Energy &amp; Commodities">
                                         <option value="CL=F">CL=F — Crude Oil WTI</option>
                                         <option value="BZ=F">BZ=F — Brent Crude</option>
                                         <option value="NG=F">NG=F — Natural Gas</option>
@@ -367,13 +367,13 @@ export default function AstroCorrelation() {
                             {!planetRequired && (
                                 <div style={{ minWidth: 150 }}>
                                     <label className="form-label">Planet</label>
-                                    <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#a78bfa' }}>🔮 Multiple (Yoga)</div>
+                                    <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#a78bfa' }}> Multiple (Yoga)</div>
                                 </div>
                             )}
                             <div style={{ minWidth: 180 }}>
                                 <label className="form-label">Historical Period <span style={{ fontSize: 10, color: '#f59e0b' }}>(Pro)</span></label>
                                 <select className="form-select" value={years} onChange={e => { if (guardYears(Number(e.target.value))) setYears(Number(e.target.value)); }}>
-                                    {[1, 2, 3, 5, 10, 15, 20].map(y => <option key={y} value={y}>{y} {y > 1 ? 'Year(s) 🔒' : 'Year'}</option>)}
+                                    {[1, 2, 3, 5, 10, 15, 20].map(y => <option key={y} value={y}>{y} {y > 1 ? 'Year(s) ' : 'Year'}</option>)}
                                 </select>
                             </div>
                             <div style={{ minWidth: 150 }}>
@@ -399,9 +399,9 @@ export default function AstroCorrelation() {
                         <EventPicker activeEvent={eventType} onPick={setEventType} />
 
                         <button className="btn-primary" onClick={runBacktest} disabled={loading} style={{ minWidth: 220 }}>
-                            {loading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Running…</> : `▶ Run Backtest: ${chosenEvent?.label || eventType}`}
+                            {loading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Running…</> : ` Run Backtest: ${chosenEvent?.label || eventType}`}
                         </button>
-                        {error && <div className="alert-error" style={{ marginTop: 14 }}>❌ {error}</div>}
+                        {error && <div className="alert-error" style={{ marginTop: 14 }}> {error}</div>}
                     </div>
 
                     {result && result.stats && (
@@ -412,7 +412,7 @@ export default function AstroCorrelation() {
                                         {chosenEvent?.label || eventType} — {result.symbol}
                                     </div>
                                     <span className={`badge ${result.stats.is_significant ? 'badge-bullish' : 'badge-neutral'}`} style={{ fontSize: 13, padding: '6px 14px' }}>
-                                        {result.stats.is_significant ? '✅ Statistically Significant' : '⚪ Not Significant'}
+                                        {result.stats.is_significant ? ' Statistically Significant' : ' Not Significant'}
                                     </span>
                                 </div>
                                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>p-value: <strong style={{ color: 'var(--text-primary)', fontSize: 16 }}>{result.stats.p_value?.toFixed(4)}</strong></span>
@@ -459,7 +459,7 @@ export default function AstroCorrelation() {
                             {ALL_YOGA_EVENTS.includes(vixEvent) && (
                                 <div style={{ minWidth: 150 }}>
                                     <label className="form-label">Planet</label>
-                                    <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#a78bfa' }}>🔮 Multiple</div>
+                                    <div style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 8, padding: '9px 14px', fontSize: 13, color: '#a78bfa' }}> Multiple</div>
                                 </div>
                             )}
                             <div style={{ minWidth: 180 }}>
@@ -468,15 +468,15 @@ export default function AstroCorrelation() {
                                     const v = Number(e.target.value);
                                     if (guardYears(v)) setVixYears(v);
                                 }}>
-                                    <option value={1}>1 year ✓ Free</option>
-                                    <option value={3}>🔒 3 years — Pro</option>
-                                    <option value={5}>🔒 5 years — Pro</option>
-                                    <option value={7}>🔒 7 years — Pro</option>
-                                    <option value={10}>🔒 10 years — Pro</option>
-                                    <option value={15}>🔒 15 years — Elite</option>
-                                    <option value={20}>🔒 20 years — Elite</option>
-                                    <option value={30}>🔒 30 years — Elite</option>
-                                    <option value={99}>🔒 Max Available — Elite</option>
+                                    <option value={1}>1 year  Free</option>
+                                    <option value={3}> 3 years — Pro</option>
+                                    <option value={5}> 5 years — Pro</option>
+                                    <option value={7}> 7 years — Pro</option>
+                                    <option value={10}> 10 years — Pro</option>
+                                    <option value={15}> 15 years — Elite</option>
+                                    <option value={20}> 20 years — Elite</option>
+                                    <option value={30}> 30 years — Elite</option>
+                                    <option value={99}> Max Available — Elite</option>
                                 </select>
                             </div>
                         </div>
@@ -494,9 +494,9 @@ export default function AstroCorrelation() {
                         <EventPicker activeEvent={vixEvent} onPick={setVixEvent} />
 
                         <button className="btn-primary" onClick={runVixBacktest} disabled={vixLoading}>
-                            {vixLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Running…</> : `▶ Run VIX Backtest`}
+                            {vixLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Running…</> : ` Run VIX Backtest`}
                         </button>
-                        {vixError && <div className="alert-error" style={{ marginTop: 14 }}>❌ {vixError}</div>}
+                        {vixError && <div className="alert-error" style={{ marginTop: 14 }}> {vixError}</div>}
                     </div>
 
                     {vixResult && vixResult.stats && (
@@ -504,7 +504,7 @@ export default function AstroCorrelation() {
                             <div style={{ marginBottom: 16 }}>
                                 <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{chosenVixEvent?.label} — India VIX</div>
                                 <span className={`badge ${vixResult.stats.is_significant ? 'badge-bullish' : 'badge-neutral'}`} style={{ fontSize: 13, padding: '6px 14px' }}>
-                                    {vixResult.stats.is_significant ? '✅ Significant VIX Impact' : '⚪ No Significant Impact'}
+                                    {vixResult.stats.is_significant ? ' Significant VIX Impact' : ' No Significant Impact'}
                                 </span>
                             </div>
                             <div className="grid-2">

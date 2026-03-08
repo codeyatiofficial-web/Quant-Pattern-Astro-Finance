@@ -1,7 +1,7 @@
-/* ═══════════════════════════════════════════════════
+/* 
    Kuber Chatbot — Vanilla JS widget for marketing site
    Connects to Quant Pattern AI API
-   ═══════════════════════════════════════════════════ */
+    */
 
 (function () {
   'use strict';
@@ -22,7 +22,7 @@
     "What is the Pricing?",
   ];
 
-  // ── Inject CSS ──
+  //  Inject CSS 
   const style = document.createElement('style');
   style.textContent = `
     .tara-bubble {
@@ -164,7 +164,7 @@
   `;
   document.head.appendChild(style);
 
-  // ── Build DOM ──
+  //  Build DOM 
   function build() {
     // Bubble
     const bubble = document.createElement('button');
@@ -179,7 +179,7 @@
     tooltip.className = 'tara-tooltip';
     tooltip.id = 'taraTooltip';
     tooltip.innerHTML = `
-      <div class="tara-tooltip-title">✨ Kuber — AI Sales & Growth Rep</div>
+      <div class="tara-tooltip-title"> Kuber — AI Sales & Growth Rep</div>
       <div class="tara-tooltip-sub">Ask me how we can scale your trading edge!</div>
     `;
     document.body.appendChild(tooltip);
@@ -193,7 +193,7 @@
         <div class="tara-header-left">
           <img src="images/kuber-avatar.png" alt="Kuber" />
           <div>
-            <div class="tara-header-name">Kuber ✨</div>
+            <div class="tara-header-name">Kuber </div>
             <div class="tara-header-sub">कुबेर • AI Sales & Growth Rep</div>
           </div>
         </div>
@@ -205,7 +205,7 @@
           <input class="tara-input" id="taraInput" placeholder="Ask Kuber about patterns, strategies..." autocomplete="off" />
           <button class="tara-send" type="submit" id="taraSend">↑</button>
         </form>
-        <div class="tara-footer-note">Powered by Kuber ✨ • Not financial advice</div>
+        <div class="tara-footer-note">Powered by Kuber  • Not financial advice</div>
       </div>
     `;
     document.body.appendChild(chat);
@@ -231,7 +231,7 @@
 
     if (isOpen) {
       bubble.classList.add('open');
-      bubble.innerHTML = `<span class="close-x">✕</span>`;
+      bubble.innerHTML = `<span class="close-x">X</span>`;
       chat.classList.add('open');
       tooltip.style.display = 'none';
       document.getElementById('taraInput').focus();
@@ -252,7 +252,7 @@
       container.innerHTML = `
         <div class="tara-welcome">
           <img src="images/kuber-avatar.png" alt="Kuber" />
-          <div class="tara-welcome-title">Namaste! I'm Kuber ✨</div>
+          <div class="tara-welcome-title">Namaste! I'm Kuber </div>
           <div class="tara-welcome-sub">
             Your AI Sales & Growth Rep • कुबेर<br />
             Ask me how we can boost your<br />
@@ -265,7 +265,7 @@
       quickPrompts.forEach(p => {
         const btn = document.createElement('button');
         btn.className = 'tara-prompt-btn';
-        btn.textContent = '💬 ' + p;
+        btn.textContent = p;
         btn.onclick = () => sendMessage(p);
         promptsDiv.appendChild(btn);
       });
@@ -352,7 +352,7 @@
       }
     } catch {
       loading = false;
-      messages.push({ role: 'assistant', content: '⚠️ Connection issue. Please try again!' });
+      messages.push({ role: 'assistant', content: 'Connection issue. Please try again!' });
       renderMessages();
     }
   }
@@ -390,7 +390,7 @@
     }).join('');
   }
 
-  // ── Init ──
+  //  Init 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', build);
   } else {

@@ -21,6 +21,7 @@ export default function AstroFinanceApp() {
   const [page, setPage] = useState<Page>('dashboard');
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isProcessingAuth, setIsProcessingAuth] = useState(false);
+  const [currentSymbol, setCurrentSymbol] = useState('^NSEI');
   const { tier } = usePlan();
   const isFree = tier === 'free';
 
@@ -78,7 +79,7 @@ export default function AstroFinanceApp() {
         {isProcessingAuth && (
           <div className="flex flex-col items-center justify-center p-10 bg-[var(--bg-card)] rounded-xl border border-[var(--border-subtle)] mb-8 shadow-lg">
             <div className="spinner mb-4 w-8 h-8 border-4"></div>
-            <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">Authenticating with Kite...</h2>
+            <h2 className="text-xl font-bold text-blue-500">Authenticating with Kite...</h2>
             <p className="text-gray-400 text-sm mt-2">Connecting up your live data feeds. Please wait.</p>
           </div>
         )}
@@ -92,15 +93,15 @@ export default function AstroFinanceApp() {
           />
         )}
         {page === 'nakshatra' && tier === 'elite' && <NakshatraAnalysis data={analysisData} />}
-        {page === 'technical' && <TechnicalAnalysis active={true} />}
+        {page === 'technical' && <TechnicalAnalysis active={true} onSymbolChange={setCurrentSymbol} />}
         {page === 'correlation' && !isFree && <AstroCorrelation />}
         {page === 'sentiment' && !isFree && <SentimentVix />}
         {page === 'events' && <EconomicEvents />}
         {page === 'derivatives' && <DerivativesDashboard />}
       </main>
 
-      {/* AI Trading Assistant — accessible from all pages */}
-      <AIChatbot currentTab={page} />
+      {/* AI Trading Assistant — accessible from all pages with live market context */}
+      <AIChatbot currentTab={page} currentSymbol={currentSymbol} />
     </>
   );
 }
