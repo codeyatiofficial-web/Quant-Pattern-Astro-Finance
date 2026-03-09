@@ -249,10 +249,20 @@ class MarketDataFetcher:
                 conn = sqlite3.connect(CACHE_DB)
                 cursor = conn.cursor()
                 # Ensure we have previously fetched a sufficiently large data block for this symbol interval
-                cursor.execute("SELECT start_date FROM intraday_fetch_log WHERE symbol = ? AND interval = ?", (symbol, interval))
+                cursor.execute("SELECT start_date, last_fetch FROM intraday_fetch_log WHERE symbol = ? AND interval = ?", (symbol, interval))
                 log_row = cursor.fetchone()
                 
                 # Fetch recent log to make sure we don't have extremely stale cache endings
+                if log_row:
+                    try:
+                        last_fetch_str = log_row[1]
+                        last_fetch_dt = datetime.fromisoformat(last_fetch_str)
+                        if (datetime.now() - last_fetch_dt).total_seconds() > 43200:
+                            # Cache older than 12 hours, force refetch
+                            log_row = None
+                    except:
+                        pass
+                
                 if log_row:
                     query = '''
                         SELECT * FROM intraday_market_data

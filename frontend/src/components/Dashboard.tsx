@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePlanGate } from './UpgradeModal';
 import { usePlan } from '../contexts/PlanContext';
+import { MarketTicker } from './MarketTicker';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
@@ -79,7 +80,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const [planet, setPlanet] = useState('Moon');
     const [startDate, setStartDate] = useState(() => {
         const d = new Date();
-        d.setFullYear(d.getFullYear() - 1);
+        d.setFullYear(d.getFullYear() - 15);
         return d.toISOString().slice(0, 10);
     });
     const [endDate] = useState(new Date().toISOString().slice(0, 10));
@@ -140,6 +141,9 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     return (
         <div className="fade-in">
             {planModal}
+
+            <MarketTicker />
+
             {/*  Page Header  */}
             <div style={{ marginBottom: 24 }}>
                 <h1 className="section-title"> Market Intelligence Dashboard</h1>

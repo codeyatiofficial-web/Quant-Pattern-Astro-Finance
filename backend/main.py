@@ -1126,6 +1126,85 @@ def get_nakshatras():
 # LIVE CHART DATA
 # ══════════════════════════════════════════════════════════════════════════════
 
+@app.get("/api/market/live")
+def get_live_market_data():
+    """
+    Fetch live market data for global indices and commodities.
+    Uses yfinance to get reliable global data including Forex & Commodities.
+    """
+    import yfinance as yf
+    import pandas as pd
+    
+    # Define the specific symbols requested by the user
+    symbols = {
+        "NIFTY 50": "^NSEI",
+        "BANK NIFTY": "^NSEBANK",
+        "NASDAQ": "NQ=F",
+        "OIL": "CL=F",
+        "GOLD": "GC=F",
+        "USD/INR": "INR=X"
+    }
+    
+    results = []
+    
+    try:
+        data = yf.download(" ".join(symbols.values()), period="5d", progress=False)
+        for name, symbol in symbols.items():
+            close_data = None
+            try:
+                # Try MultiIndex tuple first
+                if isinstance(data.columns, pd.MultiIndex) or getattr(data.columns, 'nlevels', 1) > 1:
+                    close_data = data[('Close', symbol)].dropna()
+                else:
+                    # Single level fallback
+                    close_data = data['Close'].dropna()
+            except Exception:
+                # If tuple indexing fails, try dict-like column access
+                try:
+                    close_data = data['Close'][symbol].dropna()
+                except Exception:
+                    continue
+                    
+            if close_data is None or len(close_data) == 0:
+                continue
+
+            if len(close_data) >= 2:
+                current_price = float(close_data.iloc[-1])
+                prev_price = float(close_data.iloc[-2])
+                change = current_price - prev_price
+                change_pct = (change / prev_price) * 100
+            elif len(close_data) == 1:
+                current_price = float(close_data.iloc[-1])
+                change = 0.0
+                change_pct = 0.0
+            else:
+                continue
+                
+            # Format appropriately depending on the instrument
+            if symbol == "INR=X":
+                price_str = f"₹{current_price:.2f}"
+            elif symbol in ["CL=F", "GC=F"]:
+                price_str = f"${current_price:.2f}"
+            else:
+                price_str = f"{current_price:,.2f}"
+                
+            results.append({
+                "name": name,
+                "symbol": symbol,
+                "price": current_price,
+                "priceStr": price_str,
+                "change": change,
+                "changePct": change_pct,
+                "isPositive": change >= 0
+            })
+                
+        return {"success": True, "data": results}
+    except Exception as e:
+        logger.error(f"Failed to fetch live market data: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/chart/ohlcv")
 def get_chart_data(symbol: str = "^NSEI", interval: str = "1d", period: str = "6mo"):
     """
