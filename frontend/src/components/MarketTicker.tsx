@@ -18,7 +18,7 @@ export function MarketTicker() {
 
     const fetchMarketData = async () => {
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/market/live');
+            const response = await fetch('/api/market/live');
             if (!response.ok) {
                 throw new Error('Failed to fetch market data');
             }
