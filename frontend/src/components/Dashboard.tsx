@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { usePlanGate } from './UpgradeModal';
 import { usePlan } from '../contexts/PlanContext';
 import { MarketTicker } from './MarketTicker';
+import IntradayForecastWidget from './IntradayForecastWidget';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
@@ -151,6 +152,9 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     AI-composite signals across planetary cycles, technicals, options & institutional flows
                 </p>
             </div>
+
+            {/* LIVE 1-HOUR INTRADAY FORECAST (All Users) */}
+            <IntradayForecastWidget />
 
             {/*  1-WEEK COMPREHENSIVE FORECAST (All users)  */}
             <div style={{

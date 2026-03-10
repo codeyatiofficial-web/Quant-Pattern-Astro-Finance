@@ -405,30 +405,31 @@ def get_monthly_forecast(target_date: str = None, market: str = "NSE"):
     except Exception as e:
         logger.warning(f"Forecast: astro signal failed: {e}")
 
-    # ── 2. MACRO EVENTS SIGNAL (weight: 2) ───────────────────────────────────
+    # ── 8. NEW: ECONOMIC EVENTS SIGNAL ─────────────────────────────────────────
     try:
-        from modules.economic_events import EconomicEventsAnalyzer
-        events_engine = EconomicEventsAnalyzer()
-        events = events_engine.get_upcoming_events(days_ahead=30) if not is_historical else []
+        from modules.economic_events import EconomicEventsEngine
+        events_engine = EconomicEventsEngine()
+        upcoming = events_engine.get_events_in_window(days_ahead=30)  # Next 30 days
         
-        if not is_historical:
-            bullish_events = sum(1 for e in events if e.get("expected_bias") == "Bullish")
-            bearish_events = sum(1 for e in events if e.get("expected_bias") == "Bearish")
+        # Filter for near-term events
+        near_events = [e for e in upcoming if e.get("days_away", 999) <= 15]
+        if near_events:
+            # We take the most imminent/important
+            top_event = near_events[0]
+            bias = top_event.get("original_bias", top_event.get("historical_bias", "Neutral"))
             
-            if bullish_events > bearish_events:
-                score += 2.0
-                signals.append({"category": "Events", "icon": "🗓️", "direction": "bullish", "text": f"{bullish_events} positive macro events upcoming"})
-            elif bearish_events > bullish_events:
-                score -= 2.0
-                signals.append({"category": "Events", "icon": "🗓️", "direction": "bearish", "text": f"{bearish_events} negative macro events upcoming"})
-            elif len(events) > 0:
-                signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral", "text": f"{len(events)} mixed macro events scheduled"})
+            if "ullish" in bias.lower():
+                score += 1
+                signals.append({"category": "Events", "icon": "📅", "direction": "bullish", "text": f"{top_event['sub_event']} in {top_event['days_away']}d ({bias})"})
+            elif "earish" in bias.lower():
+                score -= 1
+                signals.append({"category": "Events", "icon": "📅", "direction": "bearish", "text": f"{top_event['sub_event']} in {top_event['days_away']}d ({bias})"})
             else:
-                signals.append({"category": "Events", "icon": "🗓️", "direction": "neutral", "text": "Quiet macroeconomic calendar for the next month"})
+                signals.append({"category": "Events", "icon": "📅", "direction": "neutral", "text": f"{top_event['sub_event']} closely watched"})
         else:
-            signals.append({"category": "Events", "icon": "🗓️", "direction": "historical", "text": "Historical macro events N/A"})
+            signals.append({"category": "Events", "icon": "📅", "direction": "neutral", "text": "Quiet macroeconomic calendar for the next month"})
     except Exception as e:
-        logger.warning(f"Forecast: events signal failed: {e}")
+        logger.warning(f"Forecast: events signal failed: {str(e)}")
 
     # ── 3. TECHNICAL SIGNAL (weight: 3) ──────────────────────────────────────
     try:
@@ -648,26 +649,27 @@ def get_weekly_forecast(market: str = "NSE"):
         options_signal = {"pcr": None, "vix": None, "direction": "neutral", "text": "N/A"}
         try:
             snap = derivatives_engine.get_market_snapshot("NIFTY" if market == "NSE" else "SPY")
-            pcr = snap.get("pcr", {}).get("value")
-            vix = snap.get("vix", {}).get("value")
-            options_signal["pcr"] = pcr
-            options_signal["vix"] = vix
-            if pcr and vix:
-                if pcr > 1.3:
-                    options_signal["direction"] = "bullish"
-                    options_signal["text"] = f"High PCR {pcr:.2f} (put writing) · VIX {vix:.1f}"
-                elif pcr < 0.7:
-                    options_signal["direction"] = "bearish"
-                    options_signal["text"] = f"Low PCR {pcr:.2f} (call writing) · VIX {vix:.1f}"
-                else:
-                    options_signal["text"] = f"PCR {pcr:.2f} balanced · VIX {vix:.1f}"
+            if isinstance(snap, dict):
+                pcr = snap.get("pcr", {}).get("value")
+                vix = snap.get("vix", {}).get("value")
+                options_signal["pcr"] = pcr
+                options_signal["vix"] = vix
+                if pcr and vix:
+                    if pcr > 1.3:
+                        options_signal["direction"] = "bullish"
+                        options_signal["text"] = f"High PCR {pcr:.2f} (put writing) · VIX {vix:.1f}"
+                    elif pcr < 0.7:
+                        options_signal["direction"] = "bearish"
+                        options_signal["text"] = f"Low PCR {pcr:.2f} (call writing) · VIX {vix:.1f}"
+                    else:
+                        options_signal["text"] = f"PCR {pcr:.2f} balanced · VIX {vix:.1f}"
         except Exception as e:
-            logger.warning(f"Weekly forecast: Options snapshot failed: {e}")
+            logger.warning(f"Weekly forecast: Options snapshot failed: {str(e)}")
     
         # ── 2. FII/DII flows ─────────────────────────────────────────────────────
         fii_signal = {"direction": "neutral", "text": "N/A", "fii_net": None, "dii_net": None}
         try:
-            fii_data = fetch_fii_dii_data()
+            fii_data = fetch_fii_dii_data(datetime.now())
             if fii_data and fii_data.get("fii_net") is not None:
                 fii_net = fii_data["fii_net"]
                 dii_net = fii_data.get("dii_net", 0)
@@ -1863,11 +1865,364 @@ def run_correlation_heatmap(req: HeatmapRequest):
             years=req.years
         )
         if "error" in res:
-             raise HTTPException(status_code=400, detail=res["error"])
-        return res
+            raise HTTPException(status_code=400, detail=res["error"])
+        return {"data": res}
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/correlation/live-prediction")
+def get_live_prediction(market: str = "NSE"):
+    """
+    Live prediction engine for Nifty 50 based on Nasdaq, USD/INR, Crude Oil, and Gold
+    Calculates rolling correlations and projects a near-term directional bias.
+    """
+    import pandas as pd
+    import numpy as np
+
+    target_symbol = "^NSEI" if market == "NSE" else "^IXIC"
+    predictors = {
+        "Nasdaq": "NQ=F",
+        "SP500": "ES=F",
+        "USD_INR": "INR=X",
+        "Oil": "CL=F",
+        "Gold": "GC=F"
+    }
+
+    try:
+        start_dt = (datetime.now() - pd.Timedelta(days=90)).strftime("%Y-%m-%d")
+        
+        # Use the global market object instantiated at target main.py
+        target_data = globals()['market'].fetch_stock_data(target_symbol, start_date=start_dt, market=market)
+        
+        preds_data = {}
+        for name, sym in predictors.items():
+            df = globals()['market'].fetch_stock_data(sym, start_date=start_dt, market="Global")
+            if not df.empty:
+                df = df.set_index('date')
+                preds_data[name] = df['daily_return']
+
+        if target_data.empty or len(preds_data) == 0:
+             raise HTTPException(status_code=400, detail="Not enough data to run correlation")
+
+        target_df = target_data.set_index('date')['daily_return']
+        combined_df = pd.DataFrame({target_symbol: target_df})
+        for name, series in preds_data.items():
+            combined_df[name] = series
+
+        combined_df = combined_df.dropna()
+        if len(combined_df) < 10:
+             raise HTTPException(status_code=400, detail="Insufficient overlapping dates for assets.")
+
+        correlations = {}
+        for name in predictors.keys():
+            if name in combined_df.columns:
+                corr = combined_df[target_symbol].corr(combined_df[name])
+                correlations[name] = round(corr, 3) if not pd.isna(corr) else 0.0
+
+        latest_row = combined_df.iloc[-1]
+        score = 0.0
+        
+        for name, corr_val in correlations.items():
+            if name in latest_row:
+                asset_return = latest_row[name]
+                score += (asset_return * corr_val)
+
+        prediction_bias = "Neutral"
+        confidence = min(abs(score) * 15, 95)
+        
+        if score > 0.3:
+             prediction_bias = "Bullish"
+        elif score < -0.3:
+             prediction_bias = "Bearish"
+
+        current_values = {}
+        for name, sym in predictors.items():
+             sym_df = globals()['market'].fetch_stock_data(sym, start_date=(datetime.now() - pd.Timedelta(days=5)).strftime("%Y-%m-%d"), market="Global")
+             if not sym_df.empty:
+                 current_values[name] = round(sym_df['close'].iloc[-1], 2)
+
+        target_latest = target_data['close'].iloc[-1] if not target_data.empty else 0
+
+        return {
+            "prediction": prediction_bias,
+            "confidence": round(confidence, 1),
+            "score": round(score, 3),
+            "target": {
+                "symbol": target_symbol,
+                "current_price": round(target_latest, 2)
+            },
+            "correlations": correlations,
+            "current_values": current_values,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Live prediction error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/correlation/sp500-intraday")
+def get_sp500_intraday_correlation(market: str = "NSE"):
+    """
+    Compute rolling intraday correlation between Nifty and major global futures
+    (S&P 500, Dollar, Oil, Gold, Nasdaq) across 5m, 15m, 30m, and 1h timeframes.
+    Returns time-series data for charting + a prediction per timeframe.
+    """
+    import yfinance as yf
+    import pandas as pd
+    import numpy as np
+
+    target_symbol = "^NSEI" if market == "NSE" else "^IXIC"
+
+    # All reference futures to correlate against Nifty
+    reference_assets = {
+        "SP500": {"symbol": "ES=F", "label": "S&P 500 Futures"},
+        "Dollar": {"symbol": "DX=F", "label": "Dollar Index Futures"},
+        "Oil": {"symbol": "CL=F", "label": "Crude Oil Futures"},
+        "Gold": {"symbol": "GC=F", "label": "Gold Futures"},
+        "Nasdaq": {"symbol": "NQ=F", "label": "Nasdaq Futures"},
+    }
+
+    # yfinance limits: 5m/15m/30m → max 60 days, 1h → max 730 days
+    timeframe_config = {
+        "5m":  {"period": "5d",  "interval": "5m",  "window": 20},
+        "15m": {"period": "15d", "interval": "15m", "window": 20},
+        "30m": {"period": "30d", "interval": "30m", "window": 20},
+        "1h":  {"period": "60d", "interval": "1h",  "window": 20},
+    }
+
+    results = {}
+
+    try:
+        # Pre-fetch target data per timeframe (shared across assets)
+        target_cache = {}
+        for tf_label, cfg in timeframe_config.items():
+            try:
+                tdf = yf.download(
+                    target_symbol, period=cfg["period"], interval=cfg["interval"],
+                    progress=False, auto_adjust=True
+                )
+                if isinstance(tdf.columns, pd.MultiIndex):
+                    tdf.columns = tdf.columns.get_level_values(0)
+                target_cache[tf_label] = tdf
+            except Exception:
+                target_cache[tf_label] = pd.DataFrame()
+
+        for tf_label, cfg in timeframe_config.items():
+            tf_result = {"assets": {}, "prediction": "Neutral", "confidence": 0, "combined_signal": 0}
+
+            target_df = target_cache.get(tf_label, pd.DataFrame())
+            if target_df.empty:
+                results[tf_label] = tf_result
+                continue
+
+            target_ret = target_df["Close"].pct_change().dropna()
+            combined_signal = 0.0
+            asset_count = 0
+
+            for asset_key, asset_info in reference_assets.items():
+                try:
+                    ref_df = yf.download(
+                        asset_info["symbol"], period=cfg["period"], interval=cfg["interval"],
+                        progress=False, auto_adjust=True
+                    )
+
+                    if ref_df.empty:
+                        tf_result["assets"][asset_key] = {
+                            "label": asset_info["label"],
+                            "symbol": asset_info["symbol"],
+                            "current_corr": None, "latest_return": None,
+                            "data_points": 0, "data": []
+                        }
+                        continue
+
+                    if isinstance(ref_df.columns, pd.MultiIndex):
+                        ref_df.columns = ref_df.columns.get_level_values(0)
+
+                    ref_ret = ref_df["Close"].pct_change().dropna()
+                    combined = pd.DataFrame({"target": target_ret, "ref": ref_ret}).dropna()
+
+                    if len(combined) < cfg["window"] + 2:
+                        tf_result["assets"][asset_key] = {
+                            "label": asset_info["label"],
+                            "symbol": asset_info["symbol"],
+                            "current_corr": None, "latest_return": None,
+                            "data_points": 0, "data": []
+                        }
+                        continue
+
+                    rolling_corr = combined["target"].rolling(window=cfg["window"]).corr(combined["ref"]).dropna()
+
+                    chart_data = []
+                    for ts, corr_val in rolling_corr.items():
+                        if not pd.isna(corr_val):
+                            chart_data.append({
+                                "time": ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
+                                "correlation": round(float(corr_val), 4)
+                            })
+
+                    current_corr = round(float(rolling_corr.iloc[-1]), 4) if len(rolling_corr) > 0 else None
+                    latest_return = round(float(combined["ref"].iloc[-1]) * 100, 4)
+
+                    # Contribute to combined prediction signal
+                    if current_corr is not None:
+                        combined_signal += current_corr * latest_return
+                        asset_count += 1
+
+                    tf_result["assets"][asset_key] = {
+                        "label": asset_info["label"],
+                        "symbol": asset_info["symbol"],
+                        "current_corr": current_corr,
+                        "latest_return": latest_return,
+                        "data_points": len(chart_data),
+                        "data": chart_data[-200:]
+                    }
+
+                except Exception as asset_err:
+                    logger.warning(f"Futures intraday {tf_label}/{asset_key} error: {asset_err}")
+                    tf_result["assets"][asset_key] = {
+                        "label": asset_info["label"],
+                        "symbol": asset_info["symbol"],
+                        "current_corr": None, "latest_return": None,
+                        "data_points": 0, "data": []
+                    }
+
+            # Average the combined signal across assets that contributed
+            if asset_count > 0:
+                combined_signal /= asset_count
+
+            if combined_signal > 0.05:
+                tf_result["prediction"] = "Bullish"
+            elif combined_signal < -0.05:
+                tf_result["prediction"] = "Bearish"
+            else:
+                tf_result["prediction"] = "Neutral"
+
+            tf_result["confidence"] = round(min(abs(combined_signal) * 50, 95), 1)
+            tf_result["combined_signal"] = round(combined_signal, 4)
+
+            results[tf_label] = tf_result
+
+        return {
+            "target": target_symbol,
+            "reference_assets": {k: v["label"] for k, v in reference_assets.items()},
+            "timeframes": results,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Futures intraday correlation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/correlation/futures-macro")
+def get_futures_macro_correlation(market: str = "NSE"):
+    """
+    Compute 25-Year macro correlation between Nifty and global futures.
+    Returns daily data rolling correlation over 25 years, downsampled for UI efficiency.
+    """
+    import yfinance as yf
+    import pandas as pd
+    import numpy as np
+
+    target_symbol = "^NSEI" if market == "NSE" else "^IXIC"
+
+    reference_assets = {
+        "SP500": {"symbol": "ES=F", "label": "S&P 500 Futures"},
+        "Dollar": {"symbol": "DX=F", "label": "Dollar Index Futures"},
+        "Oil": {"symbol": "CL=F", "label": "Crude Oil Futures"},
+        "Gold": {"symbol": "GC=F", "label": "Gold Futures"},
+        "Nasdaq": {"symbol": "NQ=F", "label": "Nasdaq Futures"},
+    }
+
+    try:
+        # Fetch 25y 1d data for Target
+        target_df = yf.download(target_symbol, period="25y", interval="1d", progress=False, auto_adjust=True)
+        if target_df.empty:
+            raise ValueError(f"No data for target {target_symbol}")
+        
+        if isinstance(target_df.columns, pd.MultiIndex):
+            target_df.columns = target_df.columns.get_level_values(0)
+            
+        target_ret = target_df["Close"].pct_change().dropna()
+        
+        tf_result = {"assets": {}, "prediction": "Neutral", "confidence": 0, "combined_signal": 0}
+        combined_signal = 0.0
+        asset_count = 0
+
+        for asset_key, asset_info in reference_assets.items():
+            try:
+                ref_df = yf.download(asset_info["symbol"], period="25y", interval="1d", progress=False, auto_adjust=True)
+                if ref_df.empty:
+                    tf_result["assets"][asset_key] = {
+                        "label": asset_info["label"], "symbol": asset_info["symbol"],
+                        "current_corr": None, "latest_return": None, "data_points": 0, "data": []
+                    }
+                    continue
+
+                if isinstance(ref_df.columns, pd.MultiIndex):
+                    ref_df.columns = ref_df.columns.get_level_values(0)
+
+                ref_ret = ref_df["Close"].pct_change().dropna()
+                combined = pd.DataFrame({"target": target_ret, "ref": ref_ret}).dropna()
+
+                # 60-day rolling window for Macro view
+                if len(combined) < 62:
+                    tf_result["assets"][asset_key] = {
+                        "label": asset_info["label"], "symbol": asset_info["symbol"],
+                        "current_corr": None, "latest_return": None, "data_points": 0, "data": []
+                    }
+                    continue
+
+                rolling_corr = combined["target"].rolling(window=60).corr(combined["ref"]).dropna()
+
+                chart_data = []
+                for ts, corr_val in rolling_corr.items():
+                    if not pd.isna(corr_val):
+                        # ISO format
+                        chart_data.append({"time": ts.isoformat() if hasattr(ts, 'isoformat') else str(ts), "correlation": round(float(corr_val), 4)})
+
+                current_corr = round(float(rolling_corr.iloc[-1]), 4) if len(rolling_corr) > 0 else None
+                latest_return = round(float(combined["ref"].iloc[-1]) * 100, 4)
+
+                if current_corr is not None:
+                    combined_signal += current_corr * latest_return
+                    asset_count += 1
+
+                # Downsample chart_data: take every 5th point (weekly approx) so the UI chart doesn't lag rendering 6000 points
+                downsampled_data = chart_data[::5]
+
+                tf_result["assets"][asset_key] = {
+                    "label": asset_info["label"],
+                    "symbol": asset_info["symbol"],
+                    "current_corr": current_corr,
+                    "latest_return": latest_return,
+                    "data_points": len(downsampled_data),
+                    "data": downsampled_data
+                }
+            except Exception as asset_err:
+                logger.warning(f"Futures macro {asset_key} error: {asset_err}")
+                tf_result["assets"][asset_key] = {
+                    "label": asset_info["label"], "symbol": asset_info["symbol"],
+                    "current_corr": None, "latest_return": None, "data_points": 0, "data": []
+                }
+
+        if asset_count > 0:
+            combined_signal /= asset_count
+
+        if combined_signal > 0.05: tf_result["prediction"] = "Bullish"
+        elif combined_signal < -0.05: tf_result["prediction"] = "Bearish"
+        else: tf_result["prediction"] = "Neutral"
+
+        tf_result["confidence"] = round(min(abs(combined_signal) * 50, 95), 1)
+        tf_result["combined_signal"] = round(combined_signal, 4)
+
+        return {
+            "target": target_symbol,
+            "reference_assets": {k: v["label"] for k, v in reference_assets.items()},
+            "timeframes": {"1d": tf_result},
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Futures macro correlation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/symbols")

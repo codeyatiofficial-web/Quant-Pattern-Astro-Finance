@@ -1,6 +1,10 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePlanGate } from './UpgradeModal';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
@@ -136,7 +140,21 @@ export default function AstroCorrelation() {
     const [vixResult, setVixResult] = useState<any>(null);
     const [vixError, setVixError] = useState('');
 
-    const [sub, setSub] = useState<'backtest' | 'vix'>('backtest');
+    const [futuresMarket, setFuturesMarket] = useState('NSE');
+    const [futuresLoading, setFuturesLoading] = useState(false);
+    const [futuresResult, setFuturesResult] = useState<any>(null);
+    const [futuresError, setFuturesError] = useState('');
+
+    const [sp500Loading, setSp500Loading] = useState(false);
+    const [sp500Result, setSp500Result] = useState<any>(null);
+    const [sp500Error, setSp500Error] = useState('');
+
+    const [macroLoading, setMacroLoading] = useState(false);
+    const [macroResult, setMacroResult] = useState<any>(null);
+    const [macroError, setMacroError] = useState('');
+
+
+    const [sub, setSub] = useState<'backtest' | 'vix' | 'futures' | 'macro'>('backtest');
 
     const { guardYears, modal: planModal } = usePlanGate(1);
 
@@ -181,6 +199,46 @@ export default function AstroCorrelation() {
             else setVixResult(data);
         } catch { setVixError('Network error'); }
         setVixLoading(false);
+    };
+
+    const runFuturesPrediction = async () => {
+        setFuturesLoading(true); setFuturesError(''); setFuturesResult(null);
+        try {
+            const res = await fetch(`${API}/api/correlation/live-prediction?market=${futuresMarket}`);
+            const data = await res.json();
+            if (!res.ok || data.error) setFuturesError(data.error || data.detail || 'Error');
+            else setFuturesResult(data);
+        } catch { setFuturesError('Network error'); }
+        setFuturesLoading(false);
+    };
+
+    const TF_LABELS: Record<string, string> = { '5m': '5 Min', '15m': '15 Min', '30m': '30 Min', '1h': '1 Hour' };
+    const TF_COLORS: Record<string, string> = { '5m': '#6366f1', '15m': '#10b981', '30m': '#f59e0b', '1h': '#ef4444' };
+
+    const runSP500Correlation = async () => {
+        setSp500Loading(true); setSp500Error(''); setSp500Result(null);
+        try {
+            const res = await fetch(`${API}/api/correlation/sp500-intraday?market=${futuresMarket}`);
+            const data = await res.json();
+            if (!res.ok || data.error) setSp500Error(data.error || data.detail || 'Error');
+            else setSp500Result(data);
+        } catch { setSp500Error('Network error – is backend running?'); }
+        setSp500Loading(false);
+    };
+
+    const runMacroCorrelation = async () => {
+        setMacroLoading(true); setMacroError(''); setMacroResult(null);
+        // Automatically fetch intraday data if empty so the user can compare macro vs intraday
+        if (!sp500Result) {
+            runSP500Correlation();
+        }
+        try {
+            const res = await fetch(`${API}/api/correlation/futures-macro?market=${futuresMarket}`);
+            const data = await res.json();
+            if (!res.ok || data.error) setMacroError(data.error || data.detail || 'Error');
+            else setMacroResult(data);
+        } catch { setMacroError('Network error – is backend running?'); }
+        setMacroLoading(false);
     };
 
     // Currently chosen group info
@@ -241,6 +299,8 @@ export default function AstroCorrelation() {
             <div className="tab-list" style={{ marginBottom: 20 }}>
                 <button className={`tab-btn ${sub === 'backtest' ? 'active' : ''}`} onClick={() => setSub('backtest')}> Market Backtest</button>
                 <button className={`tab-btn ${sub === 'vix' ? 'active' : ''}`} onClick={() => setSub('vix')}> VIX Backtest</button>
+                <button className={`tab-btn ${sub === 'futures' ? 'active' : ''}`} onClick={() => setSub('futures')}> Nifty Backtesting with 5 Global Indicators</button>
+                <button className={`tab-btn ${sub === 'macro' ? 'active' : ''}`} onClick={() => setSub('macro')}> 25-Year Macro</button>
             </div>
 
             {sub === 'backtest' && (
@@ -524,6 +584,475 @@ export default function AstroCorrelation() {
                             )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {sub === 'futures' && (
+                <div>
+                    <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                        <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 16 }}>Live Market Prediction Engine</h3>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
+                            Predict target direction by correlating historical returns against core global assets (Nasdaq, S&P 500, Oil, Gold, USD/INR).
+                        </p>
+
+                        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20, alignItems: 'flex-end' }}>
+                            <div style={{ minWidth: 150 }}>
+                                <label className="form-label">Target Market</label>
+                                <select className="form-select" value={futuresMarket} onChange={e => setFuturesMarket(e.target.value)}>
+                                    <option value="NSE">Nifty 50 (^NSEI)</option>
+                                    <option value="NASDAQ">Nasdaq (^IXIC)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                            <button className="btn-primary" onClick={runFuturesPrediction} disabled={futuresLoading}>
+                                {futuresLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Running…</> : ` Run Live Prediction`}
+                            </button>
+                            <button className="btn-primary" onClick={runSP500Correlation} disabled={sp500Loading} style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
+                                {sp500Loading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Analyzing…</> : `📊 Nifty Direction Indicator`}
+                            </button>
+                        </div>
+                        {futuresError && <div className="alert-error" style={{ marginTop: 14 }}> {futuresError}</div>}
+                        {sp500Error && <div className="alert-error" style={{ marginTop: 14 }}> {sp500Error}</div>}
+                    </div>
+
+                    {futuresResult && (
+                        <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+                                <div>
+                                    <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+                                        Hourly Output: {futuresResult.target.symbol}
+                                    </div>
+                                    <span className={`badge ${futuresResult.prediction === 'Bullish' ? 'badge-bullish' : futuresResult.prediction === 'Bearish' ? 'badge-bearish' : 'badge-neutral'}`} style={{ fontSize: 13, padding: '6px 14px' }}>
+                                        Direction: {futuresResult.prediction} ({futuresResult.confidence}% confidence)
+                                    </span>
+                                </div>
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Score: <strong style={{ color: 'var(--text-primary)', fontSize: 16 }}>{futuresResult.score}</strong></span>
+                            </div>
+
+                            <div className="grid-2" style={{ marginBottom: 16 }}>
+                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 16 }}>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Correlated Global Assets List</div>
+                                    <div style={{ display: 'grid', gap: 8 }}>
+                                        {Object.entries(futuresResult.correlations || {}).map(([key, val]) => (
+                                            <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                                                <span>{key.replace('_', '/')}</span>
+                                                <span style={{ color: (val as number) > 0 ? 'var(--accent-green)' : (val as number) < 0 ? 'var(--accent-red)' : 'var(--text-muted)' }}>
+                                                    {(val as number) > 0 ? '+' : ''}{val as React.ReactNode} (r)
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 16 }}>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Current Ticker Prices</div>
+                                    <div style={{ display: 'grid', gap: 8 }}>
+                                        {Object.entries(futuresResult.current_values || {}).map(([key, price]) => (
+                                            <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
+                                                <span>{key.replace('_', '/')}</span>
+                                                <span>{price as React.ReactNode}</span>
+                                            </div>
+                                        ))}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8, marginTop: 4 }}>
+                                            <span>{futuresResult.target.symbol} Target</span>
+                                            <span style={{ color: 'var(--accent-blue)' }}>{futuresResult.target.current_price}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="insight-box" style={{ marginTop: 16 }}>
+                                {futuresResult.prediction === 'Bullish' ? 'The collective regression from global indices points upwards. Risk-on environment likely.' : futuresResult.prediction === 'Bearish' ? 'The collective regression indicates downward pressure on the target index. Consider protective hedges.' : 'System is showing mixed signals. No clear directional edge from global correlations right now.'}
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 10 }}>Updated Context @ {new Date(futuresResult.timestamp).toLocaleTimeString()}</div>
+                        </div>
+                    )}
+
+                    {/* ═══════════════════════════════════════════════════════════ */}
+                    {/* GLOBAL FUTURES INTRADAY CORRELATION CHARTS                 */}
+                    {/* ═══════════════════════════════════════════════════════════ */}
+                    {sp500Result && sp500Result.timeframes && (() => {
+                        const ASSET_COLORS: Record<string, string> = { SP500: '#6366f1', Dollar: '#f59e0b', Oil: '#ef4444', Gold: '#10b981', Nasdaq: '#3b82f6' };
+                        const ASSET_LABELS: Record<string, string> = sp500Result.reference_assets || { SP500: 'S&P 500', Dollar: 'Dollar', Oil: 'Oil', Gold: 'Gold', Nasdaq: 'Nasdaq' };
+                        return (
+                            <div style={{ marginTop: 4 }}>
+                                <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+                                        <span style={{ fontSize: 22 }}>📊</span>
+                                        <div>
+                                            <h3 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>Global Futures → Nifty Prediction</h3>
+                                            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                                                Rolling 20-bar Pearson correlation of {sp500Result.target} vs 5 global futures · Combined prediction per timeframe
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 10 }}>
+                                        {Object.entries(ASSET_COLORS).map(([key, color]) => (
+                                            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)' }}>
+                                                <div style={{ width: 10, height: 3, borderRadius: 2, background: color }} />
+                                                {ASSET_LABELS[key] || key}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Prediction summary cards */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 20 }}>
+                                    {(['5m', '15m', '30m', '1h'] as const).map(tf => {
+                                        const tfData = sp500Result.timeframes[tf];
+                                        if (!tfData) return null;
+                                        return (
+                                            <div key={tf} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${TF_COLORS[tf]}30`, borderRadius: 12, padding: 18, position: 'relative', overflow: 'hidden' }}>
+                                                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: TF_COLORS[tf] }} />
+                                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>{TF_LABELS[tf]} Prediction</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                                    <span className={`badge ${tfData.prediction === 'Bullish' ? 'badge-bullish' : tfData.prediction === 'Bearish' ? 'badge-bearish' : 'badge-neutral'}`} style={{ fontSize: 12, padding: '5px 12px' }}>
+                                                        {tfData.prediction === 'Bullish' ? '▲' : tfData.prediction === 'Bearish' ? '▼' : '●'} {tfData.prediction}
+                                                    </span>
+                                                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{tfData.confidence}%</span>
+                                                </div>
+                                                <div style={{ display: 'grid', gap: 4 }}>
+                                                    {tfData.assets && Object.entries(tfData.assets).map(([aKey, aData]: [string, any]) => (
+                                                        <div key={aKey} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                                            <span style={{ color: ASSET_COLORS[aKey] || 'var(--text-muted)', fontWeight: 600 }}>{aKey}</span>
+                                                            <span style={{ color: aData.current_corr != null ? (aData.current_corr > 0 ? '#10b981' : '#ef4444') : '#94a3b8', fontWeight: 600 }}>
+                                                                {aData.current_corr != null ? (aData.current_corr > 0 ? '+' : '') + aData.current_corr.toFixed(3) : '—'}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Forward-Looking Multi-Timeframe Forecast */}
+                                {(() => {
+                                    const sig5 = sp500Result.timeframes['5m']?.combined_signal || 0;
+                                    const sig15 = sp500Result.timeframes['15m']?.combined_signal || 0;
+                                    const sig30 = sp500Result.timeframes['30m']?.combined_signal || 0;
+                                    const sig60 = sp500Result.timeframes['1h']?.combined_signal || 0;
+                                    const sig10 = (sig5 + sig15) / 2; // Interpolated 10m
+
+                                    const path = [
+                                        0,
+                                        sig5 * 10,
+                                        (sig5 + sig10) * 10,
+                                        (sig5 + sig10 + sig15) * 10,
+                                        (sig5 + sig10 + sig15 + sig30) * 10,
+                                        (sig5 + sig10 + sig15 + sig30 + sig60) * 10
+                                    ];
+
+                                    const overallForecast = path[5] > 0.5 ? 'Strong Bullish' : path[5] > 0 ? 'Bullish' : path[5] < -0.5 ? 'Strong Bearish' : path[5] < 0 ? 'Bearish' : 'Neutral';
+                                    const pathColor = path[5] > 0 ? '#10b981' : path[5] < 0 ? '#ef4444' : '#f59e0b';
+                                    const pathGradientFill = path[5] > 0 ? 'rgba(16, 185, 129, 0.1)' : path[5] < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+
+                                    const forecastData = {
+                                        labels: ['Now', '+5m', '+10m', '+15m', '+30m', '+1h'],
+                                        datasets: [{
+                                            label: 'Predicted Nifty Trajectory',
+                                            data: path,
+                                            borderColor: pathColor,
+                                            backgroundColor: pathGradientFill,
+                                            borderWidth: 3,
+                                            pointRadius: 4,
+                                            pointBackgroundColor: pathColor,
+                                            tension: 0.4,
+                                            fill: true,
+                                        }]
+                                    };
+
+                                    const forecastOptions = {
+                                        responsive: true, maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: { backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: pathColor, borderColor: pathColor, borderWidth: 1 }
+                                        },
+                                        scales: {
+                                            x: { display: true, ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } }, grid: { display: false } },
+                                            y: { display: false, grid: { display: false } }
+                                        },
+                                        interaction: { intersect: false, mode: 'index' as const },
+                                    };
+
+                                    return (
+                                        <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                                                <div>
+                                                    <h3 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>AI Intraday Forecast Pattern</h3>
+                                                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0' }}>Target trajectory based on overlapping 5m, 10m, 15m, 30m, and 1h indicators</p>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <span className={`badge ${path[5] > 0 ? 'badge-bullish' : path[5] < 0 ? 'badge-bearish' : 'badge-neutral'}`} style={{ fontSize: 14, padding: '6px 14px' }}>
+                                                        {path[5] > 0 ? '▲' : path[5] < 0 ? '▼' : '●'} {overallForecast}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div style={{ height: 260, padding: 8, background: 'rgba(0,0,0,0.1)', borderRadius: 12, border: `1px solid ${pathColor}40` }}>
+                                                <Line data={forecastData} options={forecastOptions} />
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 12 }}>
+                                                This path represents cumulative momentum from all 5 global futures overlaid on Nifty.
+                                                <br />
+                                                <span style={{ opacity: 0.7 }}>Back data used: 5 Days (for 5m), 15 Days (for 15m), 30 Days (for 30m), and 60 Days (for 1h) with a 20-bar rolling correlation.</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                <h3 style={{ fontWeight: 600, fontSize: 15, marginBottom: 12, marginTop: 10, color: 'var(--text-primary)' }}>Individual Timeframe Correlation Charts</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: 16 }}>
+                                    {(['5m', '15m', '30m', '1h'] as const).map(tf => {
+                                        const tfData = sp500Result.timeframes[tf];
+                                        if (!tfData || !tfData.assets) return null;
+                                        const assetEntries = Object.entries(tfData.assets).filter(([, a]: [string, any]) => a.data && a.data.length > 0);
+                                        if (assetEntries.length === 0) return null;
+
+                                        const longestAsset = assetEntries.reduce((a, b) => ((a[1] as any).data.length > (b[1] as any).data.length ? a : b));
+                                        const labels = (longestAsset[1] as any).data.map((d: any) => {
+                                            const dt = new Date(d.time);
+                                            return tf === '1h' ? dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ' ' + dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                                                : dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                                        });
+
+                                        const indexDatasets = assetEntries.map(([aKey, aData]: [string, any]) => ({
+                                            label: ASSET_LABELS[aKey] || aKey,
+                                            data: aData.data.map((d: any) => d.correlation),
+                                            borderColor: ASSET_COLORS[aKey] || '#94a3b8',
+                                            backgroundColor: 'transparent',
+                                            borderWidth: 1.5,
+                                            pointRadius: 0,
+                                            pointHoverRadius: 3,
+                                            tension: 0.3,
+                                        }));
+
+                                        const chartData = { labels, datasets: indexDatasets };
+                                        const chartOptions = {
+                                            responsive: true, maintainAspectRatio: false,
+                                            plugins: {
+                                                legend: { display: true, position: 'top' as const, labels: { color: 'rgba(255,255,255,0.6)', font: { size: 10 }, boxWidth: 12, padding: 10 } },
+                                                tooltip: {
+                                                    backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: '#a0a0b0', borderColor: TF_COLORS[tf], borderWidth: 1,
+                                                    callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}` }
+                                                }
+                                            },
+                                            scales: {
+                                                x: { display: true, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                                                y: { min: -1, max: 1, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 }, stepSize: 0.5 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                                            },
+                                            interaction: { intersect: false, mode: 'index' as const },
+                                        };
+
+                                        return (
+                                            <div key={tf} className="glass-card" style={{ padding: 18 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: TF_COLORS[tf] }} />
+                                                        <span style={{ fontSize: 14, fontWeight: 700 }}>{TF_LABELS[tf]} Correlation Chart</span>
+                                                    </div>
+                                                    <span className={`badge ${tfData.prediction === 'Bullish' ? 'badge-bullish' : tfData.prediction === 'Bearish' ? 'badge-bearish' : 'badge-neutral'}`} style={{ fontSize: 11 }}>
+                                                        Nifty → {tfData.prediction}
+                                                    </span>
+                                                </div>
+                                                <div style={{ height: 250 }}>
+                                                    <Line data={chartData} options={chartOptions} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="insight-box" style={{ marginTop: 16 }}>
+                                    {(() => {
+                                        const tfs = sp500Result.timeframes;
+                                        const bullish = Object.values(tfs).filter((t: any) => t.prediction === 'Bullish').length;
+                                        const bearish = Object.values(tfs).filter((t: any) => t.prediction === 'Bearish').length;
+                                        if (bullish > bearish) return `${bullish} of 4 timeframes predict Bullish for Nifty based on global futures correlation. Positive momentum is dominant across multiple intervals.`;
+                                        if (bearish > bullish) return `${bearish} of 4 timeframes predict Bearish for Nifty based on global futures correlation. Downside pressure detected across multiple intervals.`;
+                                        return 'Timeframes are evenly split between Bullish and Bearish. No clear directional consensus from global futures correlation signals.';
+                                    })()}
+                                </div>
+                                <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 8 }}>Last updated @ {new Date(sp500Result.timestamp).toLocaleTimeString()}</div>
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
+
+            {sub === 'macro' && (
+                <div>
+                    <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                        <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 16 }}>25-Year Global Futures Macro Correlation</h3>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
+                            Analyze the long-term Pearson correlation (60-day rolling window) between Nifty and 5 key global futures over a 25-year period.
+                        </p>
+
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                            <button className="btn-primary" onClick={runMacroCorrelation} disabled={macroLoading} style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+                                {macroLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Analyzing 25 Years…</> : `🌍 Run 25-Year Macro Correlation`}
+                            </button>
+                        </div>
+                        {macroError && <div className="alert-error" style={{ marginTop: 14 }}> {macroError}</div>}
+                    </div>
+
+                    {macroResult && macroResult.timeframes && macroResult.timeframes['1d'] && (() => {
+                        const tfData = macroResult.timeframes['1d'];
+                        if (!tfData || !tfData.assets) return null;
+
+                        const ASSET_COLORS: Record<string, string> = { SP500: '#6366f1', Dollar: '#f59e0b', Oil: '#ef4444', Gold: '#10b981', Nasdaq: '#3b82f6' };
+                        const ASSET_LABELS: Record<string, string> = macroResult.reference_assets || { SP500: 'S&P 500', Dollar: 'Dollar', Oil: 'Oil', Gold: 'Gold', Nasdaq: 'Nasdaq' };
+
+                        const assetEntries = Object.entries(tfData.assets).filter(([, a]: [string, any]) => a.data && a.data.length > 0);
+                        if (assetEntries.length === 0) return null;
+
+                        // Find consensus
+                        const bullishCount = assetEntries.filter(([, a]: [string, any]) => (a.current_corr ?? 0) > 0.2).length;
+                        const bearishCount = assetEntries.filter(([, a]: [string, any]) => (a.current_corr ?? 0) < -0.2).length;
+                        const macroPrediction = bullishCount > bearishCount ? 'Bullish' : bearishCount > bullishCount ? 'Bearish' : 'Neutral';
+
+                        const longestAsset = assetEntries.reduce((a, b) => ((a[1] as any).data.length > (b[1] as any).data.length ? a : b));
+                        const labels = (longestAsset[1] as any).data.map((d: any) => new Date(d.time).toLocaleDateString('en-IN', { year: 'numeric', month: 'short' }));
+
+                        const indexDatasets = assetEntries.map(([aKey, aData]: [string, any]) => ({
+                            label: ASSET_LABELS[aKey] || aKey,
+                            data: aData.data.map((d: any) => d.correlation),
+                            borderColor: ASSET_COLORS[aKey] || '#94a3b8',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                        }));
+
+                        const chartData = { labels, datasets: indexDatasets };
+                        const chartOptions = {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: true, position: 'top' as const, labels: { color: 'rgba(255,255,255,0.8)', font: { size: 11 }, padding: 16 } },
+                                tooltip: {
+                                    backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: '#a0a0b0', borderColor: '#10b981', borderWidth: 1,
+                                    callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}` }
+                                }
+                            },
+                            scales: {
+                                x: { display: true, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 12, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.03)' } },
+                                y: { min: -1, max: 1, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, stepSize: 0.5 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                            },
+                            interaction: { intersect: false, mode: 'index' as const },
+                        };
+
+                        return (
+                            <div style={{ marginTop: 4 }}>
+                                <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <span style={{ fontSize: 22 }}>📈</span>
+                                            <div>
+                                                <h3 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>25-Year Macro History</h3>
+                                                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0' }}>Daily correlation trends of Nifty vs Global Assets since ~2000</p>
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>25-Year Outlook</div>
+                                            <span className={`badge ${macroPrediction === 'Bullish' ? 'badge-bullish' : macroPrediction === 'Bearish' ? 'badge-bearish' : 'badge-neutral'}`} style={{ fontSize: 13, padding: '6px 14px' }}>
+                                                {macroPrediction === 'Bullish' ? '▲' : macroPrediction === 'Bearish' ? '▼' : '●'} {macroPrediction}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
+                                        {assetEntries.map(([aKey, aData]: [string, any]) => (
+                                            <div key={aKey} style={{ background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: 8, borderLeft: `3px solid ${ASSET_COLORS[aKey]}` }}>
+                                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{aKey} Correl</div>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: aData.current_corr != null ? (aData.current_corr > 0 ? '#10b981' : '#ef4444') : '#fff' }}>
+                                                    {aData.current_corr != null ? (aData.current_corr > 0 ? '+' : '') + aData.current_corr.toFixed(3) : '—'}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ height: 450, padding: 8, background: 'rgba(0,0,0,0.1)', borderRadius: 12 }}>
+                                        <Line data={chartData} options={chartOptions} />
+                                    </div>
+                                </div>
+
+                                {/* Intraday Forecast for Comparison */}
+                                {sp500Result && (() => {
+                                    const sig5 = sp500Result.timeframes['5m']?.combined_signal || 0;
+                                    const sig15 = sp500Result.timeframes['15m']?.combined_signal || 0;
+                                    const sig30 = sp500Result.timeframes['30m']?.combined_signal || 0;
+                                    const sig60 = sp500Result.timeframes['1h']?.combined_signal || 0;
+                                    const sig10 = (sig5 + sig15) / 2;
+
+                                    const path = [
+                                        0,
+                                        sig5 * 10,
+                                        (sig5 + sig10) * 10,
+                                        (sig5 + sig10 + sig15) * 10,
+                                        (sig5 + sig10 + sig15 + sig30) * 10,
+                                        (sig5 + sig10 + sig15 + sig30 + sig60) * 10
+                                    ];
+
+                                    const overallForecast = path[5] > 0.5 ? 'Strong Bullish' : path[5] > 0 ? 'Bullish' : path[5] < -0.5 ? 'Strong Bearish' : path[5] < 0 ? 'Bearish' : 'Neutral';
+                                    const pathColor = path[5] > 0 ? '#10b981' : path[5] < 0 ? '#ef4444' : '#f59e0b';
+                                    const pathGradientFill = path[5] > 0 ? 'rgba(16, 185, 129, 0.1)' : path[5] < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+
+                                    const forecastData = {
+                                        labels: ['Now', '+5m', '+10m', '+15m', '+30m', '+1h'],
+                                        datasets: [{
+                                            label: 'Predicted Nifty Trajectory',
+                                            data: path,
+                                            borderColor: pathColor,
+                                            backgroundColor: pathGradientFill,
+                                            borderWidth: 3,
+                                            pointRadius: 4,
+                                            pointBackgroundColor: pathColor,
+                                            tension: 0.4,
+                                            fill: true,
+                                        }]
+                                    };
+
+                                    const forecastOptions = {
+                                        responsive: true, maintainAspectRatio: false,
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: { backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: pathColor, borderColor: pathColor, borderWidth: 1 }
+                                        },
+                                        scales: {
+                                            x: { display: true, ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } }, grid: { display: false } },
+                                            y: { display: false, grid: { display: false } }
+                                        },
+                                        interaction: { intersect: false, mode: 'index' as const },
+                                    };
+
+                                    return (
+                                        <div className="glass-card" style={{ padding: 24, marginTop: 24 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                                                <div>
+                                                    <h3 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>Short-Term AI Intraday Forecast Pattern</h3>
+                                                    <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '4px 0 0' }}>Compare immediate 1-hour Nifty trajectory against the 25-Year Macro outlook</p>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <span className={`badge ${path[5] > 0 ? 'badge-bullish' : path[5] < 0 ? 'badge-bearish' : 'badge-neutral'}`} style={{ fontSize: 14, padding: '6px 14px' }}>
+                                                        {path[5] > 0 ? '▲' : path[5] < 0 ? '▼' : '●'} {overallForecast}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div style={{ height: 260, padding: 8, background: 'rgba(0,0,0,0.1)', borderRadius: 12, border: `1px solid ${pathColor}40` }}>
+                                                <Line data={forecastData} options={forecastOptions as any} />
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 12 }}>
+                                                This path represents the immediate short-term momentum from the 5 global futures overlaid on Nifty.
+                                                <br />
+                                                <span style={{ opacity: 0.7 }}>Short-term Back data used: 5 Days (for 5m), 15 Days (for 15m), 30 Days (for 30m), and 60 Days (for 1h) with a 20-bar rolling correlation.</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
         </div>
