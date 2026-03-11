@@ -153,10 +153,36 @@ export default function AstroCorrelation() {
     const [macroResult, setMacroResult] = useState<any>(null);
     const [macroError, setMacroError] = useState('');
 
+    const [volLoading, setVolLoading] = useState(false);
+    const [volResult, setVolResult] = useState<any>(null);
+    const [volError, setVolError] = useState('');
 
-    const [sub, setSub] = useState<'backtest' | 'vix' | 'futures' | 'macro'>('backtest');
 
-    const { guardYears, modal: planModal } = usePlanGate(1);
+    const [sub, setSub] = useState<'backtest' | 'vix' | 'futures' | 'macro' | 'futures-backtest'>('backtest');
+
+    const [fbTarget, setFbTarget] = useState('^NSEI');
+    const [fbPredictor, setFbPredictor] = useState('ES=F');
+    const [fbCondition, setFbCondition] = useState('Positive Return');
+    const [fbYears, setFbYears] = useState(15);
+    const [fbForwardDays, setFbForwardDays] = useState(0);
+
+    const [fbLoading, setFbLoading] = useState(false);
+    const [fbResult, setFbResult] = useState<any>(null);
+    const [fbError, setFbError] = useState('');
+
+    const runFuturesBacktest = async () => {
+        setFbLoading(true); setFbError(''); setFbResult(null);
+        try {
+            const res = await fetch(`${API}/api/correlation/futures-backtest`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_symbol: fbTarget, predictor_symbol: fbPredictor, condition: fbCondition, years: fbYears, forward_days: fbForwardDays }),
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) setFbError(data.error || data.detail || 'Error');
+            else setFbResult(data);
+        } catch { setFbError('Network error'); }
+        setFbLoading(false);
+    }; const { guardYears, modal: planModal } = usePlanGate(1);
 
 
     const US_GLOBAL = new Set([
@@ -239,6 +265,17 @@ export default function AstroCorrelation() {
             else setMacroResult(data);
         } catch { setMacroError('Network error – is backend running?'); }
         setMacroLoading(false);
+    };
+
+    const runVolatilitySignals = async () => {
+        setVolLoading(true); setVolError(''); setVolResult(null);
+        try {
+            const res = await fetch(`${API}/api/correlation/volatility-signals?market=${futuresMarket}&threshold=1.5`);
+            const data = await res.json();
+            if (!res.ok || data.error) setVolError(data.error || data.detail || 'Error');
+            else setVolResult(data);
+        } catch { setVolError('Network error – is backend running?'); }
+        setVolLoading(false);
     };
 
     // Currently chosen group info
@@ -431,7 +468,7 @@ export default function AstroCorrelation() {
                                 </div>
                             )}
                             <div style={{ minWidth: 180 }}>
-                                <label className="form-label">Historical Period <span style={{ fontSize: 10, color: '#f59e0b' }}>(Pro)</span></label>
+                                <label className="form-label">Historical Period <span style={{ fontSize: 9, background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '2px 6px', borderRadius: 4, marginLeft: 6, fontWeight: 700, letterSpacing: 0.5 }}>FREE LIMIT: 1 YR</span></label>
                                 <select className="form-select" value={years} onChange={e => { if (guardYears(Number(e.target.value))) setYears(Number(e.target.value)); }}>
                                     {[1, 2, 3, 5, 10, 15, 20].map(y => <option key={y} value={y}>{y} {y > 1 ? 'Year(s) ' : 'Year'}</option>)}
                                 </select>
@@ -581,6 +618,110 @@ export default function AstroCorrelation() {
                             </div>
                             {vixResult.stats.interpretation && (
                                 <div className="insight-box" style={{ marginTop: 16 }}>{vixResult.stats.interpretation}</div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {sub === 'futures-backtest' && (
+                <div>
+                    <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                        <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 16 }}>Nifty 50 Global Indicators Backtest</h3>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
+                            Determine how Nifty 50 historically performs when specific conditions are met by global baseline assets.
+                        </p>
+
+                        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20, alignItems: 'flex-end' }}>
+                            <div style={{ minWidth: 150 }}>
+                                <label className="form-label">Target Asset</label>
+                                <select className="form-select" value={fbTarget} onChange={e => setFbTarget(e.target.value)}>
+                                    <option value="^NSEI">^NSEI — Nifty 50</option>
+                                    <option value="^NSEBANK">^NSEBANK — Bank Nifty</option>
+                                    <option value="^CNXIT">^CNXIT — Nifty IT</option>
+                                </select>
+                            </div>
+
+                            <div style={{ minWidth: 150 }}>
+                                <label className="form-label">Global Indicator</label>
+                                <select className="form-select" value={fbPredictor} onChange={e => setFbPredictor(e.target.value)}>
+                                    <option value="ES=F">ES=F — S&P 500 Futures</option>
+                                    <option value="NQ=F">NQ=F — Nasdaq Futures</option>
+                                    <option value="GC=F">GC=F — Gold</option>
+                                    <option value="CL=F">CL=F — Crude Oil</option>
+                                    <option value="DX-Y.NYB">DX-Y.NYB — US Dollar Index</option>
+                                </select>
+                            </div>
+
+                            <div style={{ minWidth: 150 }}>
+                                <label className="form-label">Condition</label>
+                                <select className="form-select" value={fbCondition} onChange={e => setFbCondition(e.target.value)}>
+                                    <option value="Positive Return">Closes Positive</option>
+                                    <option value="Negative Return">Closes Negative</option>
+                                    <option value="Return > 1%">Daily Return &gt; 1%</option>
+                                    <option value="Return < -1%">Daily Return &lt; -1%</option>
+                                    <option value="Return > 2%">Daily Return &gt; 2%</option>
+                                    <option value="Return < -2%">Daily Return &lt; -2%</option>
+                                </select>
+                            </div>
+
+                            <div style={{ minWidth: 120 }}>
+                                <label className="form-label">Forward Days</label>
+                                <select className="form-select" value={fbForwardDays} onChange={e => setFbForwardDays(Number(e.target.value))}>
+                                    <option value={0}>0 (Same Day)</option>
+                                    <option value={1}>1 Day (T+1)</option>
+                                    <option value={2}>2 Days (T+2)</option>
+                                    <option value={3}>3 Days (T+3)</option>
+                                    <option value={5}>5 Days (T+5)</option>
+                                    <option value={10}>10 Days (T+10)</option>
+                                </select>
+                            </div>
+
+                            <div style={{ minWidth: 120 }}>
+                                <label className="form-label">Historical Period <span style={{ fontSize: 9, background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '2px 6px', borderRadius: 4, marginLeft: 6, fontWeight: 700, letterSpacing: 0.5 }}>FREE LIMIT: 1 YR</span></label>
+                                <select className="form-select" value={fbYears} onChange={e => guardYears(Number(e.target.value)) ? setFbYears(Number(e.target.value)) : null}>
+                                    <option value={1}>1 Year (Free)</option>
+                                    <option value={5}>5 Years (Pro)</option>
+                                    <option value={10}>10 Years (Pro)</option>
+                                    <option value={15}>15 Years (Pro)</option>
+                                    <option value={99}>Max Available (Pro)</option>
+                                </select>
+                            </div>
+
+                        </div>
+
+                        <button className="btn btn-primary" onClick={runFuturesBacktest} disabled={fbLoading} style={{ width: '100%' }}>
+                            {fbLoading ? <span className="spinner"></span> : 'Run Global Indicator Backtest'}
+                        </button>
+                        {fbError && <div className="alert-error" style={{ marginTop: 14 }}> {fbError}</div>}
+                    </div>
+
+                    {fbResult && fbResult.stats && (
+                        <div className="glass-card" style={{ padding: 24, marginBottom: 20 }}>
+                            <div style={{ marginBottom: 16 }}>
+                                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{fbResult.predictor} {fbResult.condition} Effect on {fbResult.target}</div>
+                                <span className={`badge ${fbResult.stats.is_significant ? 'badge-bullish' : 'badge-neutral'}`} style={{ fontSize: 13, padding: '6px 14px' }}>
+                                    {fbResult.stats.is_significant ? ' ✨ Statistically Significant' : ' No Statistical Edge Found'}
+                                </span>
+                            </div>
+
+                            <div className="grid-2" style={{ marginBottom: 20 }}>
+                                <div style={{ background: 'var(--card-bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Condition Triggered</div>
+                                    <div style={{ marginBottom: 8 }}>Win Rate: <span style={{ fontWeight: 'bold', color: fbResult.stats.event_win_rate > 50 ? 'var(--success)' : 'var(--danger)' }}>{fbResult.stats.event_win_rate?.toFixed(1) || 'N/A'}%</span></div>
+                                    <div style={{ marginBottom: 8 }}>Avg Target Return: <ReturnCell v={fbResult.stats.event_mean_return} /></div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fbResult.stats.event_days} tracking days</div>
+                                </div>
+                                <div style={{ background: 'var(--card-bg-elevated)', border: '1px solid var(--border)', borderRadius: 10, padding: 16 }}>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Normal Baseline (Condition Not Met)</div>
+                                    <div style={{ marginBottom: 8 }}>Win Rate: <span style={{ fontWeight: 'bold' }}>{fbResult.stats.normal_win_rate?.toFixed(1) || 'N/A'}%</span></div>
+                                    <div style={{ marginBottom: 8 }}>Avg Target Return: <ReturnCell v={fbResult.stats.normal_mean_return} /></div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fbResult.stats.normal_days} tracking days</div>
+                                </div>
+                            </div>
+
+                            {fbResult.stats.interpretation && (
+                                <div className="insight-box">{fbResult.stats.interpretation}</div>
                             )}
                         </div>
                     )}
@@ -1053,6 +1194,121 @@ export default function AstroCorrelation() {
                             </div>
                         );
                     })()}
+
+                    {/* ══════════════════════════════════════════════════════════════
+                        VOLATILITY-BASED BUY / SELL SIGNAL GENERATOR
+                    ══════════════════════════════════════════════════════════════ */}
+                    <div className="glass-card" style={{ padding: 24, marginTop: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                    <span style={{ fontSize: 22 }}></span>
+                                    <h3 style={{ fontWeight: 800, fontSize: 18, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>25-Year Volatility Signal Engine</h3>
+                                </div>
+                                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                                    Backtest all available Nifty history for sudden moves (±0.08%+ daily), correlate with 5 global futures, and generate a live BUY/SELL signal for 3m/5m/15m charts
+                                </p>
+                            </div>
+                            <button className="btn-primary" onClick={runVolatilitySignals} disabled={volLoading} style={{ background: 'linear-gradient(135deg, #f59e0b, #dc2626)', border: 'none', fontWeight: 700 }}>
+                                {volLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Scanning Max History…</> : 'Generate Volatility Signals'}
+                            </button>
+                        </div>
+
+                        {volError && <div className="alert-error" style={{ marginTop: 14 }}>⚠ {volError}</div>}
+
+                        {volResult && (() => {
+                            const ASSET_COLORS: Record<string, string> = { SP500: '#eab308', Dollar: '#eab308', Oil: '#eab308', Gold: '#eab308', Nasdaq: '#eab308' };
+
+                            return (
+                                <div style={{ marginTop: 8 }}>
+                                    {/* -- Live Signal Card -- */}
+                                    <div style={{
+                                        background: '#eab308', border: 'none', borderRadius: 16,
+                                        padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        flexWrap: 'wrap', gap: 16, marginBottom: 20, color: '#000'
+                                    }}>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.7 }}>Live Composite Signal</div>
+                                            <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: 2 }}>
+                                                {volResult.signal}
+                                            </div>
+                                            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6 }}>
+                                                Confidence: {volResult.confidence}%
+                                                <span style={{ margin: '0 8px', opacity: 0.3 }}>|</span>
+                                                BUY: {volResult.buy_votes} / SELL: {volResult.sell_votes} / HOLD: {volResult.hold_votes}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                                                {['3m', '5m', '15m'].map(tf => (
+                                                    <span key={tf} style={{
+                                                        fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 6,
+                                                        background: '#00000015', border: '1px solid #00000025', letterSpacing: 0.5
+                                                    }}>
+                                                        {tf} Chart
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div style={{ fontSize: 11, marginTop: 6, fontStyle: 'italic', opacity: 0.6 }}>
+                                                Apply this signal on 3-min, 5-min and 15-min intraday charts for execution
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: 24, fontWeight: 700 }}>{volResult.total_volatility_events}</div>
+                                            <div style={{ fontSize: 11, opacity: 0.7 }}>Volatility Events</div>
+                                            <div style={{ fontSize: 12, marginTop: 4 }}>Up: {volResult.spike_up_count} spikes</div>
+                                            <div style={{ fontSize: 12 }}>Down: {volResult.spike_down_count} spikes</div>
+                                        </div>
+                                    </div>
+
+                                    {/* -- Proprietary Source Banner -- */}
+                                    <div style={{
+                                        background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '16px 20px',
+                                        marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, color: '#94a3b8', fontSize: 13, fontWeight: 600
+                                    }}>
+                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', flexShrink: 0 }} />
+                                        <span>Analyzing historical patterns across global markets, volatility indices, and macroeconomic events. Specific components are hidden for proprietary reasons.</span>
+                                    </div>
+
+                                    {/* ── Recent Volatility Events Table ── */}
+                                    <div style={{ background: 'rgba(0,0,0,0.1)', borderRadius: 12, padding: 16, marginBottom: 20, overflowX: 'auto' }}>
+                                        <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Recent Volatility Events (Last 30 Spikes)</h4>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                                    <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>Date</th>
+                                                    <th style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>Type</th>
+                                                    <th style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>Nifty %</th>
+                                                    <th style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>Next Day %</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {volResult.recent_signals.slice().reverse().map((ev: any, i: number) => (
+                                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                                        <td style={{ padding: '6px 10px', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: 11 }}>{ev.date}</td>
+                                                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                                                            <span style={{
+                                                                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                                                                background: ev.signal === 'SPIKE UP' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                                                                color: ev.signal === 'SPIKE UP' ? '#10b981' : '#ef4444'
+                                                            }}>{ev.signal}</span>
+                                                        </td>
+                                                        <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: ev.nifty_return > 0 ? '#10b981' : '#ef4444' }}>
+                                                            {ev.nifty_return > 0 ? '+' : ''}{ev.nifty_return}%
+                                                        </td>
+                                                        <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: ev.outcome_next_day != null ? (ev.outcome_next_day > 0 ? '#10b981' : '#ef4444') : '#94a3b8' }}>
+                                                            {ev.outcome_next_day != null ? ((ev.outcome_next_day > 0 ? '+' : '') + ev.outcome_next_day + '%') : '—'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+
+                                    <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 12 }}>Generated @ {new Date(volResult.timestamp).toLocaleTimeString()}</div>
+                                </div>
+                            );
+                        })()}
+                    </div>
                 </div>
             )}
         </div>

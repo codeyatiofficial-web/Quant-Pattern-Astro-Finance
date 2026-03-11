@@ -17,7 +17,7 @@ const PLANS = [
         period: '/forever',
         color: '#64748b',
         tier: 'free' as PlanTier,
-        features: ['7-Day AI Signal Forecast', 'Technical & Derivatives Analysis', 'Economic Events Calendar', 'Live Market Prices'],
+        features: ['1-Day AI Signal Forecast', 'Technical & Derivatives Analysis', 'Economic Events Calendar', 'Live Market Prices'],
         cta: 'Current Plan',
         disabled: true,
     },
@@ -27,7 +27,7 @@ const PLANS = [
         period: '/year',
         color: '#6366f1',
         tier: 'pro' as PlanTier,
-        features: ['Up to 15 Years Historical Data', 'All Free Features', 'Cycle Pattern Analysis', 'Signal Correlation Engine', 'Daily Predictions', 'Derivatives Strategy Tool', 'Priority Support'],
+        features: ['Up to 15 Years Historical Data', '7-Day AI Signal Forecast', 'All Free Features', 'Cycle Pattern Analysis', 'Signal Correlation Engine', 'Daily Predictions', 'Derivatives Strategy Tool', 'Priority Support'],
         cta: 'Upgrade to Pro',
         disabled: false,
         badge: 'Popular',
@@ -36,7 +36,7 @@ const PLANS = [
         name: 'Elite',
         price: '₹19,999',
         period: '/year',
-        color: 'var(--text-primary)',
+        color: '#f59e0b',
         tier: 'elite' as PlanTier,
         features: ['Max 30+ Years Historical Data', 'All Pro Features', 'Full Signal Backtesting', '1-Month AI Forecast', 'Custom Alerts', 'Dedicated WhatsApp Support'],
         cta: 'Upgrade to Elite',
@@ -57,10 +57,10 @@ export function PlanStatusBadge() {
     return (
         <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: tier === 'elite' ? 'var(--bg-secondary)' : 'linear-gradient(135deg,#6366f133,#4f46e533)',
-            border: `1px solid ${tier === 'elite' ? 'var(--border-active)' : '#6366f155'}`,
+            background: tier === 'elite' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+            border: `1px solid ${tier === 'elite' ? 'rgba(245, 158, 11, 0.4)' : '#6366f155'}`,
             borderRadius: 30, padding: '5px 14px', fontSize: 12, fontWeight: 700,
-            color: tier === 'elite' ? 'var(--text-primary)' : '#a5b4fc',
+            color: tier === 'elite' ? '#f59e0b' : '#a5b4fc',
         }}>
             {tier === 'elite' ? ' Elite' : ' Pro'}
             <span style={{ fontSize: 10, opacity: 0.8, fontWeight: 500, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 8 }}>
@@ -117,7 +117,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
             }}
         >
             <div style={{
-                background: 'linear-gradient(145deg, #0f172a 0%, #1e1b4b 100%)',
+                background: '#0f172a',
                 border: '1px solid rgba(99,102,241,0.3)',
                 borderRadius: 22, width: '100%', maxWidth: 820,
                 boxShadow: '0 30px 90px rgba(99,102,241,0.22)',
@@ -134,13 +134,16 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
 
                 {/* Header */}
                 <div style={{ padding: '32px 32px 18px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 40, marginBottom: 8 }}></div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 800, letterSpacing: 0.5, marginBottom: 12, border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                        <span className="pulse-dot" style={{ background: '#ef4444', boxShadow: '0 0 0 2px rgba(239, 68, 68, 0.25)' }}></span>
+                        LAST FEW SPOTS LEFT AT THIS PRICE
+                    </div>
                     <h2 style={{ fontSize: 24, fontWeight: 800, color: 'white', marginBottom: 6 }}>
-                        Unlock Extended Analysis
+                        Unlock Full Predictive Power
                     </h2>
                     <p style={{ color: '#94a3b8', fontSize: 14, maxWidth: 500, margin: '0 auto' }}>
-                        Your <strong style={{ color: '#a78bfa' }}>Free plan</strong> includes 1 year of data.
-                        Upgrade to analyse up to 30 years for statistically reliable insights.
+                        Your <strong style={{ color: '#a78bfa' }}>Free plan</strong> is limited to 1 year of data.
+                        Upgrade now to unlock 30-year backtesting, Elite institutional forecasts, and our proprietary signal engine.
                     </p>
                 </div>
 
@@ -186,9 +189,10 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                                     <a href={WA_URL} target="_blank" rel="noopener noreferrer" style={{
                                         display: 'block', textAlign: 'center', padding: '9px 12px',
                                         borderRadius: 10, fontSize: 12, fontWeight: 700, textDecoration: 'none',
-                                        background: `linear-gradient(135deg, ${plan.color}, ${plan.color}bb)`,
+                                        background: plan.color,
                                         color: 'white',
-                                    }}> Buy via WhatsApp</a>
+                                        boxShadow: plan.tier === 'elite' ? '0 4px 15px rgba(245, 158, 11, 0.4)' : 'none',
+                                    }}> {plan.tier === 'elite' ? 'Claim Elite Offer 🚀' : 'Buy via WhatsApp'}</a>
                                 )}
                                 {isActive && (
                                     <div style={{ textAlign: 'center', fontSize: 12, color: plan.color, fontWeight: 700, padding: '4px 0 0' }}>
@@ -238,7 +242,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                             disabled={busy}
                             style={{
                                 padding: '11px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700,
-                                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                                background: '#6366f1',
                                 color: 'white', border: 'none', cursor: busy ? 'wait' : 'pointer',
                                 opacity: busy ? 0.7 : 1, whiteSpace: 'nowrap',
                             }}
@@ -267,7 +271,7 @@ export function UpgradeModal({ onClose }: { onClose: () => void }) {
                     <span style={{ fontSize: 12, color: '#64748b' }}>Questions? Chat with us directly</span>
                     <a href={WA_URL} target="_blank" rel="noopener noreferrer" style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,
-                        background: 'linear-gradient(135deg, #25D366, #128C7E)',
+                        background: '#25D366',
                         color: 'white', textDecoration: 'none', padding: '10px 22px',
                         borderRadius: 30, fontWeight: 700, fontSize: 13,
                         boxShadow: '0 4px 15px rgba(37,211,102,0.25)',

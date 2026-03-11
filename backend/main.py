@@ -133,6 +133,13 @@ class EventCategoryBacktestRequest(BaseModel):
     symbol: str = "^NSEI"
     window_days: int = 5
 
+class FuturesBacktestRequest(BaseModel):
+    target_symbol: str = "^NSEI"
+    predictor_symbol: str
+    condition: str
+    years: int = 15
+    forward_days: int = 0
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Astro-Finance API"}
@@ -302,6 +309,63 @@ def kite_callback_post(payload: dict):
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# ── Nifty 50 1-Min Candle Chart ──────────────────────────────────────────────
+
+@app.get("/api/nifty50/candles")
+def get_nifty50_candles(count: int = 30):
+    """
+    Fetch the last `count` 1-minute candles for Nifty 50 via Kite API.
+    Returns OHLC + volume data for the frontend candlestick chart.
+    """
+    try:
+        if not kite_client.is_authenticated():
+            raise HTTPException(status_code=401, detail="Kite API not connected. Please connect Kite first.")
+
+        df = kite_client.fetch_historical_data(
+            symbol="^NSEI",
+            interval="minute",
+            days_back=1
+        )
+
+        if df.empty:
+            raise HTTPException(status_code=404, detail="No candle data available. Market may be closed.")
+
+        # Take last `count` candles
+        df = df.tail(count).reset_index(drop=True)
+
+        candles = []
+        for _, row in df.iterrows():
+            candles.append({
+                "time": row["datetime"].strftime("%H:%M"),
+                "open": round(float(row["open"]), 2),
+                "high": round(float(row["high"]), 2),
+                "low": round(float(row["low"]), 2),
+                "close": round(float(row["close"]), 2),
+                "volume": int(row.get("volume", 0)),
+            })
+
+        last = candles[-1] if candles else {}
+        first = candles[0] if candles else {}
+        change = round(last.get("close", 0) - first.get("open", 0), 2) if candles else 0
+        change_pct = round((change / first.get("open", 1)) * 100, 2) if candles and first.get("open", 0) else 0
+
+        return {
+            "success": True,
+            "symbol": "NIFTY 50",
+            "interval": "1min",
+            "count": len(candles),
+            "candles": candles,
+            "last_price": last.get("close", 0),
+            "change": change,
+            "change_pct": change_pct,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Nifty 50 candle fetch error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ==========================================
 # Native Email Authentication Endpoints
@@ -1150,37 +1214,38 @@ def get_live_market_data():
     results = []
     
     try:
-        data = yf.download(" ".join(symbols.values()), period="5d", progress=False)
+        data_1m = yf.download(" ".join(symbols.values()), period="1d", interval="1m", progress=False)
+        data_1d = yf.download(" ".join(symbols.values()), period="5d", progress=False)
+        
         for name, symbol in symbols.items():
-            close_data = None
+            current_price = None
+            prev_price = None
+            
             try:
-                # Try MultiIndex tuple first
-                if isinstance(data.columns, pd.MultiIndex) or getattr(data.columns, 'nlevels', 1) > 1:
-                    close_data = data[('Close', symbol)].dropna()
-                else:
-                    # Single level fallback
-                    close_data = data['Close'].dropna()
+                # Get true live current price
+                current_price = float(data_1m['Close'][symbol].dropna().iloc[-1] if isinstance(data_1m.columns, pd.MultiIndex) else data_1m['Close'].dropna().iloc[-1])
             except Exception:
-                # If tuple indexing fails, try dict-like column access
+                # Fallback to the daily close if 1m is somehow missing
                 try:
-                    close_data = data['Close'][symbol].dropna()
+                    current_price = float(data_1d['Close'][symbol].dropna().iloc[-1] if isinstance(data_1d.columns, pd.MultiIndex) else data_1d['Close'].dropna().iloc[-1])
                 except Exception:
                     continue
                     
-            if close_data is None or len(close_data) == 0:
+            try:
+                # Get the previous day's close
+                hist_series = data_1d['Close'][symbol].dropna() if isinstance(data_1d.columns, pd.MultiIndex) else data_1d['Close'].dropna()
+                if len(hist_series) >= 2:
+                    prev_price = float(hist_series.iloc[-2])
+                elif len(hist_series) == 1:
+                    prev_price = float(hist_series.iloc[0])
+            except Exception:
                 continue
-
-            if len(close_data) >= 2:
-                current_price = float(close_data.iloc[-1])
-                prev_price = float(close_data.iloc[-2])
-                change = current_price - prev_price
-                change_pct = (change / prev_price) * 100
-            elif len(close_data) == 1:
-                current_price = float(close_data.iloc[-1])
-                change = 0.0
-                change_pct = 0.0
-            else:
+                
+            if current_price is None or prev_price is None:
                 continue
+                
+            change = current_price - prev_price
+            change_pct = (change / prev_price) * 100 if prev_price else 0.0
                 
             # Format appropriately depending on the instrument
             if symbol == "INR=X":
@@ -1870,6 +1935,78 @@ def run_correlation_heatmap(req: HeatmapRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/correlation/futures-backtest")
+def run_futures_backtest(req: FuturesBacktestRequest):
+    """Run an independent t-test backtest of Nifty 50 daily returns based on conditions in a global indicator."""
+    import pandas as pd
+    from datetime import datetime
+    
+    try:
+        effective_years = 30 if req.years >= 99 else req.years
+        start_date = (datetime.now() - pd.DateOffset(years=effective_years)).strftime('%Y-%m-%d')
+        
+        target_df = corr_engine.market.fetch_stock_data(req.target_symbol, start_date=start_date, market="NSE" if "^NSE" in req.target_symbol.upper() else "Global")
+        predictor_df = corr_engine.market.fetch_stock_data(req.predictor_symbol, start_date=start_date, market="Global")
+        
+        if target_df.empty or predictor_df.empty:
+            raise HTTPException(status_code=400, detail="Could not fetch market data for one or both symbols.")
+            
+        target_df['date'] = pd.to_datetime(target_df['date']).dt.normalize()
+        predictor_df['date'] = pd.to_datetime(predictor_df['date']).dt.normalize()
+        
+        t_df = target_df.set_index('date')
+        p_df = predictor_df.set_index('date')
+        
+        combined_df = pd.DataFrame({
+            'target_close': t_df['close'],
+            'target_return': t_df['daily_return'],
+            'pred_return': p_df['daily_return']
+        }).dropna()
+        
+        if len(combined_df) < 10:
+             raise HTTPException(status_code=400, detail="Insufficient overlapping dates.")
+             
+        test_col = 'target_return'
+        if req.forward_days > 0:
+            combined_df[f'target_forward_{req.forward_days}d'] = combined_df['target_close'].shift(-req.forward_days) / combined_df['target_close'] - 1.0
+            test_col = f'target_forward_{req.forward_days}d'
+            
+        cond = req.condition.lower()
+        if cond == "positive return":
+             mask = combined_df['pred_return'] > 0
+        elif cond == "negative return":
+             mask = combined_df['pred_return'] < 0
+        elif cond == "return > 1%":
+             mask = combined_df['pred_return'] > 0.01
+        elif cond == "return < -1%":
+             mask = combined_df['pred_return'] < -0.01
+        elif cond == "return > 2%":
+             mask = combined_df['pred_return'] > 0.02
+        elif cond == "return < -2%":
+             mask = combined_df['pred_return'] < -0.02
+        else:
+             raise HTTPException(status_code=400, detail=f"Unsupported condition: {req.condition}")
+             
+        stats_result = corr_engine.calculate_significance(mask, combined_df, test_col=test_col)
+        
+        if "error" in stats_result:
+             raise HTTPException(status_code=400, detail=stats_result["error"])
+             
+        return {
+            "target": req.target_symbol,
+            "predictor": req.predictor_symbol,
+            "condition": req.condition,
+            "period": f"Last {effective_years} Years" + (" (Max Available)" if req.years >= 99 else ""),
+            "stats": stats_result
+        }
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/correlation/live-prediction")
 def get_live_prediction(market: str = "NSE"):
     """
@@ -2015,6 +2152,13 @@ def get_sp500_intraday_correlation(market: str = "NSE"):
                 continue
 
             target_ret = target_df["Close"].pct_change().dropna()
+            
+            freq = cfg["interval"].replace('m', 'min').replace('1h', 'h')
+            if getattr(target_ret.index, 'tz', None) is not None:
+                target_ret.index = target_ret.index.tz_convert('UTC')
+            target_ret.index = target_ret.index.floor(freq)
+            target_ret = target_ret[~target_ret.index.duplicated(keep='last')]
+
             combined_signal = 0.0
             asset_count = 0
 
@@ -2038,6 +2182,12 @@ def get_sp500_intraday_correlation(market: str = "NSE"):
                         ref_df.columns = ref_df.columns.get_level_values(0)
 
                     ref_ret = ref_df["Close"].pct_change().dropna()
+                    
+                    if getattr(ref_ret.index, 'tz', None) is not None:
+                        ref_ret.index = ref_ret.index.tz_convert('UTC')
+                    ref_ret.index = ref_ret.index.floor(freq)
+                    ref_ret = ref_ret[~ref_ret.index.duplicated(keep='last')]
+
                     combined = pd.DataFrame({"target": target_ret, "ref": ref_ret}).dropna()
 
                     if len(combined) < cfg["window"] + 2:
@@ -2223,6 +2373,234 @@ def get_futures_macro_correlation(market: str = "NSE"):
 
     except Exception as e:
         logger.error(f"Futures macro correlation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 25-YEAR VOLATILITY-BASED BUY / SELL SIGNAL GENERATOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/correlation/volatility-signals")
+def get_volatility_signals(market: str = "NSE", threshold: float = 0.08):
+    """
+    Backtest max available Nifty history. Detect sudden moves
+    (daily return > threshold%), correlate each independently with 5 global futures,
+    and generate a composite BUY/SELL/HOLD signal for 3m/5m/15m intraday charts.
+    """
+    import yfinance as yf
+    import pandas as pd
+    import numpy as np
+
+    target_symbol = "^NSEI" if market == "NSE" else "^IXIC"
+    threshold_frac = threshold / 100.0  # e.g. 0.08% → 0.0008
+
+    reference_assets = {
+        "SP500":  {"symbol": "ES=F", "label": "S&P 500 Futures"},
+        "Dollar": {"symbol": "DX=F", "label": "Dollar Index Futures"},
+        "Oil":    {"symbol": "CL=F", "label": "Crude Oil Futures"},
+        "Gold":   {"symbol": "GC=F", "label": "Gold Futures"},
+        "Nasdaq": {"symbol": "NQ=F", "label": "Nasdaq Futures"},
+    }
+
+    try:
+        # ── 1. Download max available daily data ──────────────────────────────
+        target_df = yf.download(target_symbol, period="max", interval="1d", progress=False, auto_adjust=True)
+        if target_df.empty:
+            raise ValueError(f"No data for {target_symbol}")
+        if isinstance(target_df.columns, pd.MultiIndex):
+            target_df.columns = target_df.columns.get_level_values(0)
+        target_close = target_df["Close"]
+        target_ret = target_close.pct_change().dropna()
+
+        # ── 2. Identify spike days on Nifty alone ─────────────────────────────
+        spike_up_mask = target_ret > threshold_frac
+        spike_down_mask = target_ret < -threshold_frac
+        spike_mask = spike_up_mask | spike_down_mask
+
+        spike_up_count = int(spike_up_mask.sum())
+        spike_down_count = int(spike_down_mask.sum())
+        total_spikes = spike_up_count + spike_down_count
+
+        if total_spikes < 10:
+            raise ValueError(f"Only {total_spikes} volatility events found. Lower the threshold.")
+
+        nifty_with_next = pd.DataFrame({
+            "nifty_return": target_ret,
+            "nifty_next_day": target_ret.shift(-1)
+        })
+
+        # ── 3. Per-asset independent analysis ─────────────────────────────────
+        asset_signals = {}
+        live_contributions = []
+        all_recent_rows = []
+
+        for asset_key, asset_info in reference_assets.items():
+            try:
+                ref_df = yf.download(asset_info["symbol"], period="max", interval="1d", progress=False, auto_adjust=True)
+                if ref_df.empty:
+                    raise ValueError("empty")
+                if isinstance(ref_df.columns, pd.MultiIndex):
+                    ref_df.columns = ref_df.columns.get_level_values(0)
+                ref_ret = ref_df["Close"].pct_change().dropna()
+
+                # Pair this asset with Nifty (independent overlap)
+                paired = pd.DataFrame({
+                    "nifty_return": nifty_with_next["nifty_return"],
+                    "nifty_next_day": nifty_with_next["nifty_next_day"],
+                    asset_key: ref_ret
+                }).dropna()
+
+                if len(paired) < 50:
+                    raise ValueError("insufficient overlap")
+
+                # Filter to spike days only
+                pair_spikes = paired[paired["nifty_return"].abs() > threshold_frac]
+
+                if len(pair_spikes) < 5:
+                    raise ValueError("too few spike events")
+
+                # Correlation during spikes
+                corr_val = float(pair_spikes["nifty_return"].corr(pair_spikes[asset_key]))
+
+                # Aligned: both moved same direction
+                aligned = pair_spikes[
+                    ((pair_spikes["nifty_return"] > 0) & (pair_spikes[asset_key] > 0)) |
+                    ((pair_spikes["nifty_return"] < 0) & (pair_spikes[asset_key] < 0))
+                ]
+                opposed = pair_spikes[
+                    ((pair_spikes["nifty_return"] > 0) & (pair_spikes[asset_key] < 0)) |
+                    ((pair_spikes["nifty_return"] < 0) & (pair_spikes[asset_key] > 0))
+                ]
+
+                # Win rates
+                win_rate_aligned = None
+                if len(aligned) > 5:
+                    aligned_wins = aligned[
+                        ((aligned["nifty_return"] > 0) & (aligned["nifty_next_day"] > 0)) |
+                        ((aligned["nifty_return"] < 0) & (aligned["nifty_next_day"] < 0))
+                    ]
+                    win_rate_aligned = round(len(aligned_wins) / len(aligned) * 100, 1)
+
+                win_rate_opposed = None
+                if len(opposed) > 5:
+                    opposed_wins = opposed[
+                        ((opposed["nifty_return"] > 0) & (opposed["nifty_next_day"] < 0)) |
+                        ((opposed["nifty_return"] < 0) & (opposed["nifty_next_day"] > 0))
+                    ]
+                    win_rate_opposed = round(len(opposed_wins) / len(opposed) * 100, 1)
+
+                # Latest direction for this asset
+                latest_ret = float(paired[asset_key].iloc[-1])
+                current_dir = "up" if latest_ret > 0.0001 else ("down" if latest_ret < -0.0001 else "flat")
+
+                # Contribution signal
+                contribution = "HOLD"
+                if win_rate_aligned and win_rate_aligned > 52 and current_dir != "flat":
+                    contribution = "BUY" if current_dir == "up" else "SELL"
+                elif win_rate_opposed and win_rate_opposed > 52 and current_dir != "flat":
+                    contribution = "SELL" if current_dir == "up" else "BUY"
+
+                asset_signals[asset_key] = {
+                    "label": asset_info["label"],
+                    "correlation_during_spikes": round(corr_val, 4) if not np.isnan(corr_val) else None,
+                    "win_rate_when_aligned": win_rate_aligned,
+                    "win_rate_when_opposed": win_rate_opposed,
+                    "total_aligned": len(aligned),
+                    "total_opposed": len(opposed),
+                    "current_direction": current_dir,
+                    "contribution": contribution,
+                    "latest_return_pct": round(latest_ret * 100, 3),
+                    "overlapping_days": len(paired),
+                    "spike_events_for_asset": len(pair_spikes)
+                }
+                live_contributions.append(contribution)
+
+                # Collect recent spike rows for this asset
+                for idx, row in pair_spikes.tail(10).iterrows():
+                    all_recent_rows.append({
+                        "date": idx, "nifty_return": row["nifty_return"],
+                        "nifty_next_day": row["nifty_next_day"],
+                        "asset": asset_key, "asset_return": row[asset_key]
+                    })
+
+            except Exception as asset_err:
+                logger.warning(f"Volatility signal {asset_key} error: {asset_err}")
+                asset_signals[asset_key] = {
+                    "label": asset_info["label"],
+                    "correlation_during_spikes": None, "win_rate_when_aligned": None,
+                    "win_rate_when_opposed": None, "total_aligned": 0, "total_opposed": 0,
+                    "current_direction": "N/A", "contribution": "HOLD",
+                    "latest_return_pct": 0, "overlapping_days": 0, "spike_events_for_asset": 0
+                }
+                live_contributions.append("HOLD")
+
+        # ── 4. Composite signal ───────────────────────────────────────────────
+        buy_votes = live_contributions.count("BUY")
+        sell_votes = live_contributions.count("SELL")
+        if buy_votes > sell_votes and buy_votes >= 2:
+            overall_signal = "BUY"
+        elif sell_votes > buy_votes and sell_votes >= 2:
+            overall_signal = "SELL"
+        else:
+            overall_signal = "HOLD"
+
+        confidence = round(max(buy_votes, sell_votes) / max(len(live_contributions), 1) * 100, 1)
+
+        # ── 5. Recent signals table (last 30 spike events from Nifty) ─────────
+        nifty_spike_series = target_ret[spike_mask]
+        recent_spikes = nifty_spike_series.tail(30)
+        recent_signals = []
+        for idx, val in recent_spikes.items():
+            date_str = idx.strftime("%Y-%m-%d") if hasattr(idx, 'strftime') else str(idx)
+            nifty_ret_pct = round(float(val) * 100, 3)
+            next_val = nifty_with_next["nifty_next_day"].get(idx)
+            next_day_pct = round(float(next_val) * 100, 3) if next_val is not None and not pd.isna(next_val) else None
+            sig = "SPIKE UP" if val > 0 else "SPIKE DOWN"
+
+            # Gather asset returns for this date
+            asset_rets = {}
+            for ak, ainfo in reference_assets.items():
+                matching = [r for r in all_recent_rows if r["date"] == idx and r["asset"] == ak]
+                if matching:
+                    asset_rets[ak] = round(float(matching[0]["asset_return"]) * 100, 3)
+
+            recent_signals.append({
+                "date": date_str, "signal": sig,
+                "nifty_return": nifty_ret_pct, "outcome_next_day": next_day_pct,
+                "asset_returns": asset_rets
+            })
+
+        # ── 6. Scatter chart (Nifty spike returns, downsampled) ───────────────
+        scatter_data = []
+        for idx, val in nifty_spike_series.items():
+            date_str = idx.strftime("%Y-%m-%d") if hasattr(idx, 'strftime') else str(idx)
+            scatter_data.append({"date": date_str, "nifty_return": round(float(val) * 100, 3)})
+        # Downsample
+        if len(scatter_data) > 500:
+            scatter_data = scatter_data[::max(1, len(scatter_data) // 500)]
+
+        return {
+            "signal": overall_signal,
+            "confidence": confidence,
+            "buy_votes": buy_votes,
+            "sell_votes": sell_votes,
+            "hold_votes": live_contributions.count("HOLD"),
+            "total_volatility_events": total_spikes,
+            "spike_up_count": spike_up_count,
+            "spike_down_count": spike_down_count,
+            "threshold_pct": threshold,
+            "data_points_analyzed": len(target_ret),
+            "data_years": round(len(target_ret) / 252, 1),
+            "asset_signals": asset_signals,
+            "recent_signals": recent_signals,
+            "scatter_data": scatter_data,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Volatility signals error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/symbols")
@@ -2751,3 +3129,147 @@ def clear_leads():
     except Exception as e:
         logger.error(f"Lead clear error: {e}")
         raise HTTPException(status_code=500, detail="Failed to clear leads")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NIFTY 50 SCANNER (TOP BUY / TOP SELL)
+# ══════════════════════════════════════════════════════════════════════════════
+
+import concurrent.futures
+import yfinance as yf
+import pandas as pd
+
+NIFTY_50_TICKERS = [
+    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "ITC.NS", 
+    "SBIN.NS", "LARSEN.NS", "BAJFINANCE.NS", "BHARTIARTL.NS", "KOTAKBANK.NS", 
+    "HINDUNILVR.NS", "AXISBANK.NS", "LT.NS", "M&M.NS", "MARUTI.NS", "ASIANPAINT.NS", 
+    "SUNPHARMA.NS", "TITAN.NS", "TATASTEEL.NS", "ULTRACEMCO.NS", "TATAMOTORS.NS", 
+    "POWERGRID.NS", "NTPC.NS", "NESTLEIND.NS", "ONGC.NS", "TECHM.NS", "INDUSINDBK.NS", 
+    "HCLTECH.NS", "BAJAJFINSV.NS", "WIPRO.NS", "GRASIM.NS", "JSWSTEEL.NS", "CIPLA.NS", 
+    "APOLLOHOSP.NS", "ADANIENT.NS", "ADANIPORTS.NS", "COALINDIA.NS", "BRITANNIA.NS", 
+    "HDFCLIFE.NS", "DRREDDY.NS", "HINDALCO.NS", "TATACONSUM.NS", "EICHERMOT.NS", 
+    "BAJAJ-AUTO.NS", "DIVISLAB.NS", "SBILIFE.NS", "HEROMOTOCO.NS", "BPCL.NS", "SHREECEM.NS"
+]
+
+def analyze_ticker(ticker):
+    try:
+        # Fetch daily data
+        data = yf.download(ticker, period="3mo", interval="1d", progress=False, auto_adjust=True)
+        if data.empty or len(data) < 50:
+            return None
+            
+        close = data['Close'].squeeze()
+        if isinstance(close, pd.DataFrame):
+            close = close.iloc[:, 0]
+            
+        current_price = float(close.iloc[-1])
+        prev_price = float(close.iloc[-2]) if len(close) > 1 else current_price
+        change_pct = ((current_price - prev_price) / prev_price) * 100
+        
+        # Calculate RSI (14)
+        delta = close.diff()
+        gain = delta.clip(lower=0).rolling(14).mean()
+        loss = (-delta.clip(upper=0)).rolling(14).mean()
+        rs = gain / loss
+        rsi = float(100 - (100 / (1 + rs)).iloc[-1]) if not rs.empty else 50.0
+        
+        # Calculate EMA 9, SMA 20, SMA 50
+        ema9 = float(close.ewm(span=9, adjust=False).mean().iloc[-1])
+        sma20 = float(close.rolling(20).mean().iloc[-1])
+        sma50 = float(close.rolling(50).mean().iloc[-1])
+        
+        # MACD
+        ema12 = close.ewm(span=12, adjust=False).mean()
+        ema26 = close.ewm(span=26, adjust=False).mean()
+        macd = ema12 - ema26
+        macd_signal = macd.ewm(span=9, adjust=False).mean()
+        macd_hist = float((macd - macd_signal).iloc[-1])
+        
+        score = 0
+        reasons = []
+        
+        # Scoring logic
+        if rsi < 35:
+            score += 2
+            reasons.append(f"Oversold RSI ({rsi:.1f})")
+        elif rsi > 65:
+            score -= 2
+            reasons.append(f"Overbought RSI ({rsi:.1f})")
+            
+        macd_hist_prev = float((macd - macd_signal).iloc[-2]) if len(macd) > 1 else 0
+        if macd_hist > 0 and (macd_hist - macd_hist_prev) > 0:
+            score += 2
+            reasons.append("MACD Bullish Momentum")
+        elif macd_hist < 0 and (macd_hist - macd_hist_prev) < 0:
+            score -= 2
+            reasons.append("MACD Bearish Momentum")
+            
+        if current_price > sma20 > sma50:
+            score += 1
+            reasons.append("Strong Uptrend (Price > SMA20 > SMA50)")
+        elif current_price < sma20 < sma50:
+            score -= 1
+            reasons.append("Strong Downtrend (Price < SMA20 < SMA50)")
+            
+        if ema9 > sma20:
+            score += 1
+            reasons.append("Short-term Bullish (EMA9 > SMA20)")
+        elif ema9 < sma20:
+            score -= 1
+            reasons.append("Short-term Bearish (EMA9 < SMA20)")
+
+        return {
+            "symbol": ticker.replace(".NS", ""),
+            "price": current_price,
+            "change_pct": change_pct,
+            "score": score,
+            "rsi": rsi,
+            "macd_hist": macd_hist,
+            "reasons": reasons
+        }
+    except Exception as e:
+        logger.error(f"Error scanning {ticker}: {e}")
+        return None
+
+@app.get("/api/nifty50-scan")
+def scan_nifty50():
+    try:
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_ticker = {executor.submit(analyze_ticker, t): t for t in NIFTY_50_TICKERS}
+            for future in concurrent.futures.as_completed(future_to_ticker):
+                res = future.result()
+                if res is not None:
+                    results.append(res)
+                    
+        if not results:
+            return {"error": "Failed to analyze tickers"}
+            
+        # Sort by score descending
+        results.sort(key=lambda x: x["score"], reverse=True)
+        
+        # For Top Buy, ensure score > 0. For Top Sell, ensure score < 0.
+        top_buy = next((r for r in results if r["score"] > 0), None)
+        top_sell = next((r for r in reversed(results) if r["score"] < 0), None)
+        
+        # Use fallback if there's strictly no match (e.g. market is entirely neutral)
+        if not top_buy and results:
+            top_buy = results[0]
+        if not top_sell and results:
+            top_sell = results[-1]
+        
+        # Format the reasons to take max 3
+        if top_buy:
+            top_buy["reasons"] = top_buy["reasons"][:3]
+        if top_sell:
+            top_sell["reasons"] = top_sell["reasons"][:3]
+            
+        return {
+            "success": True,
+            "top_buy": top_buy,
+            "top_sell": top_sell,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Nifty 50 scan error: {e}")
+        raise HTTPException(status_code=500, detail="Scan failed")

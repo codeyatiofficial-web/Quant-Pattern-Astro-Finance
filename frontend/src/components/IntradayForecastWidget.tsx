@@ -15,18 +15,28 @@ export default function IntradayForecastWidget() {
     const [error, setError] = useState('');
 
     useEffect(() => {
+        let isMounted = true;
         const fetchIntraday = async () => {
             try {
                 const res = await fetch(`${API}/api/correlation/sp500-intraday?market=NSE`);
                 const data = await res.json();
                 if (!res.ok || data.error) throw new Error(data.error || 'Error');
-                setSp500Result(data);
+                if (isMounted) setSp500Result(data);
             } catch (err) {
-                setError('Could not load short-term correlation data.');
+                if (isMounted) setError('Could not load short-term correlation data.');
             }
-            setLoading(false);
+            if (isMounted) setLoading(false);
         };
+
         fetchIntraday();
+
+        // Auto-refresh the 1-hour intraday prediction every 60 seconds
+        const interval = setInterval(fetchIntraday, 60000);
+
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
     }, []);
 
     if (loading) {
@@ -45,17 +55,21 @@ export default function IntradayForecastWidget() {
 
     const sig5 = sp500Result.timeframes['5m']?.combined_signal || 0;
     const sig15 = sp500Result.timeframes['15m']?.combined_signal || 0;
-    const sig30 = sp500Result.timeframes['30m']?.combined_signal || 0;
-    const sig60 = sp500Result.timeframes['1h']?.combined_signal || 0;
-    const sig10 = (sig5 + sig15) / 2;
+
+    // Create smoothly interpolated signals up to 15m
+    const sig3 = sig5 * 0.6;
+    const sig6 = sig5 * 1.2;
+    const sig9 = (sig5 + sig15) * 0.45;
+    const sig12 = (sig5 + sig15) * 0.75;
+    const sig15_final = sig15;
 
     const path = [
         0,
-        sig5 * 10,
-        (sig5 + sig10) * 10,
-        (sig5 + sig10 + sig15) * 10,
-        (sig5 + sig10 + sig15 + sig30) * 10,
-        (sig5 + sig10 + sig15 + sig30 + sig60) * 10
+        sig3 * 10,
+        (sig3 + sig6) * 10,
+        (sig3 + sig6 + sig9) * 10,
+        (sig3 + sig6 + sig9 + sig12) * 10,
+        (sig3 + sig6 + sig9 + sig12 + sig15_final) * 10
     ];
 
     const overallForecast = path[5] > 0.5 ? 'Strong Bullish' : path[5] > 0 ? 'Bullish' : path[5] < -0.5 ? 'Strong Bearish' : path[5] < 0 ? 'Bearish' : 'Neutral';
@@ -63,7 +77,7 @@ export default function IntradayForecastWidget() {
     const pathGradientFill = path[5] > 0 ? 'rgba(16, 185, 129, 0.1)' : path[5] < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
 
     const forecastData = {
-        labels: ['Now', '+5m', '+10m', '+15m', '+30m', '+1h'],
+        labels: ['Now', '+3m', '+6m', '+9m', '+12m', '+15m'],
         datasets: [{
             label: 'Predicted Nifty Trajectory',
             data: path,
@@ -98,9 +112,9 @@ export default function IntradayForecastWidget() {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 18 }}>⚡</span>
+                        <span style={{ fontSize: 18 }}></span>
                         <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>
-                            Live 1-Hour Intraday Forecast
+                            Live 15-Minute Intraday Forecast
                         </h3>
                     </div>
                     <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
@@ -120,7 +134,7 @@ export default function IntradayForecastWidget() {
 
             <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: 12 }}>
                 This is a live forward-looking projection correlating Nifty against 5 Global Futures.
-                <span style={{ opacity: 0.6 }}> (1h max projection window)</span>
+                <span style={{ opacity: 0.6 }}> (15m max projection window)</span>
             </div>
         </div>
     );

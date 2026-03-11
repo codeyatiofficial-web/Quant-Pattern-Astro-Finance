@@ -4,6 +4,8 @@ import { usePlanGate } from './UpgradeModal';
 import { usePlan } from '../contexts/PlanContext';
 import { MarketTicker } from './MarketTicker';
 import IntradayForecastWidget from './IntradayForecastWidget';
+import NiftyScannerWidget from './NiftyScannerWidget';
+import NiftyTradingViewWidget from './NiftyTradingViewWidget';
 
 const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
@@ -67,6 +69,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const { guardYears, requirePlan, modal: planModal } = usePlanGate(1);
     const { tier } = usePlan();
     const isElite = tier === 'elite';
+    const isFree = tier === 'free';
     const [insight, setInsight] = useState<TodayInsight | null>(null);
     const [loading, setLoading] = useState(true);
     const [analysing, setAnalysing] = useState(false);
@@ -76,6 +79,8 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [weekForecast, setWeekForecast] = useState<any>(null);
     const [weekLoading, setWeekLoading] = useState(true);
+    const [volSignal, setVolSignal] = useState<any>(null);
+    const [volLoading, setVolLoading] = useState(true);
 
     const [symbol, setSymbol] = useState('^NSEI');
     const [planet, setPlanet] = useState('Moon');
@@ -94,14 +99,34 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             .then(r => r.json())
             .then(d => { setInsight(d); setLoading(false); })
             .catch(() => setLoading(false));
-
         // Fetch 7-day comprehensive forecast for all users
         fetch(`${API}/api/forecast/weekly?market=NSE`)
             .then(r => r.json())
             .then(d => { setWeekForecast(d); setWeekLoading(false); })
             .catch(() => setWeekLoading(false));
 
+        // Auto-fetch volatility signal for dashboard widget
+        const fetchVolSignal = () => {
+            fetch(`${API}/api/correlation/volatility-signals?market=NSE&_t=${Date.now()}`)
+                .then(async r => {
+                    if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+                    return r.json();
+                })
+                .then(d => {
+                    if (d && d.signal) setVolSignal(d);
+                    setVolLoading(false);
+                })
+                .catch(err => {
+                    console.error("Volatility Signal Fetch Error:", err);
+                    setVolLoading(false);
+                });
+        };
+        fetchVolSignal(); // Initial fetch
+        const volInterval = setInterval(fetchVolSignal, 60000); // Auto-refresh every 60 seconds
 
+        return () => {
+            clearInterval(volInterval);
+        };
     }, []);
 
     const fetchForecast = () => {
@@ -145,16 +170,97 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
             <MarketTicker />
 
-            {/*  Page Header  */}
-            <div style={{ marginBottom: 24 }}>
-                <h1 className="section-title"> Market Intelligence Dashboard</h1>
-                <p className="section-subtitle">
-                    AI-composite signals across planetary cycles, technicals, options & institutional flows
-                </p>
-            </div>
+            {/* ── VOLATILITY SIGNAL WIDGET (All Users) ── */}
+            {(() => {
+                const sigColor = volSignal?.signal === 'BUY' ? '#22c55e' : volSignal?.signal === 'SELL' ? '#ef4444' : '#3b82f6';
+                return (
+                    <div style={{
+                        background: '#000', borderRadius: 14, padding: '18px 22px', marginBottom: 20,
+                        color: sigColor, fontFamily: 'inherit', border: `1px solid ${sigColor}30`
+                    }}>
+                        {volLoading ? (
+                            <div style={{ textAlign: 'center', padding: '14px 0', color: '#888' }}>
+                                <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2, borderColor: '#333', borderTopColor: '#888', display: 'inline-block', marginRight: 10 }} />
+                                <span style={{ fontWeight: 700, fontSize: 14 }}>Scanning volatility history...</span>
+                            </div>
+                        ) : volSignal ? (
+                            <div>
+                                {/* Row 1: Signal + Confidence */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                        <div style={{
+                                            fontSize: 38, fontWeight: 900, letterSpacing: 2, lineHeight: 1
+                                        }}>
+                                            {volSignal.signal}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.6 }}>Volatility Signal</div>
+                                            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
+                                                Confidence: {volSignal.confidence}%
+                                                <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
+                                                {volSignal.total_volatility_events.toLocaleString()} events analyzed
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                        {['3m', '5m', '15m'].map(tf => (
+                                            <span key={tf} style={{
+                                                fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 6,
+                                                background: `${sigColor}15`, border: `1px solid ${sigColor}30`, letterSpacing: 0.5
+                                            }}>
+                                                {tf} Chart
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Row 2: Proprietary Source Badge */}
+                                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                                    <span style={{
+                                        fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                                        background: '#1e293b', border: '1px solid #334155', color: '#94a3b8',
+                                        display: 'flex', alignItems: 'center', gap: 6
+                                    }}>
+                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }} />
+                                        Analyzing historical patterns across global markets, volatility indices, and macroeconomic events
+                                    </span>
+                                </div>
+
+                                {/* Row 3: Marketing Banner */}
+                                <div style={{
+                                    marginTop: 16, padding: '10px 16px', background: '#f59e0b', borderRadius: 8,
+                                    fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    flexWrap: 'wrap', gap: 8, color: '#000', textTransform: 'uppercase', letterSpacing: 0.5
+                                }}>
+                                    <span>FREE ACCESS FOR A LIMITED TIME — THIS FEATURE WILL SOON MOVE TO PRO</span>
+                                    <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 700 }}>
+                                        {volSignal.data_years ? `${volSignal.data_years}y data` : ''} | Threshold: {volSignal.threshold_pct}%
+                                    </span>
+                                </div>
+
+                                <div style={{
+                                    marginTop: 16, padding: '12px 16px', background: '#0f172a', borderRadius: 8, border: '1px solid #1e293b',
+                                    fontSize: 11, color: '#94a3b8', lineHeight: 1.5, textAlign: 'center'
+                                }}>
+                                    <strong>Pro Tip:</strong> Both the Volatility Signal and Intraday Forecast track the <strong>Nifty 50 Index</strong>.
+                                    Best practice: When <em>both</em> signals align perfectly (e.g. both are Positive), it presents a high-probability BUY setup.
+                                    When both are Negative, a short-interval SELL setup.
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 600, padding: '10px 0', color: '#666' }}>
+                                Volatility signal unavailable -- backend may be loading
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
 
             {/* LIVE 1-HOUR INTRADAY FORECAST (All Users) */}
             <IntradayForecastWidget />
+
+            {/* NIFTY 50 1-MIN CANDLE CHART (Kite API) */}
+            <NiftyTradingViewWidget />
 
             {/*  1-WEEK COMPREHENSIVE FORECAST (All users)  */}
             <div style={{
@@ -168,12 +274,18 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 20 }}></span>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>1-WEEK MARKET FORECAST</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>11 Signals: Cycles · Yogas · Lunar Phase · Transits · Technicals · Patterns · Options · FII/DII · News · Events · Weekday</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: 0.5 }}>
+                            {isFree ? '1-DAY MARKET FORECAST' : '1-WEEK MARKET FORECAST'}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            11 Signals: Cycles · Yogas · Lunar Phase · Transits · Technicals · Patterns · Options · FII/DII · News · Events · Weekday
+                        </div>
+                        {isFree && (
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4, fontStyle: 'italic', maxWidth: '80%' }}>
+                                Note: This forecast analyzes 11 distinct signal layers to gauge the current directional bias. Market conditions are dynamic, and this analysis reflects the present situation rather than a guaranteed long-term trend.
+                            </div>
+                        )}
                     </div>
-                    {weekForecast?.global_signals?.technical?.current_price && (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>₹<strong style={{ color: 'var(--text-primary)', fontSize: 14 }}>{weekForecast.global_signals.technical.current_price.toLocaleString('en-IN')}</strong></span>
-                    )}
                 </div>
 
                 {weekLoading ? (
@@ -235,66 +347,78 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                         </div>
 
                         {/* Per-Day Cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(weekForecast.days.length, 5)}, 1fr)`, gap: 10 }}>
-                            {weekForecast.days.map((day: any, idx: number) => {
-                                const isToday = idx === 0;
-                                return (
-                                    <div key={day.date} style={{
-                                        background: isToday ? 'var(--bg-secondary)' : 'var(--bg-card)',
-                                        border: `1px solid ${isToday ? 'var(--border-active)' : 'var(--border-subtle)'}`,
-                                        borderRadius: 12, padding: 14, position: 'relative',
-                                    }}>
-                                        {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-indigo)', color: 'white', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 6, letterSpacing: 1 }}>TODAY</div>}
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>{day.weekday} {day.date ? new Date(day.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'long' }) : ''}</div>
+                        {(() => {
+                            const isMarketClosed = new Date().getHours() > 15 || (new Date().getHours() === 15 && new Date().getMinutes() >= 30);
+                            const startIndex = isFree && isMarketClosed ? 1 : 0;
+                            const endIndex = isFree ? startIndex + 1 : 5;
+                            const displayedDays = weekForecast.days.slice(startIndex, endIndex);
 
-                                        {/* Verdict */}
-                                        <div style={{ textAlign: 'center', marginBottom: 8 }}>
-                                            <div style={{ fontSize: 16 }}>{day.verdict_emoji}</div>
-                                            <div style={{ fontSize: 12, fontWeight: 800, color: day.verdict_color }}>{day.verdict}</div>
-                                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Score: {day.score}</div>
-                                        </div>
+                            return (
+                                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(displayedDays.length, 5)}, 1fr)`, gap: 10 }}>
+                                    {displayedDays.map((day: any, idx: number) => {
+                                        const isToday = startIndex === 0 && idx === 0;
+                                        const isTomorrow = startIndex === 1 && idx === 0;
 
-                                        {/* Signal Breakdown Mini-Bar */}
-                                        {day.signal_breakdown && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 6 }}>
-                                                {Object.entries(day.signal_breakdown as Record<string, number>).filter(([, v]) => v !== 0).map(([key, val]) => {
-                                                    const v = val as number;
-                                                    const label: Record<string, string> = { nakshatra: ' Cycle', yogas: ' Yoga', weekday: ' Day', tithi_paksha: ' Phase', gochar: ' Transit', events: ' Event', options: ' PCR', institutional: ' FII', technical: ' Tech', chart_patterns: ' Pattern', news: ' News' };
-                                                    return (
-                                                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
-                                                            <span style={{ color: 'var(--text-muted)' }}>{label[key] || key}</span>
-                                                            <span style={{ color: v > 0 ? '#4ade80' : v < 0 ? '#f87171' : '#94a3b8', fontWeight: 700 }}>{v > 0 ? '+' : ''}{v}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                        return (
+                                            <div key={day.date} style={{
+                                                background: (isToday || isTomorrow) ? 'var(--bg-secondary)' : 'var(--bg-card)',
+                                                border: `1px solid ${(isToday || isTomorrow) ? 'var(--border-active)' : 'var(--border-subtle)'}`,
+                                                borderRadius: 12, padding: 14, position: 'relative',
+                                            }}>
+                                                {isToday && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-indigo)', color: 'white', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 6, letterSpacing: 1 }}>TODAY</div>}
+                                                {isTomorrow && <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-indigo)', color: 'white', fontSize: 8, fontWeight: 800, padding: '2px 8px', borderRadius: 6, letterSpacing: 1 }}>TOMORROW</div>}
+                                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>{day.weekday} {day.date ? new Date(day.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'long' }) : ''}</div>
 
-                                        {/* Yogas */}
-                                        {day.planetary_yogas?.length > 0 && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
-                                                {day.planetary_yogas.slice(0, 2).map((y: any, j: number) => (
-                                                    <div key={j} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: y.impact === 'bullish' ? 'rgba(74,222,128,0.15)' : y.impact === 'bearish' ? 'rgba(248,113,113,0.15)' : 'var(--bg-secondary)', color: y.impact === 'bullish' ? '#4ade80' : y.impact === 'bearish' ? '#f87171' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                        <span style={{ fontWeight: 700 }}>{y.name}</span>
+                                                {/* Verdict */}
+                                                <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                                                    <div style={{ fontSize: 16 }}>{day.verdict_emoji}</div>
+                                                    <div style={{ fontSize: 12, fontWeight: 800, color: day.verdict_color }}>{day.verdict}</div>
+                                                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Score: {day.score}</div>
+                                                </div>
+
+                                                {/* Signal Breakdown Mini-Bar */}
+                                                {day.signal_breakdown && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 6 }}>
+                                                        {Object.entries(day.signal_breakdown as Record<string, number>).filter(([, v]) => v !== 0).map(([key, val]) => {
+                                                            const v = val as number;
+                                                            const label: Record<string, string> = { nakshatra: ' Cycle', yogas: ' Yoga', weekday: ' Day', tithi_paksha: ' Phase', gochar: ' Transit', events: ' Event', options: ' PCR', institutional: ' FII', technical: ' Tech', chart_patterns: ' Pattern', news: ' News' };
+                                                            return (
+                                                                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
+                                                                    <span style={{ color: 'var(--text-muted)' }}>{label[key] || key}</span>
+                                                                    <span style={{ color: v > 0 ? '#4ade80' : v < 0 ? '#f87171' : '#94a3b8', fontWeight: 700 }}>{v > 0 ? '+' : ''}{v}</span>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                                )}
 
-                                        {/* Events */}
-                                        {day.events?.length > 0 && (
-                                            <div style={{ marginTop: 3 }}>
-                                                {day.events.slice(0, 1).map((ev: any, j: number) => (
-                                                    <div key={j} style={{ fontSize: 8, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                        {ev.name?.slice(0, 20)}
+                                                {/* Yogas */}
+                                                {day.planetary_yogas?.length > 0 && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>
+                                                        {day.planetary_yogas.slice(0, 2).map((y: any, j: number) => (
+                                                            <div key={j} style={{ fontSize: 8, padding: '2px 6px', borderRadius: 4, background: y.impact === 'bullish' ? 'rgba(74,222,128,0.15)' : y.impact === 'bearish' ? 'rgba(248,113,113,0.15)' : 'var(--bg-secondary)', color: y.impact === 'bullish' ? '#4ade80' : y.impact === 'bearish' ? '#f87171' : 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                                <span style={{ fontWeight: 700 }}>{y.name}</span>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
+                                                )}
+
+                                                {/* Events */}
+                                                {day.events?.length > 0 && (
+                                                    <div style={{ marginTop: 3 }}>
+                                                        {day.events.slice(0, 1).map((ev: any, j: number) => (
+                                                            <div key={j} style={{ fontSize: 8, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                                {ev.name?.slice(0, 20)}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
 
                         {/* Gochar / Transits row */}
                         {weekForecast.gochar_events?.length > 0 && (
@@ -310,14 +434,40 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                             </div>
                         )}
 
-                        {!isElite && (
-                            <div style={{ marginTop: 14, padding: '10px 16px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <span style={{ fontSize: 16 }}></span>
-                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                    <strong style={{ color: 'var(--text-primary)' }}>Upgrade to Elite</strong> for the full <strong>1-Month Composite Forecast</strong> with date picker, FII/DII institutional flows, options chain analysis, and seasonality scoring.
+                        {
+                            !isElite && (
+                                <div style={{
+                                    marginTop: 16,
+                                    background: 'rgba(245, 158, 11, 0.15)',
+                                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                                    borderRadius: 12,
+                                    padding: '20px 24px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    flexWrap: 'wrap',
+                                    gap: 16,
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.1, transform: 'rotate(15deg)' }}>
+                                        <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#f59e0b' }}><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" /></svg>
+                                    </div>
+                                    <div style={{ flex: 1, zIndex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                            <span style={{ color: '#f59e0b', fontWeight: 900, fontSize: 16, letterSpacing: 0.5 }}>ELITE EXCLUSIVE</span>
+                                            <span className="pulse-dot" style={{ background: '#f59e0b', boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.25)' }}></span>
+                                        </div>
+                                        <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500, lineHeight: 1.5, maxWidth: 500 }}>
+                                            Unlock the full <strong>1-Month Composite Forecast</strong> to look ahead into the future. Includes FII/DII institutional flows, options chain analysis, custom date picker, and seasonality scoring.
+                                        </div>
+                                    </div>
+                                    <button className="btn-upgrade-pro" style={{ zIndex: 1, padding: '10px 20px', fontSize: 14 }} onClick={() => requirePlan(2)}>
+                                        Unlock Elite Forecast ✨
+                                    </button>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
                     </>
                 ) : (
                     <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No forecast data available.</div>
@@ -329,7 +479,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                 isElite && (
 
                     <div style={{
-                        background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(180,83,9,0.05) 100%)',
+                        background: 'rgba(245, 158, 11, 0.08)',
                         border: '1px solid rgba(245,158,11,0.35)',
                         borderRadius: 16,
                         padding: '24px 28px',
@@ -340,7 +490,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                         {/* Elite badge */}
                         <div style={{
                             position: 'absolute', top: 16, right: 20,
-                            background: 'linear-gradient(135deg,#f59e0b,#b45309)',
+                            background: '#f59e0b',
                             color: '#fff', fontSize: 10, fontWeight: 800,
                             padding: '3px 10px', borderRadius: 20, letterSpacing: 1.2,
                         }}> ELITE</div>
@@ -425,7 +575,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                         <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
                                             <div style={{
                                                 height: '100%', width: `${forecast.confidence}%`,
-                                                background: `linear-gradient(90deg, ${forecast.verdict_color}88, ${forecast.verdict_color})`,
+                                                background: forecast.verdict_color,
                                                 borderRadius: 8, transition: 'width 0.8s ease',
                                             }} />
                                         </div>
@@ -472,9 +622,29 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 </div>
                             </>
                         ) : null}
+
+                        {isFree && (
+                            <div style={{
+                                marginTop: 20, padding: '16px 20px', background: '#1e293b', border: '1px solid #334155', borderRadius: 10,
+                                textAlign: 'center'
+                            }}>
+                                <div style={{ color: '#f8fafc', fontSize: 15, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    Want to see the full week ahead?
+                                </div>
+                                <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 12 }}>
+                                    Upgrade to Pro to unlock the complete 7-day comprehensive market forecast and plan your week with precision.
+                                </div>
+                                <button className="btn-primary" onClick={() => window.location.href = '/pricing'}>
+                                    UPGRADE TO PRO FOR 1-WEEK FORECAST
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )
             }
+
+            {/* Nifty 50 Scanner Widget */}
+            <NiftyScannerWidget />
 
             {/*  Today's Cosmic Snapshot  */}
             {
@@ -586,7 +756,11 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                     {' → '}
                                     <span style={{ color: 'var(--accent-green)' }}>{insight.transition.to_nakshatra}</span>
                                     {' at '}
-                                    <span className="num" style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>{insight.transition.transition_time}</span>
+                                    <span className="num" style={{ color: 'var(--accent-gold)', fontWeight: 600 }}>
+                                        {new Date(insight.transition.transition_time).toLocaleString('en-IN', {
+                                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
+                                        })} (Mumbai Time)
+                                    </span>
                                 </span>
                             </div>
                         )}
@@ -682,7 +856,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
                     {/* Start Date */}
                     <div>
-                        <label className="form-label">Start Date <span style={{ fontSize: 10, color: '#f59e0b' }}>(Pro for &gt;1 Yr)</span></label>
+                        <label className="form-label">Start Date <span style={{ fontSize: 9, background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '2px 6px', borderRadius: 4, marginLeft: 6, fontWeight: 700, letterSpacing: 0.5 }}>FREE LIMIT: 1 YR</span></label>
                         <input className="form-input" type="date" value={startDate}
                             max={endDate}
                             onChange={e => {
@@ -721,6 +895,33 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                             {status}
                         </span>
                     )}
+                </div>
+            </div>
+
+            {/* Custom Strategy CTA for Pro Traders */}
+            <div style={{
+                marginTop: 32, padding: '24px', background: '#0f172a', border: '1px solid #1e293b', borderRadius: 16,
+                textAlign: 'center'
+            }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+                    Pro Trader with a Custom Strategy?
+                </div>
+                <div style={{ fontSize: 14, color: '#94a3b8', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
+                    We offer bespoke integrations and custom AI modeling for institutional and professional traders. Contact us to get our engine customized exactly to your proprietary rules and requirements.
+                </div>
+                <div style={{ marginTop: 16, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <a href="mailto:quant0pattern@gmail.com" style={{
+                        display: 'inline-block', padding: '10px 20px', background: '#3b82f6', color: '#fff',
+                        fontWeight: 700, borderRadius: 8, fontSize: 13, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: 0.5
+                    }}>
+                        CONTACT US VIA EMAIL
+                    </a>
+                    <a href="https://wa.me/9193112255" target="_blank" rel="noopener noreferrer" style={{
+                        display: 'inline-block', padding: '10px 20px', background: '#22c55e', color: '#fff',
+                        fontWeight: 700, borderRadius: 8, fontSize: 13, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: 0.5
+                    }}>
+                        CHAT ON WHATSAPP
+                    </a>
                 </div>
             </div>
         </div >

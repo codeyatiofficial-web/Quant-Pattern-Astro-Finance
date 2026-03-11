@@ -342,6 +342,29 @@
     transform: none;
   }
 
+  .btn-upgrade-pro {
+    background: #eab308;
+    color: #0f172a;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(234, 179, 8, 0.4);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.2px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-upgrade-pro:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(234, 179, 8, 0.6);
+    filter: brightness(1.1);
+  }
+
   .btn-secondary {
     background: var(--bg-card);
     color: var(--text-primary);
@@ -781,5 +804,79 @@
     display: flex !important;
     align-items: center;
     gap: 12px;
+  }
+}
+
+/* ── Dashboard Mobile Optimizations ──────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* Reduce panel padding on mobile */
+  .panel,
+  .glass-card {
+    padding: 14px 12px !important;
+  }
+
+  .metric-box {
+    padding: 14px 12px !important;
+  }
+
+  /* Make inline cards stack vertically */
+  .app-main>div {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Tighter section spacing */
+  .section-title {
+    font-size: 18px;
+  }
+
+  .section-subtitle {
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+
+  /* Tables scroll horizontally */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 12px;
+  }
+
+  .data-table thead th,
+  .data-table tbody td {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  /* Buttons smaller on mobile */
+  .btn-primary {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .btn-secondary {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Tab bar scrollable */
+  .tab-list {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  /* Badge sizing */
+  .badge {
+    padding: 3px 8px;
+    font-size: 10px;
   }
 }

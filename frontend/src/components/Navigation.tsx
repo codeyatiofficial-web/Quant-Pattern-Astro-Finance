@@ -145,6 +145,11 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
             {/* Desktop: Kite + Theme */}
             <div className="nav-desktop-actions">
               <PlanStatusBadge />
+              {isFree && (
+                <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro">
+                  ✨ Upgrade to Pro
+                </button>
+              )}
               {kiteConnected === true ? (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px',
@@ -167,6 +172,11 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
 
             {/* Mobile hamburger + theme */}
             <div className="nav-mobile-actions">
+              {isFree && (
+                <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro" style={{ padding: '4px 10px', fontSize: 11, animation: 'none' }}>
+                  ✨ Upgrade
+                </button>
+              )}
               {kiteConnected === false && (
                 <button onClick={handleKiteLogin} style={{
                   padding: '4px 10px', background: 'var(--accent-indigo)', color: 'white',
