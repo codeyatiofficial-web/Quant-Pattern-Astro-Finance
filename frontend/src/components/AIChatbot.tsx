@@ -188,18 +188,7 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                 )}
             </button>
 
-            {/* Notification dot when closed */}
-            {!isOpen && messages.length === 0 && (
-                <div style={{
-                    position: 'fixed', bottom: 70, right: 20, zIndex: 9991,
-                    background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(59,130,246,0.3)',
-                    borderRadius: 12, padding: '8px 14px', maxWidth: 200,
-                    animation: 'fadeInUp 0.5s ease',
-                }}>
-                    <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700 }}> Tara — AI Trading Mentor</div>
-                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>Ask me about patterns, strategies & AI signals!</div>
-                </div>
-            )}
+            {/* Notification dot removed to prevent blocking UI */}
 
             {/*  Chat Window  */}
             {isOpen && (
@@ -276,23 +265,6 @@ export default function AIChatbot({ currentTab, currentSymbol, currentPrice, det
                                     Your AI Trading Mentor • तारा<br />
                                     Ask me about patterns, derivatives strategies,<br />
                                     signal patterns, or any trading concept!
-                                </div>
-
-                                {/* Quick prompts */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    {quickPrompts.map((p, i) => (
-                                        <button key={i} onClick={() => sendMessage(p)} style={{
-                                            padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600,
-                                            cursor: 'pointer', textAlign: 'left',
-                                            background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.15)',
-                                            color: '#93c5fd', transition: 'all 0.2s',
-                                        }}
-                                            onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(59,130,246,0.2)'; }}
-                                            onMouseLeave={e => { (e.target as HTMLElement).style.background = 'rgba(59,130,246,0.08)'; }}
-                                        >
-                                            {p}
-                                        </button>
-                                    ))}
                                 </div>
                             </div>
                         )}

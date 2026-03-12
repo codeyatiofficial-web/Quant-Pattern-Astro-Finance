@@ -26,12 +26,13 @@ function NiftyCandleChart() {
     const [data, setData] = useState<CandleData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedInterval, setSelectedInterval] = useState('minute');
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const fetchCandles = async () => {
+    const fetchCandles = async (intv: string) => {
         try {
-            const res = await fetch(`${API}/api/nifty50/candles?count=30`);
+            const res = await fetch(`${API}/api/nifty50/candles?count=30&interval=${intv}`);
             if (!res.ok) {
                 const err = await res.json().catch(() => ({ detail: 'Failed to fetch' }));
                 throw new Error(err.detail || `HTTP ${res.status}`);
@@ -47,10 +48,16 @@ function NiftyCandleChart() {
     };
 
     useEffect(() => {
-        fetchCandles();
-        const interval = setInterval(fetchCandles, 60000); // refresh every minute
-        return () => clearInterval(interval);
-    }, []);
+        setLoading(true);
+        fetchCandles(selectedInterval);
+        // Adaptive refresh: faster for short intervals, slower for long ones
+        const refreshMs: Record<string, number> = {
+            'minute': 1000, '3minute': 3000, '5minute': 5000,
+            '15minute': 10000, '30minute': 15000, '60minute': 30000,
+        };
+        const timer = setInterval(() => fetchCandles(selectedInterval), refreshMs[selectedInterval] || 5000);
+        return () => clearInterval(timer);
+    }, [selectedInterval]);
 
     // Draw candlestick chart on canvas
     useEffect(() => {
@@ -167,6 +174,15 @@ function NiftyCandleChart() {
 
     const isPositive = data ? data.change >= 0 : true;
 
+    const intervals = [
+        { label: '1m', value: 'minute' },
+        { label: '3m', value: '3minute' },
+        { label: '5m', value: '5minute' },
+        { label: '15m', value: '15minute' },
+        { label: '30m', value: '30minute' },
+        { label: '1h', value: '60minute' },
+    ];
+
     return (
         <div style={{
             background: '#0f172a', border: '1px solid #1e293b', borderRadius: 14,
@@ -175,11 +191,36 @@ function NiftyCandleChart() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                 <div>
-                    <h3 style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>
-                        NIFTY 50 — 1-Min Chart
-                    </h3>
-                    <p style={{ fontSize: 10, color: '#64748b', margin: 0, marginTop: 3 }}>
-                        Last 30 candles via Kite API | Auto-refreshes every 60s
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <h3 style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc', letterSpacing: 0.5, margin: 0, textTransform: 'uppercase' }}>
+                            NIFTY 50 — {intervals.find(i => i.value === selectedInterval)?.label} Chart
+                        </h3>
+                        
+                        {/* Interval Selector */}
+                        <div style={{ display: 'flex', background: '#1e293b', padding: 2, borderRadius: 6, gap: 2 }}>
+                            {intervals.map((intv) => (
+                                <button
+                                    key={intv.value}
+                                    onClick={() => setSelectedInterval(intv.value)}
+                                    style={{
+                                        background: selectedInterval === intv.value ? '#3b82f6' : 'transparent',
+                                        color: selectedInterval === intv.value ? '#ffffff' : '#94a3b8',
+                                        border: 'none',
+                                        borderRadius: 4,
+                                        padding: '2px 8px',
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                >
+                                    {intv.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <p style={{ fontSize: 10, color: '#64748b', margin: 0, marginTop: 4 }}>
+                        Last 30 candles via Kite API | Live updates
                     </p>
                 </div>
                 {data && (
@@ -214,7 +255,7 @@ function NiftyCandleChart() {
                         <div style={{ fontSize: 14, fontWeight: 700, color: '#f87171' }}>Chart Unavailable</div>
                         <div>{error}</div>
                         <button
-                            onClick={() => { setLoading(true); setError(null); fetchCandles(); }}
+                            onClick={() => { setLoading(true); setError(null); fetchCandles(selectedInterval); }}
                             style={{
                                 marginTop: 4, padding: '6px 16px', fontSize: 11, fontWeight: 700,
                                 background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
@@ -231,7 +272,7 @@ function NiftyCandleChart() {
 
             {/* Footer */}
             <div style={{ marginTop: 8, fontSize: 9, color: '#475569', textAlign: 'center' }}>
-                Data source: Kite Connect API | Exchange: NSE | Updates every market minute
+                Data source: Kite Connect API | Exchange: NSE | Live updates
             </div>
         </div>
     );
