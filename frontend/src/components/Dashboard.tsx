@@ -38,38 +38,13 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     const [forecastMarket, setForecastMarket] = useState('NSE');
     const [forecastDate, setForecastDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [weekForecast, setWeekForecast] = useState<any>(null);
-    const [weekLoading, setWeekLoading] = useState(true);
-    const [volSignal, setVolSignal] = useState<any>(null);
-    const [volLoading, setVolLoading] = useState(true);    useEffect(() => {
+    const [weekLoading, setWeekLoading] = useState(true);    useEffect(() => {
 
         // Fetch 7-day comprehensive forecast for all users
         fetch(`${API}/api/forecast/weekly?market=NSE`)
             .then(r => r.json())
             .then(d => { setWeekForecast(d); setWeekLoading(false); })
             .catch(() => setWeekLoading(false));
-
-        // Auto-fetch volatility signal for dashboard widget
-        const fetchVolSignal = () => {
-            fetch(`${API}/api/correlation/volatility-signals?market=NSE&_t=${Date.now()}`)
-                .then(async r => {
-                    if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
-                    return r.json();
-                })
-                .then(d => {
-                    if (d && d.signal) setVolSignal(d);
-                    setVolLoading(false);
-                })
-                .catch(err => {
-                    console.error("Volatility Signal Fetch Error:", err);
-                    setVolLoading(false);
-                });
-        };
-        fetchVolSignal(); // Initial fetch
-        const volInterval = setInterval(fetchVolSignal, 60000); // Auto-refresh every 60 seconds
-
-        return () => {
-            clearInterval(volInterval);
-        };
     }, []);
 
     const fetchForecast = () => {
@@ -86,93 +61,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
             <MarketTicker />
 
-    {/* ── VOLATILITY SIGNAL WIDGET (All Users) ── */ }
-    {
-        (() => {
-            const sigColor = volSignal?.signal === 'BUY' ? '#22c55e' : volSignal?.signal === 'SELL' ? '#ef4444' : '#3b82f6';
-            return (
-                <div style={{
-                    background: '#000', borderRadius: 14, padding: '18px 22px', marginBottom: 20,
-                    color: sigColor, fontFamily: 'inherit', border: `1px solid ${sigColor}30`
-                }}>
-                    {volLoading ? (
-                        <div style={{ textAlign: 'center', padding: '14px 0', color: '#888' }}>
-                            <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2, borderColor: '#333', borderTopColor: '#888', display: 'inline-block', marginRight: 10 }} />
-                            <span style={{ fontWeight: 700, fontSize: 14 }}>Scanning volatility history...</span>
-                        </div>
-                    ) : volSignal ? (
-                        <div>
-                            {/* Row 1: Signal + Confidence */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                    <div style={{
-                                        fontSize: 38, fontWeight: 900, letterSpacing: 2, lineHeight: 1
-                                    }}>
-                                        {volSignal.signal}
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.6 }}>Volatility Signal</div>
-                                        <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>
-                                            Confidence: {volSignal.confidence}%
-                                            <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
-                                            {volSignal.total_volatility_events.toLocaleString()} events analyzed
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                    {['3m', '5m', '15m'].map(tf => (
-                                        <span key={tf} style={{
-                                            fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 6,
-                                            background: `${sigColor}15`, border: `1px solid ${sigColor}30`, letterSpacing: 0.5
-                                        }}>
-                                            {tf} Chart
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
 
-                            {/* Row 2: Proprietary Source Badge */}
-                            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                                <span style={{
-                                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 6,
-                                    background: '#1e293b', border: '1px solid #334155', color: '#94a3b8',
-                                    display: 'flex', alignItems: 'center', gap: 6
-                                }}>
-                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }} />
-                                    Analyzing historical patterns across global markets, volatility indices, and macroeconomic events
-                                </span>
-                            </div>
-
-                            {/* Row 3: Marketing Banner */}
-                            <div style={{
-                                marginTop: 16, padding: '10px 16px', background: '#f59e0b', borderRadius: 8,
-                                fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                flexWrap: 'wrap', gap: 8, color: '#000', textTransform: 'uppercase', letterSpacing: 0.5
-                            }}>
-                                <span>FREE ACCESS FOR A LIMITED TIME — THIS FEATURE WILL SOON MOVE TO PRO</span>
-                                <span style={{ opacity: 0.7, fontSize: 10, fontWeight: 700 }}>
-                                    {volSignal.data_years ? `${volSignal.data_years}y data` : ''} | Threshold: {volSignal.threshold_pct}%
-                                </span>
-                            </div>
-
-                            <div style={{
-                                marginTop: 16, padding: '12px 16px', background: '#0f172a', borderRadius: 8, border: '1px solid #1e293b',
-                                fontSize: 11, color: '#94a3b8', lineHeight: 1.5, textAlign: 'center'
-                            }}>
-                                <strong>Pro Tip:</strong> Both the Volatility Signal and Intraday Forecast track the <strong>Nifty 50 Index</strong>.
-                                Best practice: When <em>both</em> signals align perfectly (e.g. both are Positive), it presents a high-probability BUY setup.
-                                When both are Negative, a short-interval SELL setup.
-                            </div>
-                        </div>
-                    ) : (
-                        <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 600, padding: '10px 0', color: '#666' }}>
-                            Volatility signal unavailable -- backend may be loading
-                        </div>
-                    )}
-                </div>
-            );
-        })()
-    }
 
     {/* LIVE 1-HOUR INTRADAY FORECAST (All Users) */ }
     <IntradayForecastWidget />

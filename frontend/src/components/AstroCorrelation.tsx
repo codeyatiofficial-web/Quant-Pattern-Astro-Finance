@@ -153,10 +153,6 @@ export default function AstroCorrelation() {
     const [macroResult, setMacroResult] = useState<any>(null);
     const [macroError, setMacroError] = useState('');
 
-    const [volLoading, setVolLoading] = useState(false);
-    const [volResult, setVolResult] = useState<any>(null);
-    const [volError, setVolError] = useState('');
-
 
     const [sub, setSub] = useState<'backtest' | 'vix' | 'futures' | 'macro' | 'futures-backtest'>('backtest');
 
@@ -267,16 +263,6 @@ export default function AstroCorrelation() {
         setMacroLoading(false);
     };
 
-    const runVolatilitySignals = async () => {
-        setVolLoading(true); setVolError(''); setVolResult(null);
-        try {
-            const res = await fetch(`${API}/api/correlation/volatility-signals?market=${futuresMarket}&threshold=1.5`);
-            const data = await res.json();
-            if (!res.ok || data.error) setVolError(data.error || data.detail || 'Error');
-            else setVolResult(data);
-        } catch { setVolError('Network error – is backend running?'); }
-        setVolLoading(false);
-    };
 
     // Currently chosen group info
     const chosenGroup = EVENT_GROUPS.find(g => g.events.some(e => e.value === eventType));
@@ -1195,120 +1181,7 @@ export default function AstroCorrelation() {
                         );
                     })()}
 
-                    {/* ══════════════════════════════════════════════════════════════
-                        VOLATILITY-BASED BUY / SELL SIGNAL GENERATOR
-                    ══════════════════════════════════════════════════════════════ */}
-                    <div className="glass-card" style={{ padding: 24, marginTop: 24 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                    <span style={{ fontSize: 22 }}></span>
-                                    <h3 style={{ fontWeight: 800, fontSize: 18, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>25-Year Volatility Signal Engine</h3>
-                                </div>
-                                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
-                                    Backtest all available Nifty history for sudden moves (±0.08%+ daily), correlate with 5 global futures, and generate a live BUY/SELL signal for 3m/5m/15m charts
-                                </p>
-                            </div>
-                            <button className="btn-primary" onClick={runVolatilitySignals} disabled={volLoading} style={{ background: 'linear-gradient(135deg, #f59e0b, #dc2626)', border: 'none', fontWeight: 700 }}>
-                                {volLoading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginRight: 8 }} />Scanning Max History…</> : 'Generate Volatility Signals'}
-                            </button>
-                        </div>
 
-                        {volError && <div className="alert-error" style={{ marginTop: 14 }}>⚠ {volError}</div>}
-
-                        {volResult && (() => {
-                            const ASSET_COLORS: Record<string, string> = { SP500: '#eab308', Dollar: '#eab308', Oil: '#eab308', Gold: '#eab308', Nasdaq: '#eab308' };
-
-                            return (
-                                <div style={{ marginTop: 8 }}>
-                                    {/* -- Live Signal Card -- */}
-                                    <div style={{
-                                        background: '#eab308', border: 'none', borderRadius: 16,
-                                        padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                        flexWrap: 'wrap', gap: 16, marginBottom: 20, color: '#000'
-                                    }}>
-                                        <div>
-                                            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.7 }}>Live Composite Signal</div>
-                                            <div style={{ fontSize: 42, fontWeight: 900, letterSpacing: 2 }}>
-                                                {volResult.signal}
-                                            </div>
-                                            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6 }}>
-                                                Confidence: {volResult.confidence}%
-                                                <span style={{ margin: '0 8px', opacity: 0.3 }}>|</span>
-                                                BUY: {volResult.buy_votes} / SELL: {volResult.sell_votes} / HOLD: {volResult.hold_votes}
-                                            </div>
-                                            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                                                {['3m', '5m', '15m'].map(tf => (
-                                                    <span key={tf} style={{
-                                                        fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 6,
-                                                        background: '#00000015', border: '1px solid #00000025', letterSpacing: 0.5
-                                                    }}>
-                                                        {tf} Chart
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div style={{ fontSize: 11, marginTop: 6, fontStyle: 'italic', opacity: 0.6 }}>
-                                                Apply this signal on 3-min, 5-min and 15-min intraday charts for execution
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: 24, fontWeight: 700 }}>{volResult.total_volatility_events}</div>
-                                            <div style={{ fontSize: 11, opacity: 0.7 }}>Volatility Events</div>
-                                            <div style={{ fontSize: 12, marginTop: 4 }}>Up: {volResult.spike_up_count} spikes</div>
-                                            <div style={{ fontSize: 12 }}>Down: {volResult.spike_down_count} spikes</div>
-                                        </div>
-                                    </div>
-
-                                    {/* -- Proprietary Source Banner -- */}
-                                    <div style={{
-                                        background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '16px 20px',
-                                        marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, color: '#94a3b8', fontSize: 13, fontWeight: 600
-                                    }}>
-                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', flexShrink: 0 }} />
-                                        <span>Analyzing historical patterns across global markets, volatility indices, and macroeconomic events. Specific components are hidden for proprietary reasons.</span>
-                                    </div>
-
-                                    {/* ── Recent Volatility Events Table ── */}
-                                    <div style={{ background: 'rgba(0,0,0,0.1)', borderRadius: 12, padding: 16, marginBottom: 20, overflowX: 'auto' }}>
-                                        <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Recent Volatility Events (Last 30 Spikes)</h4>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                                    <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>Date</th>
-                                                    <th style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>Type</th>
-                                                    <th style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>Nifty %</th>
-                                                    <th style={{ padding: '8px 10px', textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600 }}>Next Day %</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {volResult.recent_signals.slice().reverse().map((ev: any, i: number) => (
-                                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                                                        <td style={{ padding: '6px 10px', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: 11 }}>{ev.date}</td>
-                                                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                                                            <span style={{
-                                                                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
-                                                                background: ev.signal === 'SPIKE UP' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                                                                color: ev.signal === 'SPIKE UP' ? '#10b981' : '#ef4444'
-                                                            }}>{ev.signal}</span>
-                                                        </td>
-                                                        <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: ev.nifty_return > 0 ? '#10b981' : '#ef4444' }}>
-                                                            {ev.nifty_return > 0 ? '+' : ''}{ev.nifty_return}%
-                                                        </td>
-                                                        <td style={{ padding: '6px 10px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600, color: ev.outcome_next_day != null ? (ev.outcome_next_day > 0 ? '#10b981' : '#ef4444') : '#94a3b8' }}>
-                                                            {ev.outcome_next_day != null ? ((ev.outcome_next_day > 0 ? '+' : '') + ev.outcome_next_day + '%') : '—'}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-
-                                    <div style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'right', marginTop: 12 }}>Generated @ {new Date(volResult.timestamp).toLocaleTimeString()}</div>
-                                </div>
-                            );
-                        })()}
-                    </div>
                 </div>
             )}
         </div>
