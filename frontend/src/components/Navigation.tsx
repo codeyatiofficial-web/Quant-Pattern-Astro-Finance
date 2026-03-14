@@ -154,16 +154,6 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
 
             {/* Desktop: Kite + Theme */}
             <div className="nav-desktop-actions">
-              <a
-                href="/home"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="website-btn"
-              >
-                <span className="website-btn-shine" />
-                <ExternalLink size={11} />
-                <span>Website</span>
-              </a>
               <PlanStatusBadge />
               {isFree && (
                 <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro">
@@ -192,17 +182,6 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
 
             {/* Mobile hamburger + theme */}
             <div className="nav-mobile-actions">
-              <a
-                href="/home"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="website-btn"
-                style={{ padding: '4px 10px', fontSize: 11 }}
-              >
-                <span className="website-btn-shine" />
-                <ExternalLink size={10} />
-                <span>Home</span>
-              </a>
               {isFree && (
                 <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro" style={{ padding: '4px 10px', fontSize: 11, animation: 'none' }}>
                   Upgrade
