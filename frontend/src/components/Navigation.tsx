@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Home, LineChart, PieChart, BarChart2, Calendar, FileText, Menu, X, Link as LinkIcon, CheckCircle2, TrendingUp, Lock, Cpu } from 'lucide-react';
+import { Home, LineChart, PieChart, BarChart2, Calendar, FileText, Menu, X, Link as LinkIcon, CheckCircle2, TrendingUp, Lock, Cpu, ExternalLink } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { PlanStatusBadge } from './UpgradeModal';
 import { usePlan } from '../contexts/PlanContext';
@@ -154,6 +154,20 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
 
             {/* Desktop: Kite + Theme */}
             <div className="nav-desktop-actions">
+              <a
+                href="/home"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  background: 'rgba(99,102,241,0.1)', color: 'var(--accent-indigo)',
+                  border: '1px solid rgba(99,102,241,0.2)', textDecoration: 'none',
+                  transition: 'all 0.2s', whiteSpace: 'nowrap',
+                }}
+              >
+                <ExternalLink size={12} /> Website
+              </a>
               <PlanStatusBadge />
               {isFree && (
                 <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro">
@@ -182,6 +196,19 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
 
             {/* Mobile hamburger + theme */}
             <div className="nav-mobile-actions">
+              <a
+                href="/home"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '4px 9px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                  background: 'rgba(99,102,241,0.1)', color: 'var(--accent-indigo)',
+                  border: '1px solid rgba(99,102,241,0.2)', textDecoration: 'none',
+                }}
+              >
+                <ExternalLink size={11} /> Home
+              </a>
               {isFree && (
                 <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro" style={{ padding: '4px 10px', fontSize: 11, animation: 'none' }}>
                   ✨ Upgrade
