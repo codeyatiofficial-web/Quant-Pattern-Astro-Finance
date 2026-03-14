@@ -116,7 +116,7 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
     window.open(`${backendUrl}/api/kite/redirect`, '_blank');
   };
 
-  const handleNavClick = (link: typeof ALL_LINKS[0]) => {
+  const handleNavClick = (link: { key: Page; eliteOnly?: boolean; proOnly?: boolean; [key: string]: any }) => {
     if (link.eliteOnly && !isElite) {
       setShowUpgrade(true);
       return;
