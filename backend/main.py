@@ -3537,6 +3537,18 @@ def analyze_ticker_heatmap(ticker: str):
         ema21 = float(close.ewm(span=21, adjust=False).mean().iloc[-1])
         momentum = round(((current_price - ema21) / ema21) * 100, 2)
 
+        # Open Interest — sum calls+puts OI from nearest expiry options chain
+        oi_total = 0
+        try:
+            expiries = ticker_obj.options
+            if expiries:
+                chain = ticker_obj.option_chain(expiries[0])
+                calls_oi = int(chain.calls['openInterest'].fillna(0).sum()) if not chain.calls.empty else 0
+                puts_oi = int(chain.puts['openInterest'].fillna(0).sum()) if not chain.puts.empty else 0
+                oi_total = calls_oi + puts_oi
+        except Exception:
+            oi_total = 0
+
         # Composite score (same logic as scanner)
         score = 0
         if rsi_val < 35:
@@ -3577,7 +3589,7 @@ def analyze_ticker_heatmap(ticker: str):
             "change": change_pct,
             "dma": dma,
             "volume": today_volume,
-            "oi": 0,
+            "oi": oi_total,
             "iv": iv,
             "rsi": rsi_val,
             "momentum": momentum,
@@ -3593,10 +3605,10 @@ def get_nifty50_heatmap():
     """Fetch real market data for all Nifty 50 stocks for the heatmap widget."""
     global _heatmap_cache
     try:
-        # Return cached data if fresh (< 60 seconds old)
+        # Return cached data if fresh (< 300 seconds old)
         if _heatmap_cache["data"] and _heatmap_cache["timestamp"]:
             age = (datetime.now() - _heatmap_cache["timestamp"]).total_seconds()
-            if age < 60:
+            if age < 300:
                 return _heatmap_cache["data"]
 
         results = []
