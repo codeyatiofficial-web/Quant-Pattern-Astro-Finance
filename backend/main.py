@@ -3491,7 +3491,33 @@ NIFTY50_META = {
 _heatmap_cache = {"data": None, "timestamp": None}
 
 
-def analyze_ticker_heatmap(ticker: str):
+def fetch_kite_oi_batch() -> dict:
+    """Fetch OI for all Nifty 50 stocks in a single Kite quote() batch call.
+    Returns dict: {symbol_without_ns: oi_int}, e.g. {"TCS": 1234000}
+    Falls back to empty dict if Kite is not authenticated.
+    """
+    try:
+        if not kite_client.is_authenticated():
+            return {}
+        # Build NSE:SYMBOL list from NIFTY_50_TICKERS
+        kite_symbols = []
+        for t in NIFTY_50_TICKERS:
+            sym = t.replace(".NS", "")
+            # Kite uses "BAJAJ-AUTO" but NSE API needs exact symbol; strip only .NS
+            kite_symbols.append(f"NSE:{sym}")
+        quotes = kite_client.kite.quote(kite_symbols)
+        oi_map = {}
+        for ks, qdata in quotes.items():
+            # ks is like "NSE:TCS"
+            sym = ks.replace("NSE:", "")
+            oi_map[sym] = int(qdata.get("oi", 0) or 0)
+        return oi_map
+    except Exception as e:
+        logger.warning(f"Kite batch OI fetch failed: {e}")
+        return {}
+
+
+def analyze_ticker_heatmap(ticker: str, oi_map: dict = None):
     """Analyze a single ticker for heatmap data: LTP, change, DMA, RSI, vol, score."""
     try:
         symbol = ticker.replace(".NS", "")
@@ -3537,17 +3563,10 @@ def analyze_ticker_heatmap(ticker: str):
         ema21 = float(close.ewm(span=21, adjust=False).mean().iloc[-1])
         momentum = round(((current_price - ema21) / ema21) * 100, 2)
 
-        # Open Interest — sum calls+puts OI from nearest expiry options chain
+        # Open Interest — from Kite quote batch (passed in oi_map)
         oi_total = 0
-        try:
-            expiries = ticker_obj.options
-            if expiries:
-                chain = ticker_obj.option_chain(expiries[0])
-                calls_oi = int(chain.calls['openInterest'].fillna(0).sum()) if not chain.calls.empty else 0
-                puts_oi = int(chain.puts['openInterest'].fillna(0).sum()) if not chain.puts.empty else 0
-                oi_total = calls_oi + puts_oi
-        except Exception:
-            oi_total = 0
+        if oi_map:
+            oi_total = oi_map.get(symbol, 0)
 
         # Composite score (same logic as scanner)
         score = 0
@@ -3612,8 +3631,10 @@ def get_nifty50_heatmap():
                 return _heatmap_cache["data"]
 
         results = []
+        # Fetch OI for all 50 stocks in a single Kite batch call
+        oi_map = fetch_kite_oi_batch()
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_ticker = {executor.submit(analyze_ticker_heatmap, t): t for t in NIFTY_50_TICKERS}
+            future_to_ticker = {executor.submit(analyze_ticker_heatmap, t, oi_map): t for t in NIFTY_50_TICKERS}
             for future in concurrent.futures.as_completed(future_to_ticker):
                 res = future.result()
                 if res is not None:
