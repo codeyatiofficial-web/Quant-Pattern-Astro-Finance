@@ -3641,7 +3641,8 @@ async def startup_event():
         "global_bias": 0,
         "pre_market_report": "Not generated yet.",
         "latest_signal": None,
-        "is_active": False
+        "is_active": False,
+        "is_active_algo2": False
     }
     app.state.algo = algo_state
     
@@ -3694,6 +3695,28 @@ def toggle_algo(payload: dict):
         "success": True,
         "is_active": is_active,
         "message": f"Algo execution is now {'active' if is_active else 'paused'}."
+    }
+
+
+@app.post("/api/algo2/toggle")
+def toggle_algo2(payload: dict):
+    """Toggles the live execution of Algo 2 (Correlation Engine) on/off."""
+    if not hasattr(app.state, "algo"):
+        raise HTTPException(status_code=503, detail="Algo subsystem not initialized")
+
+    is_active = payload.get("is_active", False)
+    app.state.algo["is_active_algo2"] = is_active
+
+    state_str = 'ON' if is_active else 'OFF (PAUSED)'
+    logger.info(f"Algo 2 Correlation Engine Toggled: {state_str}")
+
+    from modules.algo.telegram_bot import send_telegram_message
+    send_telegram_message(f"<b>Algo 2 Correlation Engine</b>\nStatus changed to: {state_str}")
+
+    return {
+        "success": True,
+        "is_active": is_active,
+        "message": f"Algo 2 execution is now {'active' if is_active else 'paused'}."
     }
 
 

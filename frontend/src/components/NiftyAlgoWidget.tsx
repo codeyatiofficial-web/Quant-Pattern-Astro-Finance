@@ -26,7 +26,16 @@ function Chip({ label, color, bg }: { label: string; color: string; bg: string }
 function Algo2CorrelationEngine() {
     const [cd, setCd] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [toggling, setToggling] = useState(false);
+    const [isActive, setIsActive] = useState(false);
     const [countdown, setCountdown] = useState(60);
+
+    const fetchStatus2 = async () => {
+        try {
+            const r = await fetch('/api/algo/status');
+            if (r.ok) { const j = await r.json(); setIsActive(j.data?.is_active_algo2 ?? false); }
+        } catch (e) { console.error(e); }
+    };
 
     const fetch2 = async () => {
         setLoading(true);
@@ -37,7 +46,20 @@ function Algo2CorrelationEngine() {
         finally { setLoading(false); setCountdown(60); }
     };
 
+    const toggleAlgo2 = async () => {
+        setToggling(true);
+        try {
+            const r = await fetch('/api/algo2/toggle', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: !isActive }),
+            });
+            if (r.ok) { const j = await r.json(); setIsActive(j.is_active); }
+        } catch (e) { console.error(e); }
+        finally { setToggling(false); }
+    };
+
     useEffect(() => {
+        fetchStatus2();
         fetch2();
         const ri = setInterval(fetch2, 60000);
         const ti = setInterval(() => setCountdown(c => c > 0 ? c - 1 : 0), 1000);
@@ -84,6 +106,13 @@ function Algo2CorrelationEngine() {
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Rolling 90-day correlation · Nasdaq · SP500 · USD/INR · Oil · Gold → Nifty 50 projection</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 5, background: isActive ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.08)', color: isActive ? '#22c55e' : '#94a3b8', border: `1px solid ${isActive ? 'rgba(34,197,94,0.25)' : 'rgba(148,163,184,0.15)'}` }}>
+                            {isActive ? 'LIVE' : 'PAUSED'}
+                        </span>
+                        <button onClick={toggleAlgo2} disabled={toggling}
+                            style={{ padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: toggling ? 'not-allowed' : 'pointer', background: isActive ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)', color: isActive ? '#ef4444' : '#22c55e', border: `1px solid ${isActive ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}` }}>
+                            {toggling ? '...' : isActive ? 'Pause Algo 2' : 'Start Algo 2'}
+                        </button>
                         <button onClick={fetch2} style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>Refresh</button>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{countdown}s</span>
                     </div>
