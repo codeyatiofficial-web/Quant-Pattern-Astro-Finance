@@ -3710,14 +3710,19 @@ def get_nifty50_heatmap():
 # ALGO TRADING SUBSYSTEM
 # ==========================================
 import asyncio
-from modules.algo.scheduler import AlgoScheduler
+try:
+    from modules.algo.scheduler import AlgoScheduler
+    _algo_scheduler_available = True
+except Exception as _algo_import_err:
+    logger.warning(f"AlgoScheduler not available (missing dep?): {_algo_import_err}")
+    AlgoScheduler = None  # type: ignore
+    _algo_scheduler_available = False
 
 algo_scheduler = None
 
 @app.on_event("startup")
 async def startup_event():
     global algo_scheduler
-    logger.info("Initializing AlgoScheduler...")
     
     algo_state = {
         "global_bias": 0,
@@ -3736,7 +3741,12 @@ async def startup_event():
         }
     }
     app.state.algo = algo_state
-    
+
+    if not _algo_scheduler_available:
+        logger.warning("AlgoScheduler skipped (import failed). Algo endpoints will be limited.")
+        return
+
+    logger.info("Initializing AlgoScheduler...")
     app_state_dict = {"algo": algo_state}
     algo_scheduler = AlgoScheduler(app_state=app_state_dict)
     

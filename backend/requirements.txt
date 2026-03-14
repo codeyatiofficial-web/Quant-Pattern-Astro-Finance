@@ -1,2 +1,15 @@
 holidays
 cryptography==42.0.5
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scipy
+yfinance
+kiteconnect
+python-dotenv
+pytz
+ephem
+apscheduler
+ta
+psycopg2-binary
