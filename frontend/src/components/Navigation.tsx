@@ -158,15 +158,11 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
                 href="/home"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                  background: 'rgba(99,102,241,0.1)', color: 'var(--accent-indigo)',
-                  border: '1px solid rgba(99,102,241,0.2)', textDecoration: 'none',
-                  transition: 'all 0.2s', whiteSpace: 'nowrap',
-                }}
+                className="website-btn"
               >
-                <ExternalLink size={12} /> Website
+                <span className="website-btn-shine" />
+                <ExternalLink size={11} />
+                <span>Website</span>
               </a>
               <PlanStatusBadge />
               {isFree && (
@@ -200,14 +196,12 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
                 href="/home"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '4px 9px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                  background: 'rgba(99,102,241,0.1)', color: 'var(--accent-indigo)',
-                  border: '1px solid rgba(99,102,241,0.2)', textDecoration: 'none',
-                }}
+                className="website-btn"
+                style={{ padding: '4px 10px', fontSize: 11 }}
               >
-                <ExternalLink size={11} /> Home
+                <span className="website-btn-shine" />
+                <ExternalLink size={10} />
+                <span>Home</span>
               </a>
               {isFree && (
                 <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro" style={{ padding: '4px 10px', fontSize: 11, animation: 'none' }}>
