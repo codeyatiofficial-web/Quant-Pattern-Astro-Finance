@@ -15,12 +15,7 @@
   let isOpen = false;
   let messages = [];
   let loading = false;
-  let quickPrompts = [
-    "How accurate is the platform?",
-    "Can you build me a custom trading bot?",
-    "Do you develop custom websites or apps?",
-    "What is the Pricing?",
-  ];
+  let quickPrompts = [];
 
   //  Inject CSS 
   const style = document.createElement('style');
@@ -148,7 +143,7 @@
     [data-theme="light"] .tara-input { background: rgba(0,0,0,0.05); color: #111; border-color: rgba(0,0,0,0.2); }
     .tara-send {
       padding: 10px 16px; border-radius: 12px; font-size: 14px; border: none;
-      background: linear-gradient(135deg, #f6d365, #fda085); color: #111; font-weight: 800;
+      background: #f6d365; color: #111; font-weight: 800;
       cursor: pointer; transition: all 0.2s;
     }
     .tara-send:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -174,15 +169,7 @@
     bubble.onclick = toggle;
     document.body.appendChild(bubble);
 
-    // Tooltip
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tara-tooltip';
-    tooltip.id = 'taraTooltip';
-    tooltip.innerHTML = `
-      <div class="tara-tooltip-title"> Kuber — AI Sales & Growth Rep</div>
-      <div class="tara-tooltip-sub">Ask me how we can scale your trading edge!</div>
-    `;
-    document.body.appendChild(tooltip);
+    // Tooltip removed
 
     // Chat window
     const chat = document.createElement('div');
@@ -233,13 +220,13 @@
       bubble.classList.add('open');
       bubble.innerHTML = `<span class="close-x">X</span>`;
       chat.classList.add('open');
-      tooltip.style.display = 'none';
+      if (tooltip) tooltip.style.display = 'none';
       document.getElementById('taraInput').focus();
     } else {
       bubble.classList.remove('open');
       bubble.innerHTML = `<img src="images/kuber-avatar.png" alt="Kuber" />`;
       chat.classList.remove('open');
-      if (messages.length === 0) tooltip.style.display = 'block';
+      if (messages.length === 0 && tooltip) tooltip.style.display = 'block';
     }
     bubble.onclick = toggle;
   }

@@ -203,24 +203,15 @@ img {
 }
 
 .text-gradient {
-  background: var(--gradient-hero);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
 }
 
 .text-gradient-blue {
-  background: var(--gradient-blue);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--blue-primary);
 }
 
 .text-gradient-gold {
-  background: var(--gradient-gold);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--gold-primary);
 }
 
 .glass-card {
@@ -1016,11 +1007,11 @@ img {
 }
 
 .stat-card:nth-child(3)::before {
-  background: linear-gradient(135deg, var(--cyan-accent), var(--green-accent));
+  background: var(--green-accent);
 }
 
 .stat-card:nth-child(4)::before {
-  background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary));
+  background: var(--blue-primary);
 }
 
 .stat-icon {
@@ -1117,8 +1108,8 @@ img {
   background: linear-gradient(90deg,
       transparent,
       rgba(244, 209, 220, 0.3),
-      rgba(118, 75, 162, 0.3),
-      rgba(246, 211, 101, 0.3),
+      rgba(244, 209, 220, 0.3),
+      rgba(244, 209, 220, 0.3),
       transparent);
 }
 
@@ -1149,21 +1140,33 @@ img {
 }
 
 .step-card:nth-child(1) .step-number {
-  background: linear-gradient(135deg, rgba(244, 209, 220, 0.2), rgba(244, 209, 220, 0.05));
+  background: rgba(244, 209, 220, 0.1);
   border: 2px solid rgba(244, 209, 220, 0.4);
   color: var(--blue-light);
 }
 
 .step-card:nth-child(2) .step-number {
-  background: linear-gradient(135deg, rgba(118, 75, 162, 0.2), rgba(118, 75, 162, 0.05));
+  background: rgba(118, 75, 162, 0.1);
   border: 2px solid rgba(118, 75, 162, 0.4);
   color: #c89eff;
 }
 
 .step-card:nth-child(3) .step-number {
-  background: linear-gradient(135deg, rgba(246, 211, 101, 0.2), rgba(246, 211, 101, 0.05));
+  background: rgba(246, 211, 101, 0.1);
   border: 2px solid rgba(246, 211, 101, 0.4);
   color: var(--gold-primary);
+}
+
+.step-card:nth-child(4) .step-number {
+  background: rgba(105, 240, 174, 0.1);
+  border: 2px solid rgba(105, 240, 174, 0.4);
+  color: var(--green-accent);
+}
+
+.step-card:nth-child(5) .step-number {
+  background: rgba(0, 188, 212, 0.1);
+  border: 2px solid rgba(0, 188, 212, 0.4);
+  color: var(--cyan-accent);
 }
 
 [data-theme="light"] .step-card:nth-child(2) .step-number {
@@ -1172,6 +1175,14 @@ img {
 
 [data-theme="light"] .step-card:nth-child(3) .step-number {
   color: #b8860b;
+}
+
+[data-theme="light"] .step-card:nth-child(4) .step-number {
+  color: #2e7d32;
+}
+
+[data-theme="light"] .step-card:nth-child(5) .step-number {
+  color: #00838f;
 }
 
 .step-icon {
@@ -1363,11 +1374,11 @@ img {
 }
 
 .service-card:nth-child(3)::after {
-  background: linear-gradient(135deg, var(--green-accent), var(--cyan-accent));
+  background: var(--green-accent);
 }
 
 .service-card:nth-child(4)::after {
-  background: linear-gradient(135deg, var(--purple-primary), var(--blue-primary));
+  background: var(--blue-primary);
 }
 
 .service-icon {
@@ -1788,6 +1799,20 @@ img {
   .hero-stats-mini {
     gap: 24px;
     flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .cta-row-animated {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .cta-row-animated .btn-primary, 
+  .cta-row-animated .btn-outline {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
   }
 
   .steps-container {
@@ -1810,9 +1835,19 @@ img {
 
   .services-grid {
     grid-template-columns: 1fr;
-    max-width: 400px;
+    max-width: 100%;
     margin-left: auto;
     margin-right: auto;
+  }
+
+  .bento-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+
+  .bento-grid .bento-featured {
+    grid-column: span 1;
+    grid-row: span 1;
   }
 
   .form-row {
@@ -1849,7 +1884,15 @@ img {
   }
 
   .stat-value {
-    font-size: 2.4rem;
+    font-size: 2.2rem;
+  }
+
+  .headline {
+    font-size: clamp(2.2rem, 8vw, 3rem);
+  }
+
+  .step-card, .testimonial-card, .service-card {
+    padding: 24px 20px;
   }
 }
 /* --- ANIMATED HERO REWRITE --- */

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quant-Pattern — Pricing | Algo Trading for Nifty</title>
+  <meta name="description"
+    content="Simple pricing for India's most affordable algo trading system for Nifty 50 weekly options." />
+  <meta name="keywords"
+    content="quant pattern pricing, algo trading cost, stock market prediction, data analytics" />
+  <link rel="icon" href="../images/logo.png" type="image/png" />
+  <!-- Use absolute path to the main style.css to reuse existing styles -->
+  <link rel="stylesheet" href="../style.css" />
+</head>
+
+<body>
+
+  <!--  Animated Star Background  -->
+  <div class="stars-container"></div>
+
+  <!--  NAVBAR  -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="nav-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 170" width="68" height="68">
+          <defs>
+            <linearGradient id="qGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#4ea8c7" />
+              <stop offset="100%" stop-color="#f4d1dc" />
+            </linearGradient>
+          </defs>
+          <g transform="translate(10,15)">
+            <path d="M60 20A70 70 0 1 0 140 120" fill="none" stroke="url(#qGrad)" stroke-width="12"
+              stroke-linecap="round" />
+            <rect x="45" y="80" width="12" height="35" fill="#f4d1dc" rx="3" />
+            <rect x="70" y="50" width="12" height="65" fill="#4ea8c7" rx="3" />
+            <rect x="95" y="65" width="12" height="50" fill="#34d399" rx="3" />
+            <path d="M25 120L135 15" fill="none" stroke="#6ee7b7" stroke-width="14" stroke-linecap="round" />
+            <polygon points="115,15 145,5 135,35" fill="#6ee7b7" />
+            <circle cx="15" cy="90" r="7" fill="#6ee7b7" />
+            <circle cx="45" cy="35" r="7" fill="#4ea8c7" />
+            <circle cx="115" cy="150" r="7" fill="#f4d1dc" />
+          </g>
+        </svg>
+        <span>Quant-<span class="text-gradient-blue">Pattern</span></span>
+      </a>
+
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/#performance">Performance</a></li>
+        <li><a href="/#how-it-works">How It Works</a></li>
+        <li><a href="/#testimonials">Testimonials</a></li>
+        <li><a href="/#services">Services</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/#contact">Get a Quote</a></li>
+        <li>
+          <!-- Theme Toggle -->
+          <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark mode" title="Switch theme">
+            <span class="theme-toggle-thumb">
+              <span id="themeIcon"></span>
+            </span>
+          </button>
+        </li>
+        <li>
+          <a href="https://app.quant-pattern.com/" target="_blank" class="btn-primary" id="cta-nav">
+            Start Algo Trading ₹2,000/month
+          </a>
+        </li>
+      </ul>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!--  PRICING HEADER  -->
+  <section class="section" style="padding-top: 150px; text-align: center;">
+    <div class="container">
+      <h1 class="headline" style="font-size: 3rem; margin-bottom: 24px;">
+        <span class="line"><span class="line-inner">Simple Pricing. No Hidden Charges.</span></span>
+        <span class="line"><span class="line-inner accent"><span class="accent-underline text-gradient-gold">Built for Every Indian Trader.</span></span></span>
+      </h1>
+      <p class="subtext" style="max-width: 800px; margin: 0 auto;">
+        Whether you want full automation or custom strategy — we have one plan for you.<br/>
+        All plans include Greeks analysis on every trade, Telegram alerts and WhatsApp support.
+      </p>
+    </div>
+  </section>
+
+  <!--  PRICING CARDS  -->
+  <section class="section" id="pricing-cards" style="padding-top: 0;">
+    <div class="container">
+      <div class="services-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: start;">
+        
+        <!-- CARD 1 -->
+        <div class="service-card glass-card fade-in" style="padding: 40px 32px; position: relative;">
+          <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: var(--blue-light); color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Most Popular</div>
+          <h3 class="service-title text-gradient-blue" style="font-size: 1.5rem; text-align: center; margin-bottom: 8px;">ALGO CONNECT</h3>
+          <div style="text-align: center; margin-bottom: 8px;">
+            <span style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary);">₹2,000</span>
+            <span style="color: var(--text-secondary);">/month</span>
+          </div>
+          <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 32px;">Cancel anytime</p>
+          
+          <ul class="service-features" style="margin-bottom: 40px;">
+            <li>Auto trade on Nifty 50 weekly options</li>
+            <li>Greeks checked before every trade entry</li>
+            <li>Delta filtered strike selection always</li>
+            <li>Maximum 2 trades per day</li>
+            <li>Telegram alert with Delta and IV Rank</li>
+            <li>Entry Target Stop Loss auto-set</li>
+            <li>Daily pre-market global analysis at 9 AM</li>
+            <li>End of day performance report</li>
+            <li>Supports Zerodha Fyers Upstox</li>
+            <li>WhatsApp support</li>
+          </ul>
+          
+          <div style="text-align: center;">
+            <a href="https://app.quant-pattern.com/" target="_blank" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px 24px;">Start Algo Trading</a>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 16px;">Minimum ₹50,000 broker account</p>
+          </div>
+        </div>
+
+        <!-- CARD 2 -->
+        <div class="service-card glass-card fade-in border-gradient" style="padding: 40px 32px; position: relative; transform: scale(1.02); z-index: 2;">
+          <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: var(--gold-light); color: #000; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Best Value</div>
+          <h3 class="service-title text-gradient-gold" style="font-size: 1.5rem; text-align: center; margin-bottom: 8px;">CUSTOM DASHBOARD</h3>
+          <div style="text-align: center; margin-bottom: 8px;">
+            <span style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary);">₹3,000</span>
+            <span style="color: var(--text-secondary);">/year</span>
+          </div>
+          <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 32px;">Less than ₹250 per month</p>
+          
+          <ul class="service-features" style="margin-bottom: 40px;">
+            <li><strong style="color:var(--text-primary);">Everything in Algo Connect</strong></li>
+            <li>Personal login dashboard</li>
+            <li>Your complete trade history with Greeks</li>
+            <li>Delta Gamma Theta Vega breakdown per trade</li>
+            <li>PnL analytics and charts</li>
+            <li>Custom signal preferences</li>
+            <li>Backtesting on your parameters</li>
+            <li>Priority support response</li>
+            <li>Algo performance vs manual benchmark</li>
+          </ul>
+          
+          <div style="text-align: center;">
+            <a href="https://app.quant-pattern.com/" target="_blank" class="btn-primary" style="width: 100%; justify-content: center; padding: 14px 24px; background: linear-gradient(135deg, var(--gold-light), #e6b981); color: #000;">Get Custom Dashboard</a>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 16px;">One time annual payment</p>
+          </div>
+        </div>
+
+        <!-- CARD 3 -->
+        <div class="service-card glass-card fade-in" style="padding: 40px 32px; position: relative;">
+          <div style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.1); color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.2);">For Serious Traders</div>
+          <h3 class="service-title" style="font-size: 1.5rem; text-align: center; margin-bottom: 8px; color: var(--text-primary);">ALGO CUSTOMISATION</h3>
+          <div style="text-align: center; margin-bottom: 8px;">
+            <span style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary);">₹2,000</span>
+            <span style="color: var(--text-secondary);">/custom</span>
+          </div>
+          <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 32px;">One time charge</p>
+          
+          <ul class="service-features" style="margin-bottom: 40px;">
+            <li>Full algo parameter customisation</li>
+            <li>Your Delta threshold preference configured</li>
+            <li>Your IV Rank entry filter adjusted</li>
+            <li>Your risk appetite configured</li>
+            <li>Your capital size optimised</li>
+            <li>Your preferred time windows set</li>
+            <li>Global signal weights adjusted</li>
+            <li>Delivered in 48 hours</li>
+            <li>One month dedicated support included</li>
+            <li>Works with any existing plan</li>
+          </ul>
+          
+          <div style="text-align: center;">
+            <a href="https://wa.me/919193112255" target="_blank" class="btn-outline" style="width: 100%; justify-content: center; padding: 14px 24px;">Request Customisation</a>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 16px;">Requires active Algo Connect plan</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST SECTION -->
+  <section class="section" style="padding-top: 0; padding-bottom: 80px;">
+    <div class="container">
+      <div class="glass-card fade-in" style="padding: 32px; text-align: center; max-width: 800px; margin: 0 auto; background: rgba(20, 20, 25, 0.4);">
+        <h4 style="color: var(--text-primary); font-size: 1.2rem; margin-bottom: 24px;">All plans include:</h4>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 16px 32px; color: var(--text-secondary); font-size: 1.05rem;">
+          <div style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--blue-light);"></span> Greeks analysis on every single trade</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--blue-light);"></span> Your funds stay in your broker always</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--blue-light);"></span> SEBI compliant API trading only</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--blue-light);"></span> Cancel or pause anytime</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--blue-light);"></span> No profit sharing or hidden fees</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><span style="color: var(--blue-light);"></span> Supports Zerodha Fyers and Upstox</div>
+          <div style="display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; margin-top: 8px; color: var(--text-primary);"><span style="color: var(--gold-light);"></span> Built and supported from New Delhi India</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!--  FOOTER  -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="nav-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 170" width="60" height="60">
+              <defs>
+                <linearGradient id="qGradF" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4ea8c7" />
+                  <stop offset="100%" stop-color="#f4d1dc" />
+                </linearGradient>
+              </defs>
+              <g transform="translate(10,15)">
+                <path d="M60 20A70 70 0 1 0 140 120" fill="none" stroke="url(#qGradF)" stroke-width="12"
+                  stroke-linecap="round" />
+                <rect x="45" y="80" width="12" height="35" fill="#f4d1dc" rx="3" />
+                <rect x="70" y="50" width="12" height="65" fill="#4ea8c7" rx="3" />
+                <rect x="95" y="65" width="12" height="50" fill="#34d399" rx="3" />
+                <path d="M25 120L135 15" fill="none" stroke="#6ee7b7" stroke-width="14" stroke-linecap="round" />
+                <polygon points="115,15 145,5 135,35" fill="#6ee7b7" />
+                <circle cx="15" cy="90" r="7" fill="#6ee7b7" />
+                <circle cx="45" cy="35" r="7" fill="#4ea8c7" />
+                <circle cx="115" cy="150" r="7" fill="#f4d1dc" />
+              </g>
+            </svg>
+            <span>Quant-<span class="text-gradient-blue">Pattern</span></span>
+          </a>
+          <p>
+            Pioneering the intersection of Vedic astrology and quantitative market analysis. Building the future of
+            data-driven trading decisions.
+          </p>
+          <p style="margin-top:12px;font-size:0.8rem;line-height:1.6;">
+            A-119-120, Upper Ground Floor, Front Portion,<br>
+            Sharda Puri, Ramesh Nagar, New Delhi-110015<br>
+            <a href="tel:+919193112255" style="color:var(--blue-light)">+91 9193112255</a><br>
+            <a href="mailto:quant0pattern@gmail.com" style="color:var(--blue-light)">quant0pattern@gmail.com</a>
+          </p>
+          <div class="footer-social">
+            <a href="#" class="social-icon" aria-label="Twitter"></a>
+            <a href="#" class="social-icon" aria-label="LinkedIn">in</a>
+            <a href="#" class="social-icon" aria-label="YouTube"></a>
+            <a href="#" class="social-icon" aria-label="Telegram"></a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Product</h4>
+          <ul class="footer-links">
+            <li><a href="https://app.quant-pattern.com/" target="_blank">Launch App</a></li>
+            <li><a href="/#performance">Performance</a></li>
+            <li><a href="/#how-it-works">How It Works</a></li>
+            <li><a href="/#testimonials">Testimonials</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Services</h4>
+          <ul class="footer-links">
+            <li><a href="/#services">Web Development</a></li>
+            <li><a href="/#services">Mobile Apps</a></li>
+            <li><a href="/#services">Analytics Platforms</a></li>
+            <li><a href="/#services">Custom Software</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-title">Company</h4>
+          <ul class="footer-links">
+            <li><a href="/#contact">Contact Us</a></li>
+            <li><a href="../privacy-policy.html">Privacy Policy</a></li>
+            <li><a href="../terms.html">Terms of Service</a></li>
+            <li><a href="../disclaimer.html">Disclaimer</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2025 Quant Pattern by CodeYati. All rights reserved.</span>
+        <span>Made with in India</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../script.js"></script>
+  <script src="../tara-chat.js"></script>
+  <script>
+    // Spotlight Effect for Glass Cards
+    document.addEventListener('mousemove', e => {
+      const cards = document.querySelectorAll('.glass-card');
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+      }
+    });
+  </script>
+</body>
+
+</html>
