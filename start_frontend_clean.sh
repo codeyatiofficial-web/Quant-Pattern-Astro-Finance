@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /Users/anitarawat/nakshatranse/frontend || exit 1
+cd "$(dirname "$0")/frontend" || exit 1
 pkill -9 -f "next dev" || true
 pkill -9 "node" || true
 rm -rf .next

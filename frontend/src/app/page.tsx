@@ -10,12 +10,14 @@ import SentimentVix from '@/components/SentimentVix';
 import EconomicEvents from '@/components/EconomicEvents';
 import DerivativesDashboard from '@/components/DerivativesDashboard';
 import AIChatbot from '@/components/AIChatbot';
+import Settings from '@/components/Settings';
+import NiftyAlgoWidget from '@/components/NiftyAlgoWidget';
 import { usePlan } from '@/contexts/PlanContext';
 
 // Pages that require Pro or Elite
 const PRO_PAGES: Page[] = ['correlation', 'sentiment'];
 // Pages that require Elite
-const ELITE_PAGES: Page[] = ['nakshatra'];
+const ELITE_PAGES: Page[] = ['nakshatra', 'algo', 'settings'];
 
 export default function AstroFinanceApp() {
   const [page, setPage] = useState<Page>('dashboard');
@@ -97,7 +99,12 @@ export default function AstroFinanceApp() {
         {page === 'correlation' && !isFree && <AstroCorrelation />}
         {page === 'sentiment' && !isFree && <SentimentVix />}
         {page === 'events' && <EconomicEvents />}
-        {page === 'derivatives' && <DerivativesDashboard />}
+        {page === 'algo' && (
+          <div className="w-full max-w-5xl mx-auto h-[80vh]">
+            <NiftyAlgoWidget />
+          </div>
+        )}
+        {page === 'settings' && <Settings />}
       </main>
 
       {/* AI Trading Assistant — accessible from all pages with live market context */}

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Home, LineChart, PieChart, BarChart2, Calendar, FileText, Menu, X, Link as LinkIcon, CheckCircle2, TrendingUp, Lock } from 'lucide-react';
+import { Home, LineChart, PieChart, BarChart2, Calendar, FileText, Menu, X, Link as LinkIcon, CheckCircle2, TrendingUp, Lock, Cpu } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { PlanStatusBadge } from './UpgradeModal';
 import { usePlan } from '../contexts/PlanContext';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 function Logo() {
   return (
@@ -37,7 +37,7 @@ function Logo() {
   );
 }
 
-export type Page = 'dashboard' | 'nakshatra' | 'technical' | 'correlation' | 'sentiment' | 'events' | 'derivatives';
+export type Page = 'dashboard' | 'nakshatra' | 'technical' | 'correlation' | 'sentiment' | 'events' | 'derivatives' | 'algo' | 'settings';
 
 const ALL_LINKS: { key: Page; label: string; fullName: string; icon: any; proOnly?: boolean; eliteOnly?: boolean }[] = [
   { key: 'dashboard', label: 'Dashboard', fullName: 'Dashboard', icon: Home },
@@ -47,6 +47,8 @@ const ALL_LINKS: { key: Page; label: string; fullName: string; icon: any; proOnl
   { key: 'sentiment', label: 'Predictions', fullName: 'Daily Predictions', icon: Calendar, proOnly: true },
   { key: 'events', label: 'Events', fullName: 'Economic Events', icon: FileText },
   { key: 'correlation', label: 'Signal Correlation', fullName: 'Signal Correlation', icon: PieChart, proOnly: true },
+  { key: 'algo', label: 'Algo trading', fullName: 'Algo trading', icon: Cpu, eliteOnly: true },
+  { key: 'settings', label: 'Settings', fullName: 'Settings', icon: Menu, eliteOnly: true }, // or another icon like Settings if imported
 ];
 
 interface NavigationProps {

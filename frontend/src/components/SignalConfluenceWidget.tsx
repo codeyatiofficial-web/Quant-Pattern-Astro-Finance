@@ -2,8 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePlan } from '../contexts/PlanContext';
 
-const TIMEFRAMES = ['1m', '3m', '5m', '15m', '30m', '1H'];
-
 const SIGNAL_METRICS = [
     { id: 'pcr', name: 'PCR', bull: '> 1.2', bear: '< 0.8' },
     { id: 'fii', name: 'FII Futures', bull: 'Net Long', bear: 'Net Short' },
@@ -16,9 +14,8 @@ const SIGNAL_METRICS = [
     { id: 'maxpain', name: 'Max Pain', bull: 'Below MP', bear: 'Above MP' },
     { id: 'breadth', name: 'Breadth A/D', bull: '> 35/15', bear: '< 15/35' },
 ];
-
 export default function SignalConfluenceWidget() {
-    const [tf, setTf] = useState('15m');
+    const tf = '15m'; // using a fixed timeframe
     const [loading, setLoading] = useState(false);
     
     // For demo purposes, we generate a mock state based on TF
@@ -43,9 +40,9 @@ export default function SignalConfluenceWidget() {
                 setLoading(false);
             });
     }, [tf]);
-
+    
     const { tier } = usePlan();
-    const isLocked = tier !== 'elite';
+    const isLocked = false; // Made available for all users
 
     let recommendation = '';
     let recColor = '';
@@ -68,66 +65,11 @@ export default function SignalConfluenceWidget() {
                         NIFTY 50 Signal Confluence
                     </h2>
                 </div>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                    {/* Timeframe Selector */}
-                    <div style={{ display: 'flex', gap: 6, background: 'rgba(0,0,0,0.2)', padding: 4, borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                        {TIMEFRAMES.map(t => (
-                            <button 
-                                key={t}
-                                onClick={() => setTf(t)}
-                                disabled={isLocked}
-                                style={{
-                                    padding: '6px 14px',
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    borderRadius: 6,
-                                    background: tf === t ? 'var(--accent-indigo)' : 'transparent',
-                                    color: tf === t ? '#fff' : 'var(--text-muted)',
-                                    border: 'none',
-                                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s',
-                                    boxShadow: tf === t ? '0 2px 8px rgba(79, 70, 229, 0.4)' : 'none',
-                                    opacity: isLocked ? 0.5 : 1
-                                }}
-                            >
-                                {t}
-                            </button>
-                        ))}
-                    </div>
-                </div>
             </div>
 
             <div style={{ position: 'relative' }}>
                 {/* Paywall Overlay */}
-                {isLocked && (
-                    <div style={{
-                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-                        zIndex: 10, display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', borderRadius: 12,
-                        border: '1px solid rgba(139, 92, 246, 0.3)',
-                        padding: 32, textAlign: 'center'
-                    }}>
-                        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-                        <h3 style={{ fontSize: 24, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Elite Exclusive Feature</h3>
-                        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', maxWidth: 400, marginBottom: 24 }}>
-                            Unlock our proprietary 10-point internal Signal Confluence Scoring System. Stop guessing and let algorithms compute your trade confidence in real-time.
-                        </p>
-                        <button
-                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                            style={{
-                                background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-                                color: '#fff', border: 'none', padding: '12px 24px',
-                                borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer',
-                                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.4)'
-                            }}
-                        >
-                            UPGRADE TO ELITE
-                        </button>
-                    </div>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, filter: isLocked ? 'blur(4px)' : 'none', opacity: isLocked ? 0.3 : 1, transition: 'all 0.3s' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, transition: 'all 0.3s' }}>
                     {/* Score Section */}
                     <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: 12, padding: 20, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', position: 'relative' }}>
                         <div style={{ position: 'relative', width: 140, height: 140, marginBottom: 16 }}>
@@ -154,7 +96,7 @@ export default function SignalConfluenceWidget() {
                         <table className="data-table" style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                    <th style={{ textAlign: 'left', paddingBottom: 10, color: 'var(--text-muted)' }}>Signal ({tf})</th>
+                                    <th style={{ textAlign: 'left', paddingBottom: 10, color: 'var(--text-muted)' }}>Signal</th>
                                     <th style={{ textAlign: 'center', paddingBottom: 10, color: '#4ade80' }}>Bullish +1</th>
                                     <th style={{ textAlign: 'center', paddingBottom: 10, color: '#f87171' }}>Bearish +1</th>
                                     <th style={{ textAlign: 'center', paddingBottom: 10, color: 'var(--text-muted)' }}>State</th>
@@ -176,7 +118,7 @@ export default function SignalConfluenceWidget() {
                                                 {st === 0 && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />}
                                             </td>
                                         </tr>
-                                    )
+                                    );
                                 })}
                             </tbody>
                         </table>

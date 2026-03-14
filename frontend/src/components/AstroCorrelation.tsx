@@ -6,7 +6,7 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 function ReturnCell({ v }: { v: number | null }) {
     if (v == null) return <span style={{ color: 'var(--text-muted)' }}>—</span>;

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePlanGate } from './UpgradeModal';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 //  Tiny helper components 
 function Spinner() {

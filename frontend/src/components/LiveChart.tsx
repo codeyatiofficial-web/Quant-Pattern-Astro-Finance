@@ -6,7 +6,7 @@ import {
 } from 'lightweight-charts';
 import type { IChartApi, Time } from 'lightweight-charts';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 //  Interval / period config 
 const INTERVALS = [

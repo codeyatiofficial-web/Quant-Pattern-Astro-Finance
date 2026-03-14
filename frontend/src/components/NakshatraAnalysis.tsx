@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { usePlanGate } from './UpgradeModal';
 import CosmicSnapshotWidget from './CosmicSnapshotWidget';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 const US_SYMBOLS = new Set([
     '^IXIC', '^GSPC', '^DJI', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META',

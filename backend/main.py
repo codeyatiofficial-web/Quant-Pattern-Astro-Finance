@@ -97,6 +97,17 @@ class AuthRequest(BaseModel):
 class TokenCheckRequest(BaseModel):
     token: str
 
+class BrokerConfigRequest(BaseModel):
+    token: str
+    broker_name: str
+    api_key: str
+    api_secret: str
+
+class BrokerPreferenceRequest(BaseModel):
+    token: str
+    is_active: bool
+    trade_multiplier: float
+
 class TradeRequest(BaseModel):
     symbols: List[str]
     planets: List[str]
@@ -416,6 +427,54 @@ def get_current_user(payload: TokenCheckRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return {"success": True, "email": user["email"]}
+
+@app.post("/api/user/broker/config")
+def save_user_broker_config(payload: BrokerConfigRequest):
+    user = auth_engine.get_user_from_token(payload.token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        
+    success = auth_engine.save_broker_config(
+        user["id"], 
+        payload.broker_name, 
+        payload.api_key, 
+        payload.api_secret
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to save broker config securely")
+    return {"success": True, "message": "Broker config saved"}
+
+@app.post("/api/user/broker/preference")
+def update_user_broker_pref(payload: BrokerPreferenceRequest):
+    user = auth_engine.get_user_from_token(payload.token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+        
+    success = auth_engine.update_broker_status(
+        user["id"],
+        payload.is_active,
+        None,
+        payload.trade_multiplier
+    )
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update preference")
+    return {"success": True, "message": "Preferences updated"}
+
+@app.post("/api/user/broker/status")
+def get_user_broker_status(payload: TokenCheckRequest):
+    user = auth_engine.get_user_from_token(payload.token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+        
+    config = auth_engine.get_broker_config(user["id"])
+    if not config:
+        return {"success": True, "config": None}
+        
+    # Mask api string for frontend security
+    config["api_key"] = config["api_key"][:4] + ("*" * 10) if config["api_key"] else ""
+    config["api_secret"] = ("*" * 15) if config["api_secret"] else ""
+    
+    return {"success": True, "config": config}
 
 @app.get("/api/admin/users/export")
 def export_users():
@@ -2029,6 +2088,8 @@ def get_live_prediction(market: str = "NSE"):
     """
     import pandas as pd
     import numpy as np
+    from modules.magnitude_calculator import compute_magnitude
+    from modules.algo.telegram_bot import send_magnitude_signal
 
     target_symbol = "^NSEI" if market == "NSE" else "^IXIC"
     predictors = {
@@ -2093,8 +2154,38 @@ def get_live_prediction(market: str = "NSE"):
                  current_values[name] = round(sym_df['close'].iloc[-1], 2)
 
         target_latest = target_data['close'].iloc[-1] if not target_data.empty else 0
+        
+        # Try to get live exact price from Kite so the chart matches perfectly
+        try:
+            if target_symbol == "^NSEI" and kite_client.is_authenticated():
+                live_df = kite_client.fetch_historical_data("^NSEI", interval="minute", days_back=1)
+                if not live_df.empty:
+                    target_latest = float(live_df['close'].iloc[-1])
+        except Exception as e:
+            logger.warning(f"Failed to fetch live Kite price for magnitude: {e}")
 
-        return {
+        # Calculate Magnitude Forecast
+        # Scale the score into 0-100 format for magnitude
+        normalized_score = min(abs(score) * 40, 99) # Approx 0-100 mapping based on raw correlation sum
+        
+        # TEMPORARY OVERRIDE FOR TESTING MAGNITUDE UI
+        prediction_bias = "Bullish"
+        normalized_score = 85.0
+        
+        mag_result = compute_magnitude(prediction_bias.upper(), normalized_score, target_latest)
+        
+        # Trigger Telegram alert if strong signal and not sent in last 14 minutes
+        if not hasattr(get_live_prediction, "last_alert_time"):
+            get_live_prediction.last_alert_time = datetime.min
+        
+        time_since_alert = (datetime.now() - get_live_prediction.last_alert_time).total_seconds()
+        if prediction_bias != "Neutral" and normalized_score >= 60 and time_since_alert > 840: # 14 mins
+            # Send alert
+            send_magnitude_signal(mag_result)
+            get_live_prediction.last_alert_time = datetime.now()
+
+        # Merge response
+        response = {
             "prediction": prediction_bias,
             "confidence": round(confidence, 1),
             "score": round(score, 3),
@@ -2106,6 +2197,11 @@ def get_live_prediction(market: str = "NSE"):
             "current_values": current_values,
             "timestamp": datetime.now().isoformat()
         }
+        
+        # Merge the magnitude calculator outputs directly into response
+        response.update(mag_result)
+        
+        return response
     except Exception as e:
         logger.error(f"Live prediction error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -3467,9 +3563,80 @@ def get_nifty50_heatmap():
         _heatmap_cache = {"data": response, "timestamp": datetime.now()}
         return response
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Nifty 50 heatmap error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ==========================================
+# ALGO TRADING SUBSYSTEM
+# ==========================================
+import asyncio
+from modules.algo.scheduler import AlgoScheduler
+
+algo_scheduler = None
+
+@app.on_event("startup")
+async def startup_event():
+    global algo_scheduler
+    logger.info("Initializing AlgoScheduler...")
+    
+    algo_state = {
+        "global_bias": 0,
+        "pre_market_report": "Not generated yet.",
+        "latest_signal": None,
+        "is_active": False
+    }
+    app.state.algo = algo_state
+    
+    app_state_dict = {"algo": algo_state}
+    algo_scheduler = AlgoScheduler(app_state=app_state_dict)
+    
+    try:
+        algo_scheduler.setup_jobs()
+        algo_scheduler.start()
+        logger.info("AlgoScheduler started in background.")
+    except Exception as e:
+        logger.error(f"Failed to start AlgoScheduler: {e}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global algo_scheduler
+    if algo_scheduler:
+        try:
+            algo_scheduler.stop()
+            logger.info("AlgoScheduler shut down cleanly.")
+        except Exception as e:
+            logger.error(f"Error shutting down AlgoScheduler: {e}")
+
+@app.get("/api/algo/status")
+def get_algo_status():
+    """Returns the current state of the Algo (Global bias, last signal)."""
+    if not hasattr(app.state, "algo"):
+        raise HTTPException(status_code=503, detail="Algo subsystem not initialized")
+    return {
+        "success": True,
+        "data": app.state.algo
+    }
+
+@app.post("/api/algo/toggle")
+def toggle_algo(payload: dict):
+    """Toggles the live execution of the algo on/off."""
+    if not hasattr(app.state, "algo"):
+        raise HTTPException(status_code=503, detail="Algo subsystem not initialized")
+        
+    is_active = payload.get("is_active", False)
+    app.state.algo["is_active"] = is_active
+    
+    state_str = '🟢 ON' if is_active else '🔴 OFF (PAUSED)'
+    logger.info(f"Algo Execution Toggled: {state_str}")
+    
+    from modules.algo.telegram_bot import send_telegram_message
+    send_telegram_message(f"<b>Nifty Options Algo</b>\nStatus changed to: {state_str}")
+    
+    return {
+        "success": True,
+        "is_active": is_active,
+        "message": f"Algo execution is now {'active' if is_active else 'paused'}."
+    }
+
 

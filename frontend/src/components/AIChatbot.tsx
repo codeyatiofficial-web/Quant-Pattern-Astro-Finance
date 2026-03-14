@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 interface Message {
     role: 'user' | 'assistant';

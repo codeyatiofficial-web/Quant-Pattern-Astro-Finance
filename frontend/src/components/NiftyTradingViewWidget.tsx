@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, memo } from 'react';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 interface Candle {
     time: string;
@@ -24,11 +24,24 @@ interface CandleData {
 
 function NiftyCandleChart() {
     const [data, setData] = useState<CandleData | null>(null);
+    const [signalData, setSignalData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedInterval, setSelectedInterval] = useState('minute');
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    const fetchSignal = async () => {
+        try {
+            const res = await fetch(`${API}/api/correlation/live-prediction`);
+            if (res.ok) {
+                const json = await res.json();
+                setSignalData(json);
+            }
+        } catch (e) {
+            console.error("Failed to load magnitude signal", e);
+        }
+    };
 
     const fetchCandles = async (intv: string) => {
         try {
@@ -50,13 +63,20 @@ function NiftyCandleChart() {
     useEffect(() => {
         setLoading(true);
         fetchCandles(selectedInterval);
+        fetchSignal();
+        
         // Adaptive refresh: faster for short intervals, slower for long ones
         const refreshMs: Record<string, number> = {
             'minute': 1000, '3minute': 3000, '5minute': 5000,
             '15minute': 10000, '30minute': 15000, '60minute': 30000,
         };
         const timer = setInterval(() => fetchCandles(selectedInterval), refreshMs[selectedInterval] || 5000);
-        return () => clearInterval(timer);
+        const signalTimer = setInterval(fetchSignal, 60000); // 1 minute signal refresh
+        
+        return () => {
+            clearInterval(timer);
+            clearInterval(signalTimer);
+        };
     }, [selectedInterval]);
 
     // Draw candlestick chart on canvas
@@ -89,8 +109,21 @@ function NiftyCandleChart() {
         const chartH = H - padding.top - padding.bottom;
 
         // Price range
-        const allHighs = candles.map(c => c.high);
-        const allLows = candles.map(c => c.low);
+        let allHighs = candles.map(c => c.high);
+        let allLows = candles.map(c => c.low);
+        
+        // Ensure bounds include the overlays
+        if (signalData && signalData.direction !== 'NEUTRAL' && signalData.target_price) {
+            allHighs.push(signalData.target_price);
+            allLows.push(signalData.target_price);
+            if (signalData.target_range_high) allHighs.push(signalData.target_range_high);
+            if (signalData.target_range_low) allLows.push(signalData.target_range_low);
+            if (signalData.stop_loss) {
+                allHighs.push(signalData.stop_loss);
+                allLows.push(signalData.stop_loss);
+            }
+        }
+        
         const maxPrice = Math.max(...allHighs);
         const minPrice = Math.min(...allLows);
         const priceRange = maxPrice - minPrice || 1;
@@ -169,8 +202,64 @@ function NiftyCandleChart() {
         ctx.lineTo(W - padding.right, lastY);
         ctx.stroke();
         ctx.setLineDash([]);
+        
+        // --- DRAW MAGNITUDE SIGNAL OVERLAYS ---
+        if (signalData && signalData.direction !== 'NEUTRAL' && signalData.target_price) {
+            const isBuy = signalData.direction === 'BUY' || signalData.prediction === 'Bullish' || signalData.prediction === 'BULLISH';
+            const targetColor = isBuy ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)';
+            const bandColor = isBuy ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+            const stopColor = 'rgba(249, 115, 22, 0.9)'; // Orange for SL
 
-    }, [data]);
+            const currentX = padding.left + gap * (candles.length - 1) + gap / 2;
+
+            // 1) Target Band
+            if (signalData.target_range_high && signalData.target_range_low) {
+                const bandTop = toY(Math.max(signalData.target_range_high, signalData.target_range_low));
+                const bandBottom = toY(Math.min(signalData.target_range_high, signalData.target_range_low));
+                ctx.fillStyle = bandColor;
+                ctx.fillRect(padding.left, bandTop, chartW, bandBottom - bandTop);
+            }
+
+            // 2) Target Line
+            const tY = toY(signalData.target_price);
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = targetColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, tY);
+            ctx.lineTo(W - padding.right, tY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = targetColor;
+            ctx.font = '10px monospace';
+            ctx.fillText('🎯 TARGET', W - padding.right - 55, tY - 4);
+
+            // 3) Stop Loss Line
+            if (signalData.stop_loss) {
+                const slY = toY(signalData.stop_loss);
+                ctx.strokeStyle = stopColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, slY);
+                ctx.lineTo(W - padding.right, slY);
+                ctx.stroke();
+                
+                ctx.fillStyle = stopColor;
+                ctx.font = '10px monospace';
+                ctx.fillText('🛑 SL', W - padding.right - 35, slY + 12);
+            }
+            
+            // 4) Signal Arrow above/below current candle
+            ctx.font = '18px Arial';
+            if (isBuy) {
+                ctx.fillText('⬆️', currentX - 9, toY(candles[candles.length - 1].low) + 20);
+            } else {
+                ctx.fillText('⬇️', currentX - 9, toY(candles[candles.length - 1].high) - 10);
+            }
+        }
+
+    }, [data, signalData]);
 
     const isPositive = data ? data.change >= 0 : true;
 
@@ -266,7 +355,57 @@ function NiftyCandleChart() {
                         </button>
                     </div>
                 ) : (
-                    <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+                    <>
+                        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+                        
+                        {/* Signal Info Floating Box */}
+                        {signalData && signalData.direction !== 'NEUTRAL' && signalData.target_price && (
+                            <div style={{
+                                position: 'absolute', top: 12, left: 16, zIndex: 10,
+                                background: 'rgba(15, 23, 42, 0.85)',
+                                border: `1px solid ${signalData.direction === 'BUY' || signalData.prediction === 'Bullish' ? '#22c55e' : '#ef4444'}`,
+                                borderRadius: 8, padding: '10px 14px',
+                                backdropFilter: 'blur(4px)',
+                                boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                                display: 'flex', flexDirection: 'column', gap: 6,
+                                minWidth: 160
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
+                                        ACTIVE SIGNAL
+                                    </span>
+                                    <span style={{ 
+                                        fontSize: 11, fontWeight: 800, 
+                                        color: signalData.direction === 'BUY' || signalData.prediction === 'Bullish' ? '#4ade80' : '#f87171' 
+                                    }}>
+                                        {signalData.direction || signalData.prediction.toUpperCase()}
+                                    </span>
+                                </div>
+                                <div style={{ height: 1, background: '#334155', margin: '2px 0' }} />
+                                
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                    <span style={{ color: '#cbd5e1' }}>Target</span>
+                                    <span style={{ color: '#f8fafc', fontWeight: 700 }}>{signalData.target_price.toFixed(1)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                    <span style={{ color: '#cbd5e1' }}>Stop Loss</span>
+                                    <span style={{ color: '#fb923c', fontWeight: 700 }}>{signalData.stop_loss.toFixed(1)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                    <span style={{ color: '#cbd5e1' }}>Magnitude</span>
+                                    <span style={{ color: '#fcd34d', fontWeight: 700 }}>{signalData.magnitude_points} pts</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                    <span style={{ color: '#cbd5e1' }}>Confidence</span>
+                                    <span style={{ color: '#38bdf8', fontWeight: 700 }}>{signalData.confidence}% ({signalData.magnitude_confidence})</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginTop: 4 }}>
+                                    <span style={{ color: '#64748b' }}>Risk/Reward</span>
+                                    <span style={{ color: '#94a3b8' }}>1:{signalData.risk_reward}</span>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

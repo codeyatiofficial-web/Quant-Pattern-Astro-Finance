@@ -3,13 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { usePlanGate } from './UpgradeModal';
 import { usePlan } from '../contexts/PlanContext';
 import { MarketTicker } from './MarketTicker';
-import IntradayForecastWidget from './IntradayForecastWidget';
-
 import NiftyTradingViewWidget from './NiftyTradingViewWidget';
 import SignalConfluenceWidget from './SignalConfluenceWidget';
 import NiftyHeatmapWidget from './NiftyHeatmapWidget';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 
 
@@ -63,14 +61,71 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
 
 
-    {/* LIVE 1-HOUR INTRADAY FORECAST (All Users) */ }
-    <IntradayForecastWidget />
+    {/* NIFTY 50 1-MIN CANDLE CHART (Kite API) */ }
+    <NiftyTradingViewWidget />
+
+    {/* TELEGRAM BOT CALL TO ACTION */ }
+    <div style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 16,
+        padding: '24px',
+        marginBottom: 24,
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 20,
+    }}>
+        <div style={{ flex: '1 1 300px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#3b82f6', margin: 0, letterSpacing: 0.5 }}>
+                    LIVE MAGNITUDE ALERTS
+                </h3>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 12 }}>
+                Get instant notifications on your mobile device whenever the system detects a strong positional trading opportunity.
+            </p>
+            <ul style={{ paddingLeft: 20, margin: 0, fontSize: 12, color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <li>Scans 1-minute candles for deep short-interval signals</li>
+                <li>Exact Entry, Target, and Stop-Loss Levels</li>
+                <li>Calculated Risk-to-Reward Ratios</li>
+            </ul>
+        </div>
+        
+        <div style={{ 
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, 
+            background: 'var(--bg-secondary)', padding: '16px 24px', borderRadius: 12,
+            border: '1px solid var(--border-subtle)', flex: '0 1 auto'
+        }}>
+            <img 
+                src="/assets/telegram_qr.png" 
+                alt="Telegram Bot QR Code" 
+                style={{ width: 120, height: 120, borderRadius: 8, objectFit: 'contain', background: '#fff', padding: 4 }} 
+                onError={(e) => {
+                    // Fallback to placeholder if image is missing
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="100%" height="100%" fill="%231e293b"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%2364748b" font-family="sans-serif" font-size="12">QR Missing</text></svg>';
+                }}
+            />
+            <a 
+                href="https://t.me/QUANTPATTERN_ALERT_BOT" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{
+                    background: '#2563eb', color: '#fff', padding: '8px 16px', borderRadius: 6,
+                    fontSize: 12, fontWeight: 700, textDecoration: 'none', display: 'inline-block',
+                    transition: 'all 0.2s', textAlign: 'center'
+                }}
+            >
+                Open in Telegram
+            </a>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>@QUANTPATTERN_ALERT_BOT</span>
+        </div>
+    </div>
 
     {/* SIGNAL CONFLUENCE SCORING SYSTEM */ }
     <SignalConfluenceWidget />
-
-    {/* NIFTY 50 1-MIN CANDLE CHART (Kite API) */ }
-    <NiftyTradingViewWidget />
 
     {/*  1-WEEK COMPREHENSIVE FORECAST (All users)  */ }
     <div style={{

@@ -14,8 +14,10 @@ source venv/bin/activate
 
 # 1. Start FastAPI Backend (Port 8000)
 echo "🌙 Starting FastAPI Backend..."
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
 BACKEND_PID=$!
+cd ..
 
 # Wait for backend to initialize
 sleep 3

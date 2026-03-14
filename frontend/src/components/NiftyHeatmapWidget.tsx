@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from "react";
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 // ── Sectors ──────────────────────────────────────────────────────────────────
 const SECTORS = ["Banking", "IT", "Energy", "FMCG", "Auto", "Finance", "Pharma", "Metals", "Infra", "Cement", "Consumer", "Telecom", "Insurance", "Healthcare"];
@@ -45,6 +45,13 @@ function getColor(value: number, mode = "dma") {
     return { bg: "#1a3a2a", text: "#6ee7b7", border: "#34d399" };
   }
   return { bg: "#1e293b", text: "#94a3b8", border: "#334155" };
+}
+
+function formatDisplayValue(stock: any, mode: string) {
+  if (mode === "dma") return `${stock.dma >= 0 ? "+" : ""}${stock.dma}%`;
+  if (mode === "volume") return `${(stock.volume / 100000).toFixed(1)}L`;
+  if (mode === "iv") return `${stock.iv}%`;
+  return `${stock.change >= 0 ? "+" : ""}${stock.change}%`;
 }
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -158,8 +165,19 @@ export default function NiftyHeatmap() {
     if (!stocks.length) return null;
     const avgChange = stocks.reduce((s, d) => s + d.change, 0) / stocks.length;
     const avgDma = stocks.reduce((s, d) => s + d.dma, 0) / stocks.length;
+    const avgVolume = stocks.reduce((s, d) => s + d.volume, 0) / stocks.length;
+    const avgIv = stocks.reduce((s, d) => s + d.iv, 0) / stocks.length;
     const totalWeight = stocks.reduce((s, d) => s + d.weight, 0);
-    return { sector, avgChange: parseFloat(avgChange.toFixed(2)), avgDma: parseFloat(avgDma.toFixed(1)), stocks, totalWeight, count: stocks.length };
+    return { 
+      sector, 
+      avgChange: parseFloat(avgChange.toFixed(2)), 
+      avgDma: parseFloat(avgDma.toFixed(1)), 
+      avgVolume,
+      avgIv: parseFloat(avgIv.toFixed(1)),
+      stocks, 
+      totalWeight, 
+      count: stocks.length 
+    };
   }).filter(Boolean);
 
   const bestBuyToday = [...data].sort((a, b) => b.score - a.score)[0];
@@ -396,7 +414,7 @@ export default function NiftyHeatmap() {
                     {stock.symbol.length > 8 ? stock.name : stock.symbol}
                   </div>
                   <div style={{ fontSize: size > 8 ? "13px" : "10px", fontWeight: "700", color: colors.text, marginTop: "2px" }}>
-                    {heatmapMode === "dma" ? `${stock.dma >= 0 ? "+" : ""}${stock.dma}%` : `${stock.change >= 0 ? "+" : ""}${stock.change}%`}
+                    {formatDisplayValue(stock, heatmapMode)}
                   </div>
                   {size > 6 && (
                     <div style={{ fontSize: "8px", color: colors.text, opacity: 0.7, marginTop: "2px" }}>
@@ -442,7 +460,7 @@ export default function NiftyHeatmap() {
                   <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: SECTOR_COLORS[stock.sector] }} />
                   <div style={{ fontSize: "10px", fontWeight: "700", color: colors.text }}>{stock.symbol}</div>
                   <div style={{ fontSize: "14px", fontWeight: "700", color: colors.text, margin: "3px 0" }}>
-                    {heatmapMode === "dma" ? `${stock.dma >= 0 ? "+" : ""}${stock.dma}%` : `${stock.change >= 0 ? "+" : ""}${stock.change}%`}
+                    {formatDisplayValue(stock, heatmapMode)}
                   </div>
                   <div style={{ fontSize: "8px", color: colors.text, opacity: 0.6 }}>
                     RSI {stock.rsi}
@@ -459,9 +477,19 @@ export default function NiftyHeatmap() {
         {/* SECTOR VIEW */}
         {viewMode === "sector" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {sectorData.sort((a, b) => (heatmapMode === "dma" ? (a?.avgDma || 0) - (b?.avgDma || 0) : (b?.avgChange || 0) - (a?.avgChange || 0))).map(sec => {
+            {sectorData.sort((a, b) => {
+              if (heatmapMode === "dma") return (a?.avgDma || 0) - (b?.avgDma || 0);
+              if (heatmapMode === "volume") return (b?.avgVolume || 0) - (a?.avgVolume || 0);
+              if (heatmapMode === "iv") return (b?.avgIv || 0) - (a?.avgIv || 0);
+              return (b?.avgChange || 0) - (a?.avgChange || 0);
+            }).map(sec => {
               if (!sec) return null;
-              const colors = getColor(heatmapMode === "dma" ? sec.avgDma : sec.avgChange, heatmapMode === "dma" ? "dma" : "change");
+              const colors = getColor(
+                heatmapMode === "dma" ? sec.avgDma : 
+                heatmapMode === "volume" ? sec.avgVolume :
+                heatmapMode === "iv" ? sec.avgIv : sec.avgChange, 
+                heatmapMode
+              );
               return (
                 <div key={sec.sector} style={{
                   background: "#0a1420", borderRadius: "10px",
@@ -486,7 +514,10 @@ export default function NiftyHeatmap() {
                       fontWeight: "700", fontSize: "14px",
                       color: colors.text, minWidth: "60px", textAlign: "right"
                     }}>
-                      {heatmapMode === "dma" ? `${sec.avgDma >= 0 ? "+" : ""}${sec.avgDma}%` : `${sec.avgChange >= 0 ? "+" : ""}${sec.avgChange}%`}
+                      {heatmapMode === "dma" ? `${sec.avgDma >= 0 ? "+" : ""}${sec.avgDma}%` : 
+                       heatmapMode === "volume" ? `${(sec.avgVolume / 100000).toFixed(1)}L` :
+                       heatmapMode === "iv" ? `${sec.avgIv}%` :
+                       `${sec.avgChange >= 0 ? "+" : ""}${sec.avgChange}%`}
                     </span>
                   </div>
                   {/* Sector Stocks */}
@@ -508,7 +539,7 @@ export default function NiftyHeatmap() {
                           }}>
                           <div style={{ fontSize: "9px", fontWeight: "700", color: sc.text }}>{stock.name}</div>
                           <div style={{ fontSize: "11px", fontWeight: "700", color: sc.text }}>
-                            {heatmapMode === "dma" ? `${stock.dma >= 0 ? "+" : ""}${stock.dma}%` : `${stock.change >= 0 ? "+" : ""}${stock.change}%`}
+                            {formatDisplayValue(stock, heatmapMode)}
                           </div>
                         </div>
                       );

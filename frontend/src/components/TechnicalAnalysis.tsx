@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { usePlanGate } from './UpgradeModal';
 import LiveChart from './LiveChart';
 
-const API = typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+const API = '';
 
 //  Color helpers 
 const pct_color = (v: number | null) =>
