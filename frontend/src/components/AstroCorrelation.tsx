@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { usePlanGate } from './UpgradeModal';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -123,6 +124,11 @@ const PLANET_MOTION_EVENTS = ['Retrograde', 'Direct', 'High Speed', 'Exalted', '
 const ALL_YOGA_EVENTS = EVENT_GROUPS.flatMap(g => g.events.map(e => e.value)).filter(v => !PLANET_MOTION_EVENTS.includes(v));
 
 export default function AstroCorrelation() {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === 'dark';
+    const chartTick   = isDark ? 'rgba(255,255,255,0.45)' : '#6b7280';
+    const chartGrid   = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+    const chartLegend = isDark ? 'rgba(255,255,255,0.65)' : '#4b5563';
     const [symbol, setSymbol] = useState('^NSEI');
     const [planet, setPlanet] = useState('Mercury');
     const [eventType, setEventType] = useState('Retrograde');
@@ -277,9 +283,9 @@ export default function AstroCorrelation() {
             <div style={{ marginBottom: 20 }}>
                 {/* Group filter tabs */}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-                    <button onClick={() => setGroupFilter('All')} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: `1px solid ${groupFilter === 'All' ? '#8b5cf6' : 'rgba(255,255,255,0.1)'}`, background: groupFilter === 'All' ? 'rgba(139,92,246,0.2)' : 'transparent', color: groupFilter === 'All' ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}>All</button>
+                    <button onClick={() => setGroupFilter('All')} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: `1px solid ${groupFilter === 'All' ? '#8b5cf6' : 'var(--border-active)'}`, background: groupFilter === 'All' ? 'rgba(139,92,246,0.2)' : 'transparent', color: groupFilter === 'All' ? '#8b5cf6' : 'var(--text-muted)', cursor: 'pointer' }}>All</button>
                     {EVENT_GROUPS.map(g => (
-                        <button key={g.group} onClick={() => setGroupFilter(g.group)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: `1px solid ${groupFilter === g.group ? g.color : 'rgba(255,255,255,0.1)'}`, background: groupFilter === g.group ? `${g.color}20` : 'transparent', color: groupFilter === g.group ? 'white' : 'var(--text-muted)', cursor: 'pointer' }}>
+                        <button key={g.group} onClick={() => setGroupFilter(g.group)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: `1px solid ${groupFilter === g.group ? g.color : 'var(--border-active)'}`, background: groupFilter === g.group ? `${g.color}20` : 'transparent', color: groupFilter === g.group ? g.color : 'var(--text-muted)', cursor: 'pointer' }}>
                             {g.group.split(' ').slice(0, 2).join(' ')}
                         </button>
                     ))}
@@ -296,11 +302,11 @@ export default function AstroCorrelation() {
                                 <button key={ev.value} onClick={() => onPick(ev.value)}
                                     style={{
                                         padding: '8px 12px', borderRadius: 8, textAlign: 'left', cursor: 'pointer',
-                                        border: `1px solid ${activeEvent === ev.value ? g.color : 'rgba(255,255,255,0.06)'}`,
-                                        background: activeEvent === ev.value ? `${g.color}20` : 'rgba(255,255,255,0.02)',
+                                        border: `1px solid ${activeEvent === ev.value ? g.color : 'var(--border-subtle)'}`,
+                                        background: activeEvent === ev.value ? `${g.color}20` : 'var(--bg-secondary)',
                                         transition: 'all 0.15s',
                                     }}>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: activeEvent === ev.value ? 'white' : 'var(--text-primary)', marginBottom: 2 }}>{ev.label}</div>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: activeEvent === ev.value ? g.color : 'var(--text-primary)', marginBottom: 2 }}>{ev.label}</div>
                                     <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ev.note}</div>
                                 </button>
                             ))}
@@ -472,7 +478,7 @@ export default function AstroCorrelation() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 14px', background: `${chosenGroup?.color || '#6366f1'}15`, border: `1px solid ${chosenGroup?.color || '#6366f1'}30`, borderRadius: 10 }}>
                                 <span style={{ fontSize: 18 }}>{chosenEvent.label.split(' ')[0]}</span>
                                 <div>
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>Selected: {chosenEvent.label}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: chosenGroup?.color || 'var(--text-primary)' }}>Selected: {chosenEvent.label}</div>
                                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{chosenEvent.note}</div>
                                 </div>
                             </div>
@@ -568,7 +574,7 @@ export default function AstroCorrelation() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 14px', background: `${chosenVixGroup?.color || '#6366f1'}15`, border: `1px solid ${chosenVixGroup?.color || '#6366f1'}30`, borderRadius: 10 }}>
                                 <span style={{ fontSize: 18 }}>{chosenVixEvent.label.split(' ')[0]}</span>
                                 <div>
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>Selected: {chosenVixEvent.label}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: chosenVixGroup?.color || 'var(--text-primary)' }}>Selected: {chosenVixEvent.label}</div>
                                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{chosenVixEvent.note}</div>
                                 </div>
                             </div>
@@ -759,7 +765,7 @@ export default function AstroCorrelation() {
                             </div>
 
                             <div className="grid-2" style={{ marginBottom: 16 }}>
-                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 16 }}>
+                                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 16 }}>
                                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Correlated Global Assets List</div>
                                     <div style={{ display: 'grid', gap: 8 }}>
                                         {Object.entries(futuresResult.correlations || {}).map(([key, val]) => (
@@ -772,7 +778,7 @@ export default function AstroCorrelation() {
                                         ))}
                                     </div>
                                 </div>
-                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 16 }}>
+                                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 16 }}>
                                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>Current Ticker Prices</div>
                                     <div style={{ display: 'grid', gap: 8 }}>
                                         {Object.entries(futuresResult.current_values || {}).map(([key, price]) => (
@@ -781,7 +787,7 @@ export default function AstroCorrelation() {
                                                 <span>{price as React.ReactNode}</span>
                                             </div>
                                         ))}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8, marginTop: 4 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, borderTop: '1px solid var(--border-subtle)', paddingTop: 8, marginTop: 4 }}>
                                             <span>{futuresResult.target.symbol} Target</span>
                                             <span style={{ color: 'var(--accent-blue)' }}>{futuresResult.target.current_price}</span>
                                         </div>
@@ -830,7 +836,7 @@ export default function AstroCorrelation() {
                                         const tfData = sp500Result.timeframes[tf];
                                         if (!tfData) return null;
                                         return (
-                                            <div key={tf} style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${TF_COLORS[tf]}30`, borderRadius: 12, padding: 18, position: 'relative', overflow: 'hidden' }}>
+                                            <div key={tf} style={{ background: 'var(--bg-secondary)', border: `1px solid ${TF_COLORS[tf]}30`, borderRadius: 12, padding: 18, position: 'relative', overflow: 'hidden' }}>
                                                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: TF_COLORS[tf] }} />
                                                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>{TF_LABELS[tf]} Prediction</div>
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -843,7 +849,7 @@ export default function AstroCorrelation() {
                                                     {tfData.assets && Object.entries(tfData.assets).map(([aKey, aData]: [string, any]) => (
                                                         <div key={aKey} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                                                             <span style={{ color: ASSET_COLORS[aKey] || 'var(--text-muted)', fontWeight: 600 }}>{aKey}</span>
-                                                            <span style={{ color: aData.current_corr != null ? (aData.current_corr > 0 ? '#10b981' : '#ef4444') : '#94a3b8', fontWeight: 600 }}>
+                                                            <span style={{ color: aData.current_corr != null ? (aData.current_corr > 0 ? '#10b981' : '#ef4444') : 'var(--text-muted)', fontWeight: 600 }}>
                                                                 {aData.current_corr != null ? (aData.current_corr > 0 ? '+' : '') + aData.current_corr.toFixed(3) : '—'}
                                                             </span>
                                                         </div>
@@ -897,7 +903,7 @@ export default function AstroCorrelation() {
                                             tooltip: { backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: pathColor, borderColor: pathColor, borderWidth: 1 }
                                         },
                                         scales: {
-                                            x: { display: true, ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } }, grid: { display: false } },
+                                            x: { display: true, ticks: { color: chartTick, font: { size: 11 } }, grid: { display: false } },
                                             y: { display: false, grid: { display: false } }
                                         },
                                         interaction: { intersect: false, mode: 'index' as const },
@@ -916,7 +922,7 @@ export default function AstroCorrelation() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div style={{ height: 260, padding: 8, background: 'rgba(0,0,0,0.1)', borderRadius: 12, border: `1px solid ${pathColor}40` }}>
+                                            <div style={{ height: 260, padding: 8, background: 'var(--bg-secondary)', borderRadius: 12, border: `1px solid ${pathColor}40` }}>
                                                 <Line data={forecastData} options={forecastOptions} />
                                             </div>
                                             <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 12 }}>
@@ -958,15 +964,15 @@ export default function AstroCorrelation() {
                                         const chartOptions = {
                                             responsive: true, maintainAspectRatio: false,
                                             plugins: {
-                                                legend: { display: true, position: 'top' as const, labels: { color: 'rgba(255,255,255,0.6)', font: { size: 10 }, boxWidth: 12, padding: 10 } },
+                                                legend: { display: true, position: 'top' as const, labels: { color: chartLegend, font: { size: 10 }, boxWidth: 12, padding: 10 } },
                                                 tooltip: {
                                                     backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: '#a0a0b0', borderColor: TF_COLORS[tf], borderWidth: 1,
                                                     callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}` }
                                                 }
                                             },
                                             scales: {
-                                                x: { display: true, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 9 }, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: 'rgba(255,255,255,0.03)' } },
-                                                y: { min: -1, max: 1, ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 }, stepSize: 0.5 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                                                x: { display: true, ticks: { color: chartTick, font: { size: 9 }, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: chartGrid } },
+                                                y: { min: -1, max: 1, ticks: { color: chartTick, font: { size: 10 }, stepSize: 0.5 }, grid: { color: chartGrid } }
                                             },
                                             interaction: { intersect: false, mode: 'index' as const },
                                         };
@@ -1056,15 +1062,15 @@ export default function AstroCorrelation() {
                         const chartOptions = {
                             responsive: true, maintainAspectRatio: false,
                             plugins: {
-                                legend: { display: true, position: 'top' as const, labels: { color: 'rgba(255,255,255,0.8)', font: { size: 11 }, padding: 16 } },
+                                legend: { display: true, position: 'top' as const, labels: { color: chartLegend, font: { size: 11 }, padding: 16 } },
                                 tooltip: {
                                     backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: '#a0a0b0', borderColor: '#10b981', borderWidth: 1,
                                     callbacks: { label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(4)}` }
                                 }
                             },
                             scales: {
-                                x: { display: true, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, maxTicksLimit: 12, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.03)' } },
-                                y: { min: -1, max: 1, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 }, stepSize: 0.5 }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                                x: { display: true, ticks: { color: chartTick, font: { size: 10 }, maxTicksLimit: 12, maxRotation: 45 }, grid: { color: chartGrid } },
+                                y: { min: -1, max: 1, ticks: { color: chartTick, font: { size: 10 }, stepSize: 0.5 }, grid: { color: chartGrid } }
                             },
                             interaction: { intersect: false, mode: 'index' as const },
                         };
@@ -1090,16 +1096,16 @@ export default function AstroCorrelation() {
 
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
                                         {assetEntries.map(([aKey, aData]: [string, any]) => (
-                                            <div key={aKey} style={{ background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: 8, borderLeft: `3px solid ${ASSET_COLORS[aKey]}` }}>
+                                            <div key={aKey} style={{ background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 8, border: `1px solid var(--border-subtle)`, borderLeft: `3px solid ${ASSET_COLORS[aKey]}` }}>
                                                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{aKey} Correl</div>
-                                                <div style={{ fontSize: 14, fontWeight: 700, color: aData.current_corr != null ? (aData.current_corr > 0 ? '#10b981' : '#ef4444') : '#fff' }}>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: aData.current_corr != null ? (aData.current_corr > 0 ? '#10b981' : '#ef4444') : 'var(--text-muted)' }}>
                                                     {aData.current_corr != null ? (aData.current_corr > 0 ? '+' : '') + aData.current_corr.toFixed(3) : '—'}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
 
-                                    <div style={{ height: 450, padding: 8, background: 'rgba(0,0,0,0.1)', borderRadius: 12 }}>
+                                    <div style={{ height: 450, padding: 8, background: 'var(--bg-secondary)', borderRadius: 12 }}>
                                         <Line data={chartData} options={chartOptions} />
                                     </div>
                                 </div>
@@ -1147,7 +1153,7 @@ export default function AstroCorrelation() {
                                             tooltip: { backgroundColor: 'rgba(15,15,25,0.95)', titleColor: '#fff', bodyColor: pathColor, borderColor: pathColor, borderWidth: 1 }
                                         },
                                         scales: {
-                                            x: { display: true, ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } }, grid: { display: false } },
+                                            x: { display: true, ticks: { color: chartTick, font: { size: 11 } }, grid: { display: false } },
                                             y: { display: false, grid: { display: false } }
                                         },
                                         interaction: { intersect: false, mode: 'index' as const },
@@ -1166,7 +1172,7 @@ export default function AstroCorrelation() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div style={{ height: 260, padding: 8, background: 'rgba(0,0,0,0.1)', borderRadius: 12, border: `1px solid ${pathColor}40` }}>
+                                            <div style={{ height: 260, padding: 8, background: 'var(--bg-secondary)', borderRadius: 12, border: `1px solid ${pathColor}40` }}>
                                                 <Line data={forecastData} options={forecastOptions as any} />
                                             </div>
                                             <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 12 }}>

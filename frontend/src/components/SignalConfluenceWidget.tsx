@@ -71,14 +71,14 @@ export default function SignalConfluenceWidget() {
                 {/* Paywall Overlay */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, transition: 'all 0.3s' }}>
                     {/* Score Section */}
-                    <div style={{ background: 'rgba(0,0,0,0.15)', borderRadius: 12, padding: 20, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', position: 'relative' }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: 20, border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', position: 'relative' }}>
                         <div style={{ position: 'relative', width: 140, height: 140, marginBottom: 16 }}>
                             <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border-subtle)" strokeWidth="8" />
                                 <circle cx="50" cy="50" r="40" fill="none" stroke={recColor} strokeWidth="8" strokeDasharray="251.2" strokeDashoffset={251.2 - (score / 10) * 251.2} style={{ transition: 'stroke-dashoffset 1s ease-out' }} />
                             </svg>
                             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{score}</span>
+                                <span style={{ fontSize: 36, fontWeight: 900, color: recColor, lineHeight: 1 }}>{score}</span>
                                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>/ 10</span>
                             </div>
                         </div>
@@ -92,10 +92,10 @@ export default function SignalConfluenceWidget() {
                     </div>
 
                     {/* Table Section */}
-                    <div style={{ overflowX: 'auto', background: 'rgba(0,0,0,0.15)', borderRadius: 12, padding: '16px 20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ overflowX: 'auto', background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border-subtle)' }}>
                         <table className="data-table" style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                                     <th style={{ textAlign: 'left', paddingBottom: 10, color: 'var(--text-muted)' }}>Signal</th>
                                     <th style={{ textAlign: 'center', paddingBottom: 10, color: '#4ade80' }}>Bullish +1</th>
                                     <th style={{ textAlign: 'center', paddingBottom: 10, color: '#f87171' }}>Bearish +1</th>
@@ -106,16 +106,16 @@ export default function SignalConfluenceWidget() {
                                 {SIGNAL_METRICS.map((m, idx) => {
                                     const st = signals[m.id];
                                     return (
-                                        <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                        <tr key={m.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                                             <td style={{ padding: '8px 0', fontWeight: 600, color: 'var(--text-primary)' }}>
                                                 {m.name}
                                             </td>
                                             <td style={{ padding: '8px 0', textAlign: 'center', color: st === 1 ? '#4ade80' : 'var(--text-muted)', fontWeight: st === 1 ? 700 : 400 }}>{m.bull}</td>
                                             <td style={{ padding: '8px 0', textAlign: 'center', color: st === -1 ? '#f87171' : 'var(--text-muted)', fontWeight: st === -1 ? 700 : 400 }}>{m.bear}</td>
                                             <td style={{ padding: '8px 0', textAlign: 'center' }}>
-                                                {st === 1 && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />}
-                                                {st === -1 && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f87171', boxShadow: '0 0 8px #f87171' }} />}
-                                                {st === 0 && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />}
+                                                {st === 1 && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#4ade80' }} />}
+                                                {st === -1 && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f87171' }} />}
+                                                {st === 0 && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--border-active)' }} />}
                                             </td>
                                         </tr>
                                     );
@@ -126,10 +126,10 @@ export default function SignalConfluenceWidget() {
                 </div>
             </div>
             
-            <div style={{ marginTop: 24, padding: '12px 16px', background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: 24, fontSize: 12, color: 'var(--text-muted)', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }}></span><span style={{ color: '#fff', fontWeight: 700 }}>Score ≥ 7</span> → Strong Buy Signal</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }}></span><span style={{ color: '#fff', fontWeight: 700 }}>Score 4-6</span> → Neutral / No Trade</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }}></span><span style={{ color: '#fff', fontWeight: 700 }}>Score ≤ 3</span> → Strong Sell Signal</div>
+            <div style={{ marginTop: 24, padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border-subtle)', display: 'flex', gap: 24, fontSize: 12, color: 'var(--text-muted)', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }}></span><span style={{ color: '#22c55e', fontWeight: 700 }}>Score ≥ 7</span> → Strong Buy Signal</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }}></span><span style={{ color: '#f59e0b', fontWeight: 700 }}>Score 4-6</span> → Neutral / No Trade</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }}></span><span style={{ color: '#ef4444', fontWeight: 700 }}>Score ≤ 3</span> → Strong Sell Signal</div>
             </div>
         </div>
     );

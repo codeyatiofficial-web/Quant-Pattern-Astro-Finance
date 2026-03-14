@@ -207,7 +207,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                         INITIALIZING QUANTUM SCAN...
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 450, lineHeight: 1.5 }}>
-                        Fetching and analyzing huge amounts of data across <strong style={{ color: '#fff' }}>11 distinct market layers</strong>. This includes planetary cycles, live technical patterns, options chain data, and institutional flows.
+                        Fetching and analyzing huge amounts of data across <strong style={{ color: 'var(--text-primary)' }}>11 distinct market layers</strong>. This includes planetary cycles, live technical patterns, options chain data, and institutional flows.
                         <br /><span style={{ fontSize: 12, color: '#f59e0b', marginTop: 8, display: 'inline-block' }}>Please wait a moment...</span>
                     </div>
                 </div>
@@ -220,7 +220,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     return (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: `${ws.verdict_color}12`, border: `1px solid ${ws.verdict_color}33`, borderRadius: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                             <div style={{ fontSize: 18, fontWeight: 900, color: ws.verdict_color }}>{ws.verdict}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Avg Score: <strong style={{ color: 'white' }}>{ws.avg_score}</strong></div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Avg Score: <strong style={{ color: 'var(--text-primary)' }}>{ws.avg_score}</strong></div>
                             <div style={{ display: 'flex', gap: 6 }}>
                                 <span style={{ fontSize: 10, background: 'rgba(74,222,128,0.15)', color: '#4ade80', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}> {ws.bull_days} Bull</span>
                                 <span style={{ fontSize: 10, background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '2px 8px', borderRadius: 8, fontWeight: 700 }}>↔ {ws.neutral_days} Neutral</span>
@@ -289,7 +289,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                                     return (
                                                         <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9 }}>
                                                             <span style={{ color: 'var(--text-muted)' }}>{label[key] || key}</span>
-                                                            <span style={{ color: v > 0 ? '#4ade80' : v < 0 ? '#f87171' : '#94a3b8', fontWeight: 700 }}>{v > 0 ? '+' : ''}{v}</span>
+                                                            <span style={{ color: v > 0 ? '#4ade80' : v < 0 ? '#f87171' : 'var(--text-muted)', fontWeight: 700 }}>{v > 0 ? '+' : ''}{v}</span>
                                                         </div>
                                                     );
                                                 })}
@@ -330,7 +330,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}> Upcoming Planetary Transits</div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {weekForecast.gochar_events.slice(0, 5).map((g: any, i: number) => (
-                                <span key={i} style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, background: g.tendency === 'Bullish' ? 'rgba(74,222,128,0.12)' : g.tendency === 'Bearish' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.05)', color: g.tendency === 'Bullish' ? '#4ade80' : g.tendency === 'Bearish' ? '#f87171' : '#94a3b8' }}>
+                                <span key={i} style={{ fontSize: 9, padding: '2px 8px', borderRadius: 6, background: g.tendency === 'Bullish' ? 'rgba(74,222,128,0.12)' : g.tendency === 'Bearish' ? 'rgba(248,113,113,0.12)' : 'var(--bg-secondary)', color: g.tendency === 'Bullish' ? '#4ade80' : g.tendency === 'Bearish' ? '#f87171' : 'var(--text-muted)' }}>
                                     {g.event}
                                 </span>
                             ))}
@@ -409,7 +409,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     </div>
 
                     {/* Forecast Controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.15)', padding: '6px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-secondary)', padding: '6px 12px', borderRadius: 10, border: '1px solid var(--border-subtle)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>MARKET</label>
                             <select
@@ -422,7 +422,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                 <option value="NASDAQ">NASDAQ (US)</option>
                             </select>
                         </div>
-                        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)' }} />
+                        <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>T-ZERO DATE</label>
                             <input
@@ -460,7 +460,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                             {forecast.verdict}
                                         </div>
                                         {forecast.is_historical && (
-                                            <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: 12, color: 'var(--text-muted)' }}>HISTORICAL</span>
+                                            <span style={{ fontSize: 10, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', padding: '2px 8px', borderRadius: 12, color: 'var(--text-muted)' }}>HISTORICAL</span>
                                         )}
                                     </div>
                                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -476,7 +476,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                     <span>Confidence</span>
                                     <span style={{ fontWeight: 700, color: forecast.verdict_color }}>{forecast.confidence}%</span>
                                 </div>
-                                <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 8, overflow: 'hidden' }}>
+                                <div style={{ height: 8, background: 'var(--border-subtle)', borderRadius: 8, overflow: 'hidden' }}>
                                     <div style={{
                                         height: '100%', width: `${forecast.confidence}%`,
                                         background: forecast.verdict_color,
@@ -488,7 +488,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
                         {/* Summary */}
                         <div style={{
-                            background: 'rgba(255,255,255,0.04)', borderRadius: 10,
+                            background: 'var(--bg-secondary)', borderRadius: 10,
                             padding: '12px 16px', marginBottom: 20,
                             fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
                             borderLeft: `3px solid ${forecast.verdict_color}`,
@@ -504,12 +504,10 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                                     display: 'flex', alignItems: 'flex-start', gap: 10,
                                     background: sig.direction === 'bullish' ? 'rgba(74,222,128,0.07)'
                                         : sig.direction === 'bearish' ? 'rgba(248,113,113,0.07)'
-                                            : sig.direction === 'historical' ? 'rgba(0,0,0,0.2)'
-                                                : 'rgba(255,255,255,0.04)',
+                                            : 'var(--bg-secondary)',
                                     border: `1px solid ${sig.direction === 'bullish' ? 'rgba(74,222,128,0.2)'
                                         : sig.direction === 'bearish' ? 'rgba(248,113,113,0.2)'
-                                            : sig.direction === 'historical' ? 'rgba(255,255,255,0.05)'
-                                                : 'rgba(255,255,255,0.1)'}`,
+                                            : 'var(--border-subtle)'}`,
                                     borderRadius: 8, padding: '8px 12px',
                                     opacity: sig.direction === 'historical' ? 0.6 : 1
                                 }}>
@@ -529,13 +527,13 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
 
                 {isFree && (
                     <div style={{
-                        marginTop: 20, padding: '16px 20px', background: '#1e293b', border: '1px solid #334155', borderRadius: 10,
+                        marginTop: 20, padding: '16px 20px', background: 'var(--bg-secondary)', border: '1px solid var(--border-active)', borderRadius: 10,
                         textAlign: 'center'
                     }}>
-                        <div style={{ color: '#f8fafc', fontSize: 15, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                             Want to see the full week ahead?
                         </div>
-                        <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 12 }}>
+                        <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>
                             Upgrade to Pro to unlock the complete 7-day comprehensive market forecast and plan your week with precision.
                         </div>
                         <button className="btn-primary" onClick={() => window.location.href = '/pricing'}>
@@ -557,13 +555,13 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
     {/* Custom Strategy CTA for Pro Traders */}
     <div
         style={{
-        marginTop: 32, padding: '24px', background: '#0f172a', border: '1px solid #1e293b', borderRadius: 16,
+        marginTop: 32, padding: '24px', background: 'var(--bg-card)', border: '1px solid var(--border-active)', borderRadius: 16,
         textAlign: 'center'
     }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: '#f8fafc', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
             Pro Trader with a Custom Strategy?
         </div>
-        <div style={{ fontSize: 14, color: '#94a3b8', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
+        <div style={{ fontSize: 14, color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
             We offer bespoke integrations and custom AI modeling for institutional and professional traders. Contact us to get our engine customized exactly to your proprietary rules and requirements.
         </div>
         <div style={{ marginTop: 16, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>

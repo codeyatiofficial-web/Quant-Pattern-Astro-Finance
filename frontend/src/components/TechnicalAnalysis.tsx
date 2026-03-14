@@ -13,10 +13,10 @@ const ret_color = (v: number | null) =>
 
 function Badge({ v }: { v: string }) {
     const map: Record<string, string> = {
-        Bullish: '#10b981', Bearish: '#ef4444', Neutral: '#94a3b8',
+        Bullish: '#10b981', Bearish: '#ef4444', Neutral: 'var(--text-muted)',
         Win: '#10b981', Loss: '#ef4444', Triggered: 'var(--text-secondary)', Forming: '#f59e0b', Completing: '#f97316',
     };
-    const c = Object.entries(map).find(([k]) => v?.includes(k))?.[1] ?? '#94a3b8';
+    const c = Object.entries(map).find(([k]) => v?.includes(k))?.[1] ?? 'var(--text-muted)';
     return (
         <span style={{ background: c + '22', color: c, border: `1px solid ${c}44`, padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
             {v}
@@ -25,7 +25,7 @@ function Badge({ v }: { v: string }) {
 }
 
 function IndicatorPill({ label, value, good, bad }: { label: string; value: any; good?: boolean; bad?: boolean }) {
-    const color = good ? 'var(--accent-green)' : bad ? 'var(--accent-red)' : '#94a3b8';
+    const color = good ? 'var(--accent-green)' : bad ? 'var(--accent-red)' : 'var(--text-muted)';
     return (
         <div style={{ background: `${color}11`, border: `1px solid ${color}33`, borderRadius: 8, padding: '6px 10px', minWidth: 90 }}>
             <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 2 }}>{label}</div>
@@ -42,7 +42,7 @@ function PatternCard({ pat }: { pat: any }) {
     const isCandle = pat.source === 'Candlestick';
 
     return (
-        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16, marginBottom: 10 }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 12, padding: 16, marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -51,14 +51,14 @@ function PatternCard({ pat }: { pat: any }) {
                         </span>
                         <Badge v={pat.bias || 'Neutral'} />
                         <Badge v={pat.status || 'Monitoring'} />
-                        <span style={{ fontSize: 10, color: '#94a3b8', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 6 }}>{pat.source}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', padding: '2px 6px', borderRadius: 6 }}>{pat.source}</span>
                     </div>
                     {pat.completion_pct != null && (
                         <div style={{ marginTop: 8 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-muted)', marginBottom: 3 }}>
                                 <span>Completion</span><span>{pat.completion_pct}%</span>
                             </div>
-                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 4, height: 5, overflow: 'hidden' }}>
+                            <div style={{ background: 'var(--border-subtle)', borderRadius: 4, height: 5, overflow: 'hidden' }}>
                                 <div style={{ width: `${pat.completion_pct}%`, background: pat.completion_pct >= 75 ? '#10b981' : '#f59e0b', height: '100%', transition: 'width 0.4s' }} />
                             </div>
                         </div>
@@ -90,12 +90,12 @@ function PatternCard({ pat }: { pat: any }) {
 
             {/* Volume confirmation & indicators */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-                {pat.vol_label && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}> Vol: <strong style={{ color: 'white' }}>{pat.vol_label}</strong></span>}
-                {pat.rsi != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>RSI: <strong style={{ color: pat.rsi > 70 ? 'var(--accent-red)' : pat.rsi < 30 ? 'var(--accent-green)' : 'white' }}>{pat.rsi}</strong></span>}
-                {pat.macd_bull != null && <span style={{ fontSize: 10, color: pat.macd_bull ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.macd_bull ? ' MACD Bull' : ' MACD Bear'}</span>}
-                {pat.obv_rising != null && <span style={{ fontSize: 10, color: pat.obv_rising ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.obv_rising ? ' OBV Rising' : ' OBV Falling'}</span>}
-                {pat.price_above_vwap != null && <span style={{ fontSize: 10, color: pat.price_above_vwap ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.price_above_vwap ? ' Above VWAP' : ' Below VWAP'}</span>}
-                {pat.sharpe_like != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Sharpe: <strong style={{ color: 'white' }}>{pat.sharpe_like}</strong></span>}
+                {pat.vol_label && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}> Vol: <strong style={{ color: 'var(--text-primary)' }}>{pat.vol_label}</strong></span>}
+                {pat.rsi != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>RSI: <strong style={{ color: pat.rsi > 70 ? 'var(--accent-red)' : pat.rsi < 30 ? 'var(--accent-green)' : 'var(--text-primary)' }}>{pat.rsi}</strong></span>}
+                {pat.macd_bull != null && <span style={{ fontSize: 10, color: pat.macd_bull ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.macd_bull ? 'MACD Bull' : 'MACD Bear'}</span>}
+                {pat.obv_rising != null && <span style={{ fontSize: 10, color: pat.obv_rising ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.obv_rising ? 'OBV Rising' : 'OBV Falling'}</span>}
+                {pat.price_above_vwap != null && <span style={{ fontSize: 10, color: pat.price_above_vwap ? 'var(--accent-green)' : 'var(--accent-red)' }}>{pat.price_above_vwap ? 'Above VWAP' : 'Below VWAP'}</span>}
+                {pat.sharpe_like != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Sharpe: <strong style={{ color: 'var(--text-primary)' }}>{pat.sharpe_like}</strong></span>}
                 {pat.max_drawdown != null && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Max DD: <strong style={{ color: 'var(--accent-red)' }}>{pat.max_drawdown?.toFixed(1)}%</strong></span>}
             </div>
 
@@ -111,7 +111,7 @@ function PatternCard({ pat }: { pat: any }) {
             {/* Recent trades toggle */}
             {pat.trades?.length > 0 && (
                 <div style={{ marginTop: 10 }}>
-                    <button onClick={() => setOpen(!open)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}>
+                    <button onClick={() => setOpen(!open)} style={{ background: 'none', border: '1px solid var(--border-active)', color: 'var(--text-muted)', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}>
                         {open ? ' Hide' : ' Show'} Backtest Trades ({pat.trades.length})
                     </button>
                     {open && (
@@ -126,8 +126,8 @@ function PatternCard({ pat }: { pat: any }) {
                                 </thead>
                                 <tbody>
                                     {pat.trades.map((t: any, i: number) => (
-                                        <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                                            <td style={{ padding: '4px 8px', color: '#94a3b8' }}>{t.date}</td>
+                                        <tr key={i} style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                                            <td style={{ padding: '4px 8px', color: 'var(--text-muted)' }}>{t.date}</td>
                                             <td style={{ padding: '4px 8px' }}><Badge v={t.result} /></td>
                                             <td style={{ padding: '4px 8px', fontWeight: 600, color: t.return?.startsWith('+') ? 'var(--accent-green)' : 'var(--accent-red)' }}>{t.return}</td>
                                         </tr>
@@ -152,25 +152,25 @@ function FibPanel({ fib }: { fib: any }) {
         <div className="glass-card" style={{ padding: 20, marginBottom: 16 }}>
             <h4 style={{ fontWeight: 700, marginBottom: 14, fontSize: 14 }}> Fibonacci Levels</h4>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>Swing High: <strong style={{ color: '#f59e0b' }}>{fib.swing_high?.toLocaleString('en-IN')}</strong></span>
-                <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>Swing Low: <strong style={{ color: '#a78bfa' }}>{fib.swing_low?.toLocaleString('en-IN')}</strong></span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Swing High: <strong style={{ color: '#f59e0b' }}>{fib.swing_high?.toLocaleString('en-IN')}</strong></span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>Swing Low: <strong style={{ color: '#a78bfa' }}>{fib.swing_low?.toLocaleString('en-IN')}</strong></span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 6, marginBottom: 14 }}>
                 {levels.slice(0, 24).map(([k, v]: any) => (
-                    <div key={k} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 6, padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 10, color: k.startsWith('Ext') ? '#f59e0b' : '#94a3b8' }}>{k.replace('Ret_', '').replace('Ext_', ' ')}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>{Number(v)?.toLocaleString('en-IN')}</span>
+                    <div key={k} style={{ background: 'var(--bg-secondary)', borderRadius: 6, padding: '4px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border-subtle)' }}>
+                        <span style={{ fontSize: 10, color: k.startsWith('Ext') ? '#f59e0b' : 'var(--text-muted)' }}>{k.replace('Ret_', '').replace('Ext_', ' ')}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{Number(v)?.toLocaleString('en-IN')}</span>
                     </div>
                 ))}
             </div>
             {pivots && (
                 <div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>Floor Trader Pivots</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 6 }}>Floor Trader Pivots</div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {[['R2', '#ef4444'], ['R1', '#f97316'], ['P', '#10b981'], ['S1', 'var(--text-secondary)'], ['S2', 'var(--text-muted)']].map(([k, c]) => (
                             <div key={k} style={{ background: `${c}15`, border: `1px solid ${c}33`, borderRadius: 8, padding: '6px 10px' }}>
                                 <div style={{ fontSize: 9, color: c as string, fontWeight: 700 }}>{k}</div>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'white' }}>{pivots[k]?.toLocaleString('en-IN')}</div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{pivots[k]?.toLocaleString('en-IN')}</div>
                             </div>
                         ))}
                     </div>
@@ -183,8 +183,8 @@ function FibPanel({ fib }: { fib: any }) {
 //  Week Prediction Panel 
 function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, guardPeriod: (p: string) => void }) {
     if (!pred || pred.error || !pred.days) return null;
-    const colors: Record<string, string> = { Bullish: '#10b981', Bearish: '#ef4444', Neutral: '#94a3b8' };
-    const biasColor = colors[pred.bias] ?? '#94a3b8';
+    const colors: Record<string, string> = { Bullish: '#10b981', Bearish: '#ef4444', Neutral: 'var(--text-muted)' };
+    const biasColor = colors[pred.bias] ?? 'var(--text-muted)';
 
     const displayDays = tier === 'elite' ? pred.days.slice(0, 10) : tier === 'pro' ? pred.days.slice(0, 5) : pred.days.slice(0, 1);
     const title = tier === 'elite' ? '2-Week Technical Prediction' : tier === 'pro' ? '1-Week Technical Prediction' : '1-Day Technical Prediction';
@@ -196,15 +196,15 @@ function WeekPrediction({ pred, tier, guardPeriod }: { pred: any, tier: string, 
                     <h4 style={{ fontWeight: 700, fontSize: 14 }}> {title}</h4>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <Badge v={pred.bias} />
-                        <span style={{ fontSize: 11, color: '#94a3b8' }}>Current: <strong style={{ color: 'white' }}>{pred.current_price?.toLocaleString()}</strong></span>
-                        <span style={{ fontSize: 11, color: '#94a3b8' }}>RSI: <strong style={{ color: pred.rsi > 70 ? '#ef4444' : pred.rsi < 30 ? '#10b981' : 'white' }}>{pred.rsi}</strong></span>
-                        <span style={{ fontSize: 11, color: '#94a3b8' }}>ATR: <strong style={{ color: 'white' }}>{pred.atr?.toLocaleString('en-IN')}</strong></span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Current: <strong style={{ color: 'var(--text-primary)' }}>{pred.current_price?.toLocaleString()}</strong></span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>RSI: <strong style={{ color: pred.rsi > 70 ? '#ef4444' : pred.rsi < 30 ? '#10b981' : 'var(--text-primary)' }}>{pred.rsi}</strong></span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>ATR: <strong style={{ color: 'var(--text-primary)' }}>{pred.atr?.toLocaleString('en-IN')}</strong></span>
                     </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8 }}>
                     {displayDays.map((d: any, i: number) => (
                         <div key={i} style={{ background: `${biasColor}08`, border: `1px solid ${biasColor}22`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, marginBottom: 6 }}>{d.day}</div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 6 }}>{d.day}</div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: biasColor, marginBottom: 4 }}>
                                 {d.projected?.toLocaleString('en-IN')}
                             </div>
@@ -495,7 +495,7 @@ export default function TechnicalAnalysis({ active, onSymbolChange }: { active: 
                             <h4 style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}> Upcoming AI Signal Triggers (7 Days)</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {result.astro_confluence.map((t: any, i: number) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px' }}>
                                         <div>
                                             <span style={{ fontWeight: 600, fontSize: 13 }}>{t.event}</span>
                                         </div>
@@ -526,9 +526,9 @@ export default function TechnicalAnalysis({ active, onSymbolChange }: { active: 
                                     return (
                                         <button key={tf} onClick={() => setActiveTab(tf)} style={{
                                             padding: '8px 16px', borderRadius: 10, fontWeight: 700, fontSize: 12, cursor: 'pointer',
-                                            border: `1px solid ${active ? col : 'rgba(255,255,255,0.1)'}`,
-                                            background: active ? `${col}22` : 'rgba(255,255,255,0.02)',
-                                            color: active ? 'white' : '#94a3b8', position: 'relative',
+                                            border: `1px solid ${active ? col : 'var(--border-active)'}`,
+                                            background: active ? `${col}22` : 'transparent',
+                                            color: active ? 'var(--text-primary)' : 'var(--text-muted)', position: 'relative',
                                         }}>
                                             {tf}
                                             {candleCount && <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.7 }}>({candleCount.toLocaleString()})</span>}
