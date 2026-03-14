@@ -1,127 +1,126 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+const API = '';
 
 export default function NiftyAlgoWidget() {
-    const whatsappUrl = 'https://wa.me/message/QUANTPATTERN';
+    const [algoData, setAlgoData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [toggling, setToggling] = useState(false);
 
-    const features = [
-        { icon: '🎯', text: '80% accuracy on our live algo setups' },
-        { icon: '⚡', text: '1–2 precision trades/day — quality over quantity' },
-        { icon: '🔧', text: 'Custom setup tailored to your strategy' },
-        { icon: '📊', text: 'Equity · Commodity · Currency markets' },
-        { icon: '🤖', text: 'Pre-built strategies ready to deploy' },
-        { icon: '💰', text: 'Minimal charges to link your account' },
-    ];
+    const fetchStatus = async () => {
+        try {
+            const res = await fetch(`${API}/api/algo/status`);
+            if (res.ok) {
+                const json = await res.json();
+                setAlgoData(json.data);
+            }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    const toggleAlgo = async () => {
+        if (!algoData) return;
+        setToggling(true);
+        try {
+            const res = await fetch(`${API}/api/algo/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: !algoData.is_active }),
+            });
+            if (res.ok) {
+                const json = await res.json();
+                setAlgoData((prev: any) => ({ ...prev, is_active: json.is_active }));
+            }
+        } catch (e) { console.error(e); }
+        finally { setToggling(false); }
+    };
+
+    useEffect(() => {
+        fetchStatus();
+        const interval = setInterval(fetchStatus, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const bias = algoData?.global_bias ?? 0;
+    const biasLabel = bias > 0 ? 'BULLISH' : bias < 0 ? 'BEARISH' : 'NEUTRAL';
+    const biasColor = bias > 0 ? '#22c55e' : bias < 0 ? '#ef4444' : '#f59e0b';
+    const signal = algoData?.latest_signal;
 
     return (
-        <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 16,
-            padding: '32px 28px',
-            marginBottom: 24,
-        }}>
-            {/* Header */}
-            <div style={{ marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 24 }}>🤖</span>
-                    <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', margin: 0, letterSpacing: 0.5 }}>
-                        ALGO TRADING
-                    </h2>
-                    <span style={{
-                        fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6,
-                        background: 'rgba(74,222,128,0.15)', color: '#4ade80',
-                        border: '1px solid rgba(74,222,128,0.3)', letterSpacing: 1
-                    }}>LIVE</span>
-                </div>
-                <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, maxWidth: 700 }}>
-                    Let the system trade for you. Connect your broker via API key. Every trade executes automatically —
-                    <strong style={{ color: 'var(--text-primary)' }}> no screen watching, no emotional decisions.</strong>
-                </p>
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* Features Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                gap: 12,
-                marginBottom: 24,
-            }}>
-                {features.map((f, i) => (
-                    <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        background: 'var(--bg-secondary)',
-                        border: '1px solid var(--border-subtle)',
-                        borderRadius: 10, padding: '12px 16px',
-                    }}>
-                        <span style={{ fontSize: 18 }}>{f.icon}</span>
-                        <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{f.text}</span>
+            {/* Status Panel */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                        <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: 0.5 }}>ALGO TRADING</h2>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>Automated execution engine — Nifty 50 Options</div>
                     </div>
-                ))}
-            </div>
-
-            {/* Bottom strip */}
-            <div style={{
-                background: 'rgba(37,211,102,0.07)',
-                border: '1px solid rgba(37,211,102,0.25)',
-                borderRadius: 12, padding: '20px 24px',
-            }}>
-                {/* Tagline */}
-                <div style={{
-                    fontSize: 16, fontWeight: 800, color: 'var(--text-primary)',
-                    marginBottom: 6, letterSpacing: 0.3,
-                }}>
-                    🚀 No stress. No screen time. Just results.
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: algoData?.is_active ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.1)', color: algoData?.is_active ? '#22c55e' : '#94a3b8', border: `1px solid ${algoData?.is_active ? 'rgba(34,197,94,0.25)' : 'rgba(148,163,184,0.2)'}` }}>
+                            {loading ? 'Loading...' : algoData?.is_active ? 'RUNNING' : 'PAUSED'}
+                        </span>
+                        <button onClick={toggleAlgo} disabled={toggling || loading}
+                            style={{ padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: toggling || loading ? 'not-allowed' : 'pointer', background: algoData?.is_active ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)', color: algoData?.is_active ? '#ef4444' : '#22c55e', border: `1px solid ${algoData?.is_active ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.25)'}` }}>
+                            {toggling ? 'Updating...' : algoData?.is_active ? 'Pause Algo' : 'Start Algo'}
+                        </button>
+                        <button onClick={fetchStatus}
+                            style={{ padding: '7px 13px', borderRadius: 8, fontSize: 12, cursor: 'pointer', background: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
-                {/* CTA text — prominent */}
-                <div style={{
-                    fontSize: 14, color: '#4ade80', fontWeight: 600, marginBottom: 16,
-                }}>
-                    💬 More details? Chat with us on WhatsApp — we'll help you get started!
+                {/* KPI Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: 0.6 }}>GLOBAL BIAS</div>
+                        <div style={{ fontSize: 20, fontWeight: 900, color: biasColor }}>{biasLabel}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Score: {bias}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: 0.6 }}>EXECUTION</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: algoData?.is_active ? '#22c55e' : '#94a3b8' }}>
+                            {loading ? '—' : algoData?.is_active ? 'Live Orders Active' : 'Orders Paused'}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Nifty 50 Options</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: 0.6 }}>LATEST SIGNAL</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: signal?.direction === 'BUY' ? '#22c55e' : signal?.direction === 'SELL' ? '#ef4444' : '#94a3b8' }}>
+                            {signal ? signal.direction : 'No signal yet'}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            {signal?.timestamp ? new Date(signal.timestamp).toLocaleTimeString() : '—'}
+                        </div>
+                    </div>
                 </div>
 
-                {/* WhatsApp button — full-width on mobile, auto on desktop */}
-                <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 10,
-                        background: '#25D366', color: '#fff',
-                        padding: '12px 28px', borderRadius: 10,
-                        fontSize: 15, fontWeight: 800, textDecoration: 'none',
-                        boxShadow: '0 4px 14px rgba(37,211,102,0.35)',
-                        transition: 'opacity 0.2s, transform 0.15s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)'; }}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                    </svg>
-                    Chat on WhatsApp
-                </a>
+                {/* Pre-market report */}
+                <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: 0.8 }}>PRE-MARKET REPORT</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                        {loading ? 'Loading...' : (algoData?.pre_market_report ?? 'Not generated yet.')}
+                    </div>
+                </div>
             </div>
 
-            {/* Closing tagline */}
-            <div style={{
-                marginTop: 20,
-                textAlign: 'center',
-                padding: '16px 24px',
-                borderTop: '1px solid var(--border-subtle)',
-            }}>
-                <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: 0.5 }}>
-                    No stress.&nbsp;
-                </span>
-                <span style={{ fontSize: 18, fontWeight: 900, color: '#4ade80', letterSpacing: 0.5 }}>
-                    No screen time.&nbsp;
-                </span>
-                <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: 0.5 }}>
-                    Just results. 🚀
-                </span>
-            </div>
+            {/* Latest Signal Detail */}
+            {signal && (
+                <div style={{ background: 'var(--bg-card)', border: `1px solid ${signal.direction === 'BUY' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`, borderRadius: 16, padding: '20px 24px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 14, letterSpacing: 0.8 }}>LATEST SIGNAL DETAIL</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                        {Object.entries(signal).map(([k, v]: any) => (
+                            <div key={k} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 14px', border: '1px solid var(--border-subtle)' }}>
+                                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: 0.6 }}>{k.replace(/_/g, ' ')}</div>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{String(v)}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
