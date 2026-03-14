@@ -258,7 +258,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
                     const displayedDays = weekForecast.days.slice(startIndex, endIndex);
 
                     return (
-                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(displayedDays.length, 5)}, 1fr)`, gap: 10 }}>
+                        <div className="day-cards-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(displayedDays.length, 5)}, 1fr)`, gap: 10 }}>
                             {displayedDays.map((day: any, idx: number) => {
                                 const isToday = startIndex === 0 && idx === 0;
                                 const isTomorrow = startIndex === 1 && idx === 0;

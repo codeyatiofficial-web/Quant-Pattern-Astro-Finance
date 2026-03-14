@@ -51,6 +51,14 @@ const ALL_LINKS: { key: Page; label: string; fullName: string; icon: any; proOnl
   { key: 'settings', label: 'Settings', fullName: 'Settings', icon: Menu, eliteOnly: true }, // or another icon like Settings if imported
 ];
 
+const MOBILE_NAV: { key: Page; label: string; icon: any; eliteOnly?: boolean; proOnly?: boolean }[] = [
+  { key: 'dashboard', label: 'Home', icon: Home },
+  { key: 'technical', label: 'Charts', icon: LineChart },
+  { key: 'derivatives', label: 'F\u0026O', icon: TrendingUp },
+  { key: 'events', label: 'Events', icon: FileText },
+  { key: 'algo', label: 'Algo', icon: Cpu, eliteOnly: true },
+];
+
 interface NavigationProps {
   activePage: Page;
   onNavigate: (page: Page) => void;
@@ -261,6 +269,26 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
           </div>
         )}
       </nav>
+
+      {/* ── Mobile Bottom Navigation Bar ── */}
+      <div className="mobile-bottom-nav">
+        {MOBILE_NAV.map((link) => {
+          const Icon = link.icon;
+          const active = activePage === link.key;
+          const locked = (link.eliteOnly && !isElite) || (link.proOnly && isFree);
+          return (
+            <button
+              key={link.key}
+              className={`mobile-nav-btn${active ? ' active' : ''}`}
+              onClick={() => { handleNavClick(link); setMobileMenuOpen(false); }}
+              style={{ opacity: locked ? 0.5 : 1 }}
+            >
+              <Icon size={20} />
+              <span>{link.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </>
   );
 }

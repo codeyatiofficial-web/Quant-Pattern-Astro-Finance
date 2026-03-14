@@ -890,3 +890,166 @@
     font-size: 10px;
   }
 }
+
+/* ── Market Ticker Scrolling Strip ────────────── */
+.ticker-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 38px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.ticker-badge {
+  flex-shrink: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.ticker-track {
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.ticker-scroll {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: ticker-run 55s linear infinite;
+  will-change: transform;
+}
+
+.ticker-track:hover .ticker-scroll {
+  animation-play-state: paused;
+}
+
+@keyframes ticker-run {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px 0 0;
+}
+
+.ticker-name {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.ticker-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+
+.ticker-chg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.ticker-chg.up  { color: #4ade80; background: rgba(74,222,128,0.12); }
+.ticker-chg.down { color: #f87171; background: rgba(248,113,113,0.12); }
+
+.ticker-dot {
+  color: var(--border-active);
+  font-size: 14px;
+  margin-left: 20px;
+  opacity: 0.4;
+}
+
+/* ── Mobile Bottom Navigation Bar ─────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+  z-index: 200;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.mobile-nav-btn {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: color 0.2s;
+  padding: 8px 2px;
+}
+
+.mobile-nav-btn.active {
+  color: var(--accent-indigo);
+}
+
+.mobile-nav-btn span {
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .mobile-bottom-nav {
+    display: flex;
+    align-items: stretch;
+  }
+}
+
+/* ── Responsive Day Cards Grid ─────────────────── */
+@media (max-width: 639px) {
+  .day-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── Mobile dashboard card spacing ─────────────── */
+@media (max-width: 767px) {
+  /* Reduce oversized inner gaps on mobile */
+  .panel { padding: 14px 12px !important; }
+
+  /* Tighter section margin-bottom inline styles can't be overridden; use padding override */
+  main > div > div[style] {
+    margin-bottom: 16px !important;
+  }
+}

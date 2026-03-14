@@ -77,7 +77,7 @@ export default function AstroFinanceApp() {
     <>
       <Navigation activePage={page} onNavigate={handleNavigate} />
 
-      <main className="pt-32 pb-10 px-4 max-w-[1400px] mx-auto min-h-screen">
+      <main className="pt-[68px] sm:pt-[130px] pb-[80px] sm:pb-12 px-3 sm:px-4 max-w-[1400px] mx-auto min-h-screen">
         {isProcessingAuth && (
           <div className="flex flex-col items-center justify-center p-10 bg-[var(--bg-card)] rounded-xl border border-[var(--border-subtle)] mb-8 shadow-lg">
             <div className="spinner mb-4 w-8 h-8 border-4"></div>
@@ -100,7 +100,7 @@ export default function AstroFinanceApp() {
         {page === 'sentiment' && !isFree && <SentimentVix />}
         {page === 'events' && <EconomicEvents />}
         {page === 'algo' && (
-          <div className="w-full max-w-5xl mx-auto h-[80vh]">
+          <div className="w-full max-w-5xl mx-auto">
             <NiftyAlgoWidget />
           </div>
         )}
