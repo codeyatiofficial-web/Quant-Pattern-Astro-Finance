@@ -275,7 +275,7 @@ function Algo3OptionsEngine() {
                     <div>
                         <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: 0.4 }}>NIFTY OPTIONS ENGINE</h3>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                            4-Step validation · 110 pts · Real MaxPain · PCR · IV Rank · ATM CE/PE
+                            4-Step 110-pt scoring · Greek-targeted strike · DTE expiry intelligence · Balance-aware lot sizing
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -336,18 +336,29 @@ function Algo3OptionsEngine() {
                         </div>
                     </div>
 
-                    {/* Trade Details — Entry / SL / T1 / T2 */}
+                    {/* Trade Details */}
                     {dir3 !== 'WAIT' && (sig3?.entry_premium ?? 0) > 0 && (
                         <div style={{ background: 'var(--bg-card)', border: `1px solid ${dirColor3}35`, borderRadius: 16, padding: '20px 24px' }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 14 }}>TRADE SETUP</div>
+                            {/* Viability note */}
+                            {sig3?.viability_note && (
+                                <div style={{ fontSize: 11, color: '#f87171', background: 'rgba(248,113,113,0.08)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(248,113,113,0.2)' }}>
+                                    {sig3.viability_note}
+                                </div>
+                            )}
+                            {sig3?.theta_warning && (
+                                <div style={{ fontSize: 11, color: '#fb923c', background: 'rgba(251,146,60,0.08)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(251,146,60,0.2)' }}>
+                                    {sig3.theta_warning}
+                                </div>
+                            )}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 14 }}>
                                 {[
-                                    { label: `ATM ${sig3?.option_type ?? ''} STRIKE`, val: sig3?.atm_strike?.toFixed(0) ?? '—', color: 'var(--text-primary)' },
-                                    { label: 'ENTRY PREMIUM',  val: `${sig3?.entry_premium ?? '—'}`,  color: 'var(--text-primary)' },
-                                    { label: 'SL (40% DROP)',  val: `${sig3?.sl_premium ?? '—'}`,      color: '#f87171' },
-                                    { label: 'TARGET 1 (2x)', val: `${sig3?.t1_premium ?? '—'}`,      color: '#4ade80' },
-                                    { label: 'TARGET 2 (3x)', val: `${sig3?.t2_premium ?? '—'}`,      color: '#4ade80' },
-                                    { label: 'LOT SIZE',      val: `${sig3?.lot_size ?? 50} units`,   color: 'var(--text-muted)' },
+                                    { label: `${sig3?.option_type ?? ''} STRIKE`,   val: sig3?.strike?.toFixed(0)       ?? sig3?.atm_strike?.toFixed(0) ?? '—', color: 'var(--text-primary)' },
+                                    { label: 'ENTRY PREMIUM',  val: `${sig3?.entry_premium ?? '—'}`,    color: 'var(--text-primary)' },
+                                    { label: 'SL (40% DROP)',  val: `${sig3?.sl_premium ?? '—'}`,        color: '#f87171' },
+                                    { label: 'TARGET 1 (2x)', val: `${sig3?.t1_premium ?? '—'}`,        color: '#4ade80' },
+                                    { label: 'TARGET 2 (3x)', val: `${sig3?.t2_premium ?? '—'}`,        color: '#4ade80' },
+                                    { label: 'LOTS x QTY',    val: `${sig3?.recommended_lots ?? 1} x ${sig3?.lot_size ?? 75}`, color: 'var(--text-muted)' },
                                 ].map(item => (
                                     <div key={item.label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
                                         <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.4, marginBottom: 4 }}>{item.label}</div>
@@ -355,8 +366,85 @@ function Algo3OptionsEngine() {
                                     </div>
                                 ))}
                             </div>
+                            {sig3?.strike_reason && (
+                                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4 }}>
+                                    Strike selection: {sig3.strike_reason}
+                                </div>
+                            )}
                             <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                                Force-exit at 3:10 PM · Max 2 lots · ATM strike rounded to nearest 50
+                                Force-exit at 3:10 PM · Max {sig3?.recommended_lots ?? 1} lots · Lot size {sig3?.lot_size ?? 75} units
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Account & Balance */}
+                    {(sig3?.available_cash ?? 0) > 0 && (
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '20px 24px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 14 }}>ACCOUNT SUMMARY</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+                                {[
+                                    { label: 'AVAILABLE CASH', val: `₹${Number(sig3?.available_cash ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, color: '#4ade80' },
+                                    { label: 'USED MARGIN',    val: `₹${Number(sig3?.used_margin    ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, color: '#94a3b8' },
+                                    { label: 'DAILY P&L',      val: `₹${(sig3?.daily_pnl ?? 0) >= 0 ? '+' : ''}${Number(sig3?.daily_pnl ?? 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, color: (sig3?.daily_pnl ?? 0) >= 0 ? '#4ade80' : '#f87171' },
+                                    { label: 'EST TRADE COST', val: (sig3?.total_cost_est ?? 0) > 0 ? `₹${Number(sig3.total_cost_est).toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : '—', color: 'var(--text-primary)' },
+                                ].map(item => (
+                                    <div key={item.label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.4, marginBottom: 4 }}>{item.label}</div>
+                                        <div style={{ fontSize: 14, fontWeight: 800, color: item.color }}>{item.val}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            {(sig3?.open_positions ?? []).length > 0 && (
+                                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.8 }}>OPEN POSITIONS</div>
+                                    {(sig3.open_positions as Array<{symbol:string;qty:number;avg_price:number;pnl:number}>).map((p, i) => (
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-primary)', background: 'var(--bg-secondary)', borderRadius: 7, padding: '7px 12px', border: '1px solid var(--border-subtle)' }}>
+                                            <span style={{ fontWeight: 700 }}>{p.symbol}</span>
+                                            <span>Qty: {p.qty}</span>
+                                            <span>Avg: {p.avg_price?.toFixed(1)}</span>
+                                            <span style={{ color: (p.pnl ?? 0) >= 0 ? '#4ade80' : '#f87171', fontWeight: 700 }}>P&L: {(p.pnl ?? 0) >= 0 ? '+' : ''}{p.pnl?.toFixed(0)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Expiry Intelligence */}
+                    {sig3?.expiry_str && (
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '20px 24px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 12 }}>EXPIRY INTELLIGENCE</div>
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+                                <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 16px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>EXPIRY</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginTop: 2 }}>{sig3.expiry_str}</div>
+                                </div>
+                                <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 16px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>DTE</div>
+                                    <div style={{ fontSize: 20, fontWeight: 900, color: (sig3?.dte ?? 7) <= 1 ? '#f87171' : (sig3?.dte ?? 7) <= 3 ? '#fb923c' : '#4ade80', marginTop: 2 }}>{sig3.dte}</div>
+                                </div>
+                                <div style={{ flex: 1, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>{sig3.expiry_reason}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Greeks Card */}
+                    {(sig3?.delta ?? 0) !== 0 && (
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '20px 24px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 14 }}>OPTION GREEKS — {sig3?.strike?.toFixed(0)} {sig3?.option_type}</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 10 }}>
+                                {[
+                                    { label: 'DELTA',   val: (sig3?.delta ?? 0).toFixed(3),  desc: 'Price sensitivity',  color: dirColor3 },
+                                    { label: 'THETA',   val: (sig3?.theta ?? 0).toFixed(3),  desc: 'Daily time decay',   color: '#f87171' },
+                                    { label: 'GAMMA',   val: (sig3?.gamma ?? 0).toFixed(4),  desc: 'Delta rate of change', color: '#fb923c' },
+                                    { label: 'VEGA',    val: (sig3?.vega  ?? 0).toFixed(3),  desc: 'IV sensitivity',     color: '#6366f1' },
+                                ].map(item => (
+                                    <div key={item.label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: item.color, fontWeight: 700, letterSpacing: 0.6 }}>{item.label}</div>
+                                        <div style={{ fontSize: 18, fontWeight: 900, color: item.color, margin: '4px 0' }}>{item.val}</div>
+                                        <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{item.desc}</div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}

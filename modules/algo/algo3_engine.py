@@ -1,33 +1,61 @@
 """
-Algo 3 — Nifty Options Engine
-==============================
-Full 4-step validation system (110 pts max) + 30-pt global bias.
-Step 1: Trend Alignment     (25 pts) — Supertrend 15m+1h, EMA20>50
-Step 2: Momentum + Volume   (25 pts) — RSI14, MACD(12,26,9), Volume ratio
-Step 3: Options Chain       (25 pts) — PCR, Real MaxPain, ATM OI change, IV rank
-Step 4: Time Zone + Levels  (25 pts) — Trade windows + key level proximity
-Global Bonus               (up to +10) — if direction aligns with global bias
+Algo 3 — Professional Nifty Weekly Options Engine
+====================================================
+Built with 30+ years of options-trading discipline.
 
-Trade Rules:
-  ATM CE for BUY  |  ATM PE for SELL
-  1 lot = 50 units
-  SL   = entry_premium * 0.40   (40% drop)
-  T1   = entry_premium * 2.0    (2× premium)
-  T2   = entry_premium * 3.0    (3× premium)
+EXPIRY INTELLIGENCE
+  DTE == 0 (expiry day)    : Avoid long options — theta crush. Switch to next week.
+  DTE == 1, IV rank < 60   : Too cheap to buy, decay too fast. Switch to next week.
+  DTE == 1, IV rank >= 60  : Elevated premium compensates. Trade with caution.
+  DTE 2–4                  : Current weekly, tighten SL for theta risk.
+  DTE >= 5                 : Normal conditions, full size.
+
+GREEK-BASED STRIKE SELECTION
+  Target delta 0.40–0.58   : Near-ATM, confirmed directional play.
+  Gamma filter on expiry   : Skip gamma > 0.005 on DTE <= 2 (pin risk).
+  Theta filter             : Reject if daily theta > 15% of premium.
+  Premium floor            : Min ₹30 (rejects illiquid/near-worthless strikes).
+  Liquidity                : Among qualifying strikes, pick highest open interest.
+
+BALANCE-AWARE POSITION SIZING
+  LOT_SIZE = 75 (Nifty weekly revised lot)
+  Required per lot = premium × 75 × 1.10  (10% MTM buffer)
+  Max risk capital = available_cash × 5%
+  Recommended lots = min(2, floor(max_risk / required_per_lot))
+  Never recommends a trade if capital is insufficient.
+
+4-STEP SCORING  (110 pts)
+  Step 1: Trend Alignment   (25) — Supertrend 15m+1h, EMA20>50
+  Step 2: Momentum+Volume   (25) — RSI14, MACD(12,26,9), Volume ratio
+  Step 3: Options Chain     (25) — PCR, Real MaxPain, ATM OI change, IV rank
+  Step 4: Levels + Time     (25) — Trade windows + key level proximity
+  Global Bonus            (+10)  — direction aligns global bias
+
+TRADE RULES
+  SL  = entry_premium × 0.60  (exit at 40% premium loss)
+  T1  = entry_premium × 2.0   (book 50% qty)
+  T2  = entry_premium × 3.0   (exit remainder)
   Force-exit at 3:10 PM
-
-Thresholds (with global-bias adjustment):
-  >= 85  STRONG SIGNAL  → EXECUTE FULL SIZE
-  >= 70  GOOD SIGNAL    → EXECUTE HALF SIZE
-  >= 55  WEAK SIGNAL    → ALERT ONLY
-  <  55  NO SIGNAL      → WAIT
 """
 
 import logging
+import math
 from typing import Dict, Any, Tuple, List, Optional
-from datetime import datetime, time
+from datetime import datetime, date, timedelta, time
 import pandas as pd
 import numpy as np
+
+logger = logging.getLogger(__name__)
+
+# ─── CONSTANTS ────────────────────────────────────────────────────────────────
+LOT_SIZE         = 75       # Nifty weekly revised lot size
+MAX_LOTS         = 2        # Hard cap per trade
+CAPITAL_RISK_PCT = 0.05     # Risk max 5% of available cash per trade
+MIN_PREMIUM      = 30.0     # Minimum option premium (₹) — avoid illiquid strikes
+MAX_THETA_PCT    = 0.15     # Reject if daily theta > 15% of premium
+TARGET_DELTA_MIN = 0.40     # Minimum delta for directional buy
+TARGET_DELTA_MAX = 0.58     # Maximum delta for directional buy
+MAX_GAMMA_EXPIRY = 0.005    # Max gamma allowed on DTE <= 2
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +71,19 @@ def _safe_float(val, default=0.0) -> float:
 
 def _signed(val: float) -> str:
     return f"+{val:.2f}" if val >= 0 else f"{val:.2f}"
+
+
+def _theta_risk_label(dte: int, iv_rank: float) -> str:
+    """Human-readable theta risk note given DTE and IV rank."""
+    if dte == 0:
+        return "EXPIRY DAY — DO NOT BUY OPTIONS"
+    if dte == 1:
+        if iv_rank >= 60:
+            return f"1 DTE | High IV ({iv_rank:.0f}%) compensates — trade with caution"
+        return f"1 DTE | Low IV ({iv_rank:.0f}%) — HIGH THETA RISK"
+    if dte <= 3:
+        return f"{dte} DTE — Elevated theta, tighten SL to 30%"
+    return f"{dte} DTE — Normal conditions"
 
 
 def calculate_gift_nifty_gap(kite_instance=None) -> Dict[str, Any]:
@@ -155,6 +196,203 @@ def calculate_iv_rank(symbol: str = "^NSEI", lookback_days: int = 252) -> float:
         return 50.0
 
 
+# ─── ACCOUNT / BALANCE ────────────────────────────────────────────────────────
+
+def _days_to_expiry(expiry_str: str) -> int:
+    """Calendar days from today to expiry_str (YYYY-MM-DD)."""
+    try:
+        exp = datetime.strptime(str(expiry_str)[:10], "%Y-%m-%d").date()
+        return max(0, (exp - date.today()).days)
+    except Exception:
+        return 7
+
+
+def get_account_state(kite) -> Dict[str, Any]:
+    """
+    Fetch live balance and open positions from Kite.
+    Returns safe defaults (available_cash=0) on failure so the engine
+    can still produce a signal — it will just size at 1 lot.
+    """
+    state: Dict[str, Any] = {
+        "available_cash":        0.0,
+        "used_margin":           0.0,
+        "net_value":             0.0,
+        "daily_pnl":             0.0,
+        "open_positions":        [],
+        "has_open_nifty_option": False,
+        "margin_error":          "",
+    }
+    try:
+        margins = kite.margins()
+        equity  = margins.get("equity", {})
+        state["available_cash"] = _safe_float(
+            equity.get("available", {}).get("live_balance", 0.0)
+        )
+        state["used_margin"] = _safe_float(
+            equity.get("utilised", {}).get("debits", 0.0)
+        )
+        state["net_value"] = state["available_cash"] + state["used_margin"]
+    except Exception as e:
+        state["margin_error"] = str(e)[:80]
+        logger.warning(f"Kite margins error: {e}")
+
+    try:
+        positions = kite.positions()
+        net_pos   = positions.get("net", [])
+        day_pos   = positions.get("day", [])
+        state["daily_pnl"] = sum(_safe_float(p.get("pnl", 0)) for p in day_pos)
+        nifty_opts = [
+            p for p in net_pos
+            if "NIFTY" in str(p.get("tradingsymbol", "")).upper()
+            and p.get("product") in ("MIS", "NRML")
+            and int(p.get("quantity", 0)) != 0
+        ]
+        state["open_positions"] = [
+            {
+                "symbol":    p.get("tradingsymbol"),
+                "qty":       p.get("quantity"),
+                "avg_price": _safe_float(p.get("average_price")),
+                "pnl":       _safe_float(p.get("pnl")),
+                "product":   p.get("product"),
+            }
+            for p in nifty_opts
+        ]
+        state["has_open_nifty_option"] = len(nifty_opts) > 0
+    except Exception as e:
+        logger.warning(f"Kite positions error: {e}")
+
+    return state
+
+
+def calculate_recommended_lots(available_cash: float, entry_premium: float) -> int:
+    """
+    Conservative lot sizing:
+      required_per_lot = premium × LOT_SIZE × 1.10  (10% MTM buffer)
+      max_risk         = available_cash × CAPITAL_RISK_PCT (5%)
+      lots             = min(MAX_LOTS, floor(max_risk / required_per_lot))
+    Always returns at least 1 so the signal remains informative.
+    Returns 0 only when available_cash is explicitly 0 (Kite not available).
+    """
+    if entry_premium <= 0:
+        return 1
+    required_per_lot = entry_premium * LOT_SIZE * 1.10
+    if available_cash <= 0:
+        return 1  # unknown balance → default 1
+    max_risk = available_cash * CAPITAL_RISK_PCT
+    lots = int(math.floor(max_risk / required_per_lot))
+    return max(1, min(MAX_LOTS, lots))
+
+
+def select_best_expiry(
+    nifty_opts: List[Dict],
+    iv_rank: float
+) -> Tuple[Optional[str], int, str]:
+    """
+    Smart expiry selection:
+      DTE == 0               → switch to next weekly (theta crush)
+      DTE == 1, IV < 60      → switch to next weekly (premium decays too fast)
+      DTE == 1, IV >= 60     → proceed with strong warning
+      DTE 2–4                → current weekly, warn on theta
+      DTE >= 5               → current weekly, normal
+    Returns (expiry_str, dte, reason_label)
+    """
+    expiries = sorted(set(
+        str(i.get("expiry", ""))[:10]
+        for i in nifty_opts
+        if i.get("expiry")
+    ))
+    if not expiries:
+        return None, 0, "No expiries found in instruments"
+
+    current   = expiries[0]
+    dte       = _days_to_expiry(current)
+    next_exp  = expiries[1] if len(expiries) > 1 else current
+    next_dte  = _days_to_expiry(next_exp)
+
+    if dte == 0:
+        return next_exp, next_dte, (
+            f"Expiry day — theta crush on longs — switched to next weekly ({next_dte} DTE)"
+        )
+    if dte == 1 and iv_rank < 60:
+        return next_exp, next_dte, (
+            f"1 DTE + Low IV ({iv_rank:.0f}%) — decay risk — switched to next ({next_dte} DTE)"
+        )
+    if dte == 1:
+        return current, dte, f"1 DTE | High IV ({iv_rank:.0f}%) — elevated premium, proceed with caution"
+    if dte <= 3:
+        return current, dte, f"{dte} DTE — current weekly, elevated theta — tighten SL"
+    return current, dte, f"{dte} DTE — current weekly, normal conditions"
+
+
+def select_best_strike(
+    option_df: pd.DataFrame,
+    spot: float,
+    dte: int,
+    iv_rank: float
+) -> Tuple[Optional[Dict], str]:
+    """
+    Professional strike selection using Greeks:
+      1. Filter: premium >= MIN_PREMIUM
+      2. Delta targeting: 0.40–0.58 for directional buys
+      3. Gamma filter on DTE <= 2: skip gamma > MAX_GAMMA_EXPIRY
+      4. Theta filter: reject if daily theta > 15% of premium
+      5. Liquidity: highest open interest among qualified strikes
+      6. Fallback: nearest ATM if Greeks unavailable
+    """
+    if option_df.empty:
+        return None, "No chain data"
+
+    candidates = option_df[option_df["ltp"] >= MIN_PREMIUM].copy()
+    if candidates.empty:
+        # Premium filter too strict — widen to nearest ATM
+        nearest_idx = (option_df["strike"] - spot).abs().argsort().iloc[0]
+        row = option_df.iloc[nearest_idx]
+        return row.to_dict(), f"ATM fallback (all premiums < ₹{MIN_PREMIUM:.0f})"
+
+    has_greeks = (
+        "delta" in candidates.columns and
+        candidates["delta"].abs().sum() > 0
+    )
+    reason_parts: List[str] = []
+
+    if has_greeks:
+        # Step A: Delta range
+        delta_abs = candidates["delta"].abs()
+        delta_filtered = candidates[delta_abs.between(TARGET_DELTA_MIN, TARGET_DELTA_MAX)]
+        if delta_filtered.empty:
+            delta_filtered = candidates  # widen — use all
+        else:
+            reason_parts.append(f"delta {TARGET_DELTA_MIN}–{TARGET_DELTA_MAX}")
+
+        # Step B: Gamma cap on near-expiry
+        if dte <= 2 and "gamma" in delta_filtered.columns:
+            gamma_ok = delta_filtered[delta_filtered["gamma"].abs() <= MAX_GAMMA_EXPIRY]
+            if not gamma_ok.empty:
+                delta_filtered = gamma_ok
+                reason_parts.append(f"gamma≤{MAX_GAMMA_EXPIRY}")
+
+        # Step C: Theta cost vs premium
+        if "theta" in delta_filtered.columns:
+            theta_ok = delta_filtered[
+                delta_filtered["theta"].abs() <= delta_filtered["ltp"] * MAX_THETA_PCT
+            ]
+            if not theta_ok.empty:
+                delta_filtered = theta_ok
+                reason_parts.append(f"theta≤{MAX_THETA_PCT*100:.0f}% of premium")
+
+        # Step D: Pick highest OI (most liquid)
+        if not delta_filtered.empty:
+            best = delta_filtered.loc[delta_filtered["oi"].idxmax()]
+            delta_val = abs(_safe_float(best.get("delta", 0)))
+            reason_parts.insert(0, f"delta={delta_val:.2f}")
+            return best.to_dict(), " | ".join(reason_parts) if reason_parts else "Greek-targeted"
+
+    # No Greeks — pure ATM
+    nearest_idx = (candidates["strike"] - spot).abs().argsort().iloc[0]
+    row = candidates.iloc[nearest_idx]
+    return row.to_dict(), "ATM (no Greeks in response)"
+
+
 # ─── ALGO 3 ENGINE ────────────────────────────────────────────────────────────
 
 class Algo3Engine:
@@ -213,85 +451,102 @@ class Algo3Engine:
             logger.error(f"Spot price fetch error: {e}")
             return 0.0
 
-    def get_options_chain(self, spot: float, expiry_date: Optional[str] = None) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def get_options_chain_smart(
+        self,
+        spot: float,
+        iv_rank: float = 50.0
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, str, int, str]:
         """
-        Fetch CE and PE options chain around ATM ±10 strikes (50-pt spacing).
-        Returns (ce_df, pe_df) with columns: strike, oi, oi_change, ltp, iv
-        Expiry auto-selects nearest weekly if not provided.
+        Smart options chain fetch:
+          1. Loads NFO instruments (NFO-OPT NIFTY)
+          2. Calls select_best_expiry() — checks DTE + IV rank
+          3. Fetches ATM ±12 strikes for the chosen expiry
+          4. Batch-quotes via Kite — pulls ltp, oi, iv, greeks
+          5. Returns (ce_df, pe_df, expiry_str, dte, expiry_reason)
+             DataFrame cols: strike, oi, oi_change, ltp, iv, delta, theta, gamma, vega
         """
         try:
-            # Round spot to nearest 50
-            atm = round(spot / 50) * 50
-
-            # Build strike range ATM ± 10 steps of 50
-            strikes = [atm + (i * 50) for i in range(-10, 11)]
-
-            # Load instrument list once per session (cached in module-level dict)
             from modules.kite_client import KiteDataClient
             kdc = KiteDataClient()
             instruments = kdc.get_instruments("NFO")
-            if instruments is None or len(instruments) == 0:
-                return pd.DataFrame(), pd.DataFrame()
+            if not instruments:
+                return pd.DataFrame(), pd.DataFrame(), "", 0, "No instruments"
 
-            nifty_opts = [i for i in instruments if i.get('name', '').upper() == 'NIFTY' and i.get('segment') == 'NFO-OPT']
+            nifty_opts = [
+                i for i in instruments
+                if i.get("name", "").upper() == "NIFTY"
+                and i.get("segment") == "NFO-OPT"
+            ]
 
-            if expiry_date is None:
-                # Use nearest expiry
-                expiries = sorted(set(str(i['expiry']) for i in nifty_opts if i.get('expiry')))
-                expiry_date = expiries[0] if expiries else None
+            expiry_str, dte, exp_reason = select_best_expiry(nifty_opts, iv_rank)
+            if not expiry_str:
+                return pd.DataFrame(), pd.DataFrame(), "", 0, "No valid expiry found"
 
-            if expiry_date is None:
-                return pd.DataFrame(), pd.DataFrame()
+            atm     = round(spot / 50) * 50
+            strikes = [atm + (i * 50) for i in range(-12, 13)]
 
-            ce_tradingsymbols = []
-            pe_tradingsymbols = []
-            ce_strike_map: Dict[float, str] = {}
-            pe_strike_map: Dict[float, str] = {}
-
+            ce_map: Dict[float, str] = {}
+            pe_map: Dict[float, str] = {}
             for inst in nifty_opts:
-                strike = _safe_float(inst.get('strike'))
-                if strike in strikes and str(inst.get('expiry', '')) == expiry_date:
-                    sym = inst.get('tradingsymbol', '')
-                    if inst.get('instrument_type') == 'CE':
-                        ce_tradingsymbols.append(f"NFO:{sym}")
-                        ce_strike_map[strike] = sym
-                    elif inst.get('instrument_type') == 'PE':
-                        pe_tradingsymbols.append(f"NFO:{sym}")
-                        pe_strike_map[strike] = sym
+                s   = _safe_float(inst.get("strike"))
+                exp = str(inst.get("expiry", ""))[:10]
+                if s in strikes and exp == expiry_str:
+                    sym = inst.get("tradingsymbol", "")
+                    if inst.get("instrument_type") == "CE":
+                        ce_map[s] = sym
+                    elif inst.get("instrument_type") == "PE":
+                        pe_map[s] = sym
 
-            def _fetch_batch(symbols: List[str]) -> Dict:
-                if not symbols:
+            def _batch_quote(sym_map: Dict[float, str]) -> Dict:
+                if not sym_map:
                     return {}
+                keys = [f"NFO:{s}" for s in sym_map.values()]
                 try:
-                    return self.kite.quote(symbols) or {}
+                    return self.kite.quote(keys) or {}
                 except Exception as e:
                     logger.error(f"Options quote error: {e}")
                     return {}
 
-            ce_quotes = _fetch_batch(ce_tradingsymbols)
-            pe_quotes = _fetch_batch(pe_tradingsymbols)
+            ce_q = _batch_quote(ce_map)
+            pe_q = _batch_quote(pe_map)
 
-            def _build_df(strike_map: Dict[float, str], quotes: Dict, opt_type: str) -> pd.DataFrame:
+            def _build_df(sym_map: Dict[float, str], quotes: Dict) -> pd.DataFrame:
                 rows = []
-                for strike, sym in strike_map.items():
+                for s, sym in sym_map.items():
                     q = quotes.get(f"NFO:{sym}", {})
-                    oi = int(q.get('oi', 0))
-                    oi_day_high = int(q.get('oi_day_high', oi))
-                    oi_change = oi - int(q.get('oi_day_low', oi))
-                    ltp = _safe_float(q.get('last_price'))
-                    iv  = _safe_float(q.get('implied_volatility', 0.0))
-                    rows.append({'strike': strike, 'oi': oi, 'oi_change': oi_change, 'ltp': ltp, 'iv': iv})
+                    # Greeks from Kite quote (only available for options in live market)
+                    greeks_raw = q.get("greeks") or {}
+                    rows.append({
+                        "strike":    s,
+                        "oi":        int(q.get("oi", 0)),
+                        "oi_change": int(q.get("oi", 0)) - int(q.get("oi_day_low", q.get("oi", 0))),
+                        "ltp":       _safe_float(q.get("last_price")),
+                        "iv":        _safe_float(q.get("implied_volatility")),
+                        "delta":     _safe_float(greeks_raw.get("delta") if isinstance(greeks_raw, dict) else 0),
+                        "theta":     _safe_float(greeks_raw.get("theta") if isinstance(greeks_raw, dict) else 0),
+                        "gamma":     _safe_float(greeks_raw.get("gamma") if isinstance(greeks_raw, dict) else 0),
+                        "vega":      _safe_float(greeks_raw.get("vega")  if isinstance(greeks_raw, dict) else 0),
+                    })
                 if not rows:
                     return pd.DataFrame()
-                return pd.DataFrame(rows).sort_values('strike').reset_index(drop=True)
+                return pd.DataFrame(rows).sort_values("strike").reset_index(drop=True)
 
-            ce_df = _build_df(ce_strike_map, ce_quotes, 'CE')
-            pe_df = _build_df(pe_strike_map, pe_quotes, 'PE')
-            return ce_df, pe_df
+            ce_df = _build_df(ce_map, ce_q)
+            pe_df = _build_df(pe_map, pe_q)
+            return ce_df, pe_df, expiry_str, dte, exp_reason
 
         except Exception as e:
-            logger.error(f"Options chain fetch error: {e}")
-            return pd.DataFrame(), pd.DataFrame()
+            logger.error(f"Options chain smart error: {e}")
+            return pd.DataFrame(), pd.DataFrame(), "", 0, str(e)
+
+    # ── Legacy wrapper (kept for backward compat) ──────────────────────────────
+
+    def get_options_chain(
+        self, spot: float, expiry_date: Optional[str] = None
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Legacy method — calls get_options_chain_smart with default iv_rank=50."""
+        ce_df, pe_df, _, _, _ = self.get_options_chain_smart(spot, iv_rank=50.0)
+        return ce_df, pe_df
 
     # ── Step 1 ─────────────────────────────────────────────────────────────────
 
@@ -484,6 +739,110 @@ class Algo3Engine:
 
     # ── Entry / SL / T1 / T2 ──────────────────────────────────────────────────
 
+    def build_trade_setup(
+        self,
+        direction: str,
+        ce_data: pd.DataFrame,
+        pe_data: pd.DataFrame,
+        spot: float,
+        dte: int,
+        iv_rank: float,
+        available_cash: float
+    ) -> Dict[str, Any]:
+        """
+        Complete trade setup using Greek-targeted strike selection
+        and balance-aware lot sizing.
+
+        Returns a dict with:
+          option_type, strike, entry_premium, sl, t1, t2,
+          recommended_lots, quantity, total_cost_est,
+          delta, theta, gamma, vega,
+          strike_reason, theta_warning, trade_viable, viability_note
+        """
+        opt_type = "CE" if direction == "BUY" else "PE"
+        df       = ce_data if opt_type == "CE" else pe_data
+
+        base = {
+            "option_type":      opt_type,
+            "strike":           0.0,
+            "entry_premium":    0.0,
+            "sl_premium":       0.0,
+            "t1_premium":       0.0,
+            "t2_premium":       0.0,
+            "recommended_lots": 1,
+            "lot_size":         LOT_SIZE,
+            "quantity":         LOT_SIZE,
+            "total_cost_est":   0.0,
+            "delta":            0.0,
+            "theta":            0.0,
+            "gamma":            0.0,
+            "vega":             0.0,
+            "strike_reason":    "",
+            "theta_warning":    _theta_risk_label(dte, iv_rank),
+            "trade_viable":     False,
+            "viability_note":   "",
+        }
+
+        if df.empty:
+            base["viability_note"] = "No option chain data"
+            return base
+
+        # Block trades on expiry day
+        if dte == 0:
+            base["viability_note"] = "Expiry day — long options not recommended (theta crush)"
+            return base
+
+        best_row, reason = select_best_strike(df, spot, dte, iv_rank)
+        if best_row is None:
+            base["viability_note"] = "No qualifying strike found"
+            return base
+
+        premium = _safe_float(best_row.get("ltp", 0))
+        if premium < MIN_PREMIUM:
+            base["viability_note"] = f"Premium ₹{premium:.0f} below minimum ₹{MIN_PREMIUM:.0f}"
+            return base
+
+        # Capital adequacy
+        required_per_lot = premium * LOT_SIZE * 1.10
+        if available_cash > 0 and available_cash < required_per_lot:
+            base["viability_note"] = (
+                f"Insufficient capital: need ₹{required_per_lot:.0f}, have ₹{available_cash:.0f}"
+            )
+            base["strike"]        = _safe_float(best_row.get("strike"))
+            base["entry_premium"] = round(premium, 2)
+            base["strike_reason"] = reason
+            return base
+
+        lots = calculate_recommended_lots(available_cash, premium)
+
+        # Theta advisory (don't block — just annotate)
+        theta     = abs(_safe_float(best_row.get("theta", 0)))
+        theta_pct = (theta / premium * 100) if premium > 0 else 0
+        vibe_note = ""
+        if theta > 0 and theta_pct > MAX_THETA_PCT * 100:
+            vibe_note = f"Theta {theta_pct:.0f}% of premium/day — consider tighter SL"
+
+        base.update({
+            "strike":           _safe_float(best_row.get("strike")),
+            "entry_premium":    round(premium, 2),
+            "sl_premium":       round(premium * 0.60, 2),
+            "t1_premium":       round(premium * 2.0,  2),
+            "t2_premium":       round(premium * 3.0,  2),
+            "recommended_lots": lots,
+            "quantity":         lots * LOT_SIZE,
+            "total_cost_est":   round(premium * lots * LOT_SIZE, 0),
+            "delta":            round(_safe_float(best_row.get("delta")), 3),
+            "theta":            round(_safe_float(best_row.get("theta")), 3),
+            "gamma":            round(_safe_float(best_row.get("gamma")), 4),
+            "vega":             round(_safe_float(best_row.get("vega")),  3),
+            "strike_reason":    reason,
+            "trade_viable":     True,
+            "viability_note":   vibe_note,
+        })
+        return base
+
+    # ── Legacy method (backward compat) ───────────────────────────────────────
+
     def get_trade_details(
         self,
         direction: str,
@@ -491,91 +850,91 @@ class Algo3Engine:
         ce_data: pd.DataFrame,
         pe_data: pd.DataFrame
     ) -> Dict[str, Any]:
-        """
-        Return ATM option name, premium, SL (40% below), T1 (2×), T2 (3×).
-        """
-        details = {
-            "option_type": "CE" if direction == "BUY" else "PE",
-            "strike": atm_strike,
-            "entry_premium": 0.0,
-            "sl_premium": 0.0,
-            "t1_premium": 0.0,
-            "t2_premium": 0.0,
-            "lots": 1,
-            "lot_size": 50,
-            "quantity": 50,
-        }
-        try:
-            if direction == "BUY" and not ce_data.empty:
-                row = ce_data[ce_data['strike'] == atm_strike]
-                if not row.empty:
-                    premium = _safe_float(row.iloc[0]['ltp'])
-                    details['entry_premium'] = round(premium, 2)
-                    details['sl_premium']    = round(premium * 0.60, 2)  # 40% drop → 60% of premium
-                    details['t1_premium']    = round(premium * 2.0, 2)
-                    details['t2_premium']    = round(premium * 3.0, 2)
-
-            elif direction == "SELL" and not pe_data.empty:
-                row = pe_data[pe_data['strike'] == atm_strike]
-                if not row.empty:
-                    premium = _safe_float(row.iloc[0]['ltp'])
-                    details['entry_premium'] = round(premium, 2)
-                    details['sl_premium']    = round(premium * 0.60, 2)
-                    details['t1_premium']    = round(premium * 2.0, 2)
-                    details['t2_premium']    = round(premium * 3.0, 2)
-        except Exception as e:
-            logger.error(f"Trade details error: {e}")
-
-        return details
+        """Legacy ATM-only method — kept for backward compatibility."""
+        return self.build_trade_setup(
+            direction, ce_data, pe_data, atm_strike,
+            dte=5, iv_rank=50.0, available_cash=0.0
+        )
 
     # ── Safety checks ─────────────────────────────────────────────────────────
 
-    def run_safety_checks(self, app_state: Dict[str, Any]) -> Tuple[bool, List[Dict[str, Any]]]:
+    def run_safety_checks(
+        self,
+        app_state: Dict[str, Any],
+        account: Optional[Dict[str, Any]] = None,
+        entry_premium: float = 0.0,
+        dte: int = 7,
+    ) -> Tuple[bool, List[Dict[str, Any]]]:
         """
-        5 checks:
+        6 safety checks (upgraded from 5):
         1. Market hours (9:15–15:15)
-        2. Max lot size ≤ 2
-        3. No duplicate open option position
+        2. Not expiry day (DTE != 0)
+        3. No duplicate Nifty option position (from live Kite positions)
         4. Max 3 trades today
-        5. Daily P&L > –3000
+        5. Daily P&L > −3000
+        6. Capital adequate for at least 1 lot
 
-        Returns (all_clear: bool, checks: list of {name, ok, reason})
+        Falls back gracefully if account data is not available.
         """
         now  = datetime.now()
         t    = now.time()
-        algo = app_state.get("algo", {})
-        a3   = algo.get("algo3", {})
-
-        checks = []
+        a3   = app_state.get("algo", {}).get("algo3", {})
+        acc  = account or {}
+        checks: List[Dict[str, Any]] = []
 
         # 1. Market hours
-        market_ok = time(9, 15) <= t <= time(15, 15)
-        checks.append({"name": "Market Hours", "ok": market_ok,
-                        "reason": "9:15–15:15" if market_ok else "Outside trading hours"})
+        mok = time(9, 15) <= t <= time(15, 15)
+        checks.append({
+            "name": "Market Hours", "ok": mok,
+            "reason": "9:15–15:15 IST" if mok else "Outside trading hours"
+        })
 
-        # 2. Lot size
-        checks.append({"name": "Lot Size OK", "ok": True,
-                        "reason": "Max 2 lots enforced"})
+        # 2. Not expiry day
+        ok2 = dte != 0
+        checks.append({
+            "name": "Not Expiry Day", "ok": ok2,
+            "reason": f"DTE = {dte}" if ok2 else "Expiry day — theta crush on long options"
+        })
 
-        # 3. Duplicate position
-        has_open = a3.get("has_open_position", False)
-        checks.append({"name": "No Duplicate Position", "ok": not has_open,
-                        "reason": "No open position" if not has_open else "Already have open MIS position"})
+        # 3. Duplicate position (live from Kite, else fallback to app_state)
+        has_open = acc.get("has_open_nifty_option", a3.get("has_open_position", False))
+        checks.append({
+            "name": "No Duplicate Position", "ok": not has_open,
+            "reason": "No open Nifty option" if not has_open else "Already holding Nifty option"
+        })
 
         # 4. Trade count
-        trade_count = int(a3.get("trades_today", 0))
-        count_ok = trade_count < 3
-        checks.append({"name": f"Trade Count ({trade_count}/3)", "ok": count_ok,
-                        "reason": "Within limit" if count_ok else "Daily trade limit reached"})
+        tc   = int(a3.get("trades_today", 0))
+        ok4  = tc < 3
+        checks.append({
+            "name": f"Daily Trade Limit ({tc}/3)", "ok": ok4,
+            "reason": "Within limit" if ok4 else "3 trades already taken today"
+        })
 
-        # 5. Daily P&L
-        daily_pnl = float(a3.get("daily_pnl", 0.0))
-        pnl_ok = daily_pnl > -3000.0
-        checks.append({"name": f"Daily P&L ({daily_pnl:.0f})", "ok": pnl_ok,
-                        "reason": "Within loss limit" if pnl_ok else "Daily loss limit (-3000) breached"})
+        # 5. Daily P&L (merge live pnl from Kite with app state)
+        pnl  = float(acc.get("daily_pnl", a3.get("daily_pnl", 0.0)))
+        ok5  = pnl > -3000.0
+        checks.append({
+            "name": f"Daily P&L ({pnl:+.0f})", "ok": ok5,
+            "reason": "Within loss limit" if ok5 else "Daily loss limit −3000 breached"
+        })
 
-        all_clear = all(c["ok"] for c in checks)
-        return all_clear, checks
+        # 6. Capital adequacy
+        cash = float(acc.get("available_cash", 0.0))
+        if cash > 0 and entry_premium > 0:
+            required = entry_premium * LOT_SIZE * 1.10
+            ok6 = cash >= required
+            checks.append({
+                "name": "Capital Adequate", "ok": ok6,
+                "reason": f"Need ₹{required:.0f}, have ₹{cash:.0f}" if not ok6 else f"Cash ₹{cash:.0f} OK"
+            })
+        else:
+            checks.append({
+                "name": "Capital (unknown)", "ok": True,
+                "reason": "Balance unavailable — defaulting to 1 lot"
+            })
+
+        return all(c["ok"] for c in checks), checks
 
     # ── Main evaluate ─────────────────────────────────────────────────────────
 
@@ -589,78 +948,106 @@ class Algo3Engine:
         key_levels: Dict[str, float],
         current_time: time,
         iv_rank: float = 50.0,
+        dte: int = 7,
+        expiry_str: str = "",
+        expiry_reason: str = "",
+        account: Optional[Dict[str, Any]] = None,
         app_state: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Run all 4 steps → compute 110-pt score → derive trade details.
-        Returns a complete signal dict ready to serve via API.
+        Run all 4 steps, build trade setup with Greeks + balance awareness,
+        run safety checks, and return a complete signal dict.
         """
-        result = {
-            "direction": "WAIT",
-            "total_score": 0,
-            "step1_score": 0,
-            "step2_score": 0,
-            "step3_score": 0,
-            "step4_score": 0,
-            "global_bonus": 0,
+        acc = account or {}
+        result: Dict[str, Any] = {
+            # Direction & score
+            "direction":         "WAIT",
+            "total_score":       0,
+            "step1_score":       0,
+            "step2_score":       0,
+            "step3_score":       0,
+            "step4_score":       0,
+            "global_bonus":      0,
             "global_bias_score": self.global_bias_score,
-            "signal_strength": "NO SIGNAL",
-            "action": "WAIT",
-            "confidence": "LOW",
-            "in_trade_window": False,
-            # Step meta
-            "rsi": 0.0,
-            "macd_dir": "Flat",
+            "signal_strength":   "NO SIGNAL",
+            "action":            "WAIT",
+            "confidence":        "LOW",
+            "in_trade_window":   False,
+            # Step 2 meta
+            "rsi":       0.0,
+            "macd_dir":  "Flat",
             "vol_ratio": 0.0,
-            "pcr": 1.0,
-            "max_pain": 0.0,
-            "iv_rank": iv_rank,
-            "call_wall": 0.0,
-            "put_wall": 0.0,
+            # Step 3 meta
+            "pcr":        1.0,
+            "max_pain":   0.0,
+            "iv_rank":    iv_rank,
+            "call_wall":  0.0,
+            "put_wall":   0.0,
             "atm_strike": 0.0,
-            # Trade details
-            "option_type": "",
-            "entry_premium": 0.0,
-            "sl_premium": 0.0,
-            "t1_premium": 0.0,
-            "t2_premium": 0.0,
-            "lots": 1,
+            # Trade setup (populated later)
+            "option_type":      "",
+            "strike":           0.0,
+            "entry_premium":    0.0,
+            "sl_premium":       0.0,
+            "t1_premium":       0.0,
+            "t2_premium":       0.0,
+            "recommended_lots": 1,
+            "lot_size":         LOT_SIZE,
+            "quantity":         LOT_SIZE,
+            "total_cost_est":   0.0,
+            "delta":            0.0,
+            "theta":            0.0,
+            "gamma":            0.0,
+            "vega":             0.0,
+            "strike_reason":    "",
+            "theta_warning":    _theta_risk_label(dte, iv_rank),
+            "trade_viable":     False,
+            "viability_note":   "",
+            # Expiry intelligence
+            "expiry_str":    expiry_str,
+            "dte":           dte,
+            "expiry_reason": expiry_reason,
+            # Account
+            "available_cash": float(acc.get("available_cash", 0.0)),
+            "used_margin":    float(acc.get("used_margin", 0.0)),
+            "daily_pnl":      float(acc.get("daily_pnl", 0.0)),
+            "open_positions": acc.get("open_positions", []),
             # Safety
-            "safety_clear": False,
+            "safety_clear":  False,
             "safety_checks": [],
-            "timestamp": datetime.now().isoformat(),
+            "timestamp":     datetime.now().isoformat(),
         }
 
         try:
-            # Step 1
+            # ── Step 1: Trend ─────────────────────────────────────────────────
             s1, direction = self.step1_trend(df_15m, df_1h)
             result["step1_score"] = s1
             result["direction"]   = direction
-
             if direction == "NEUTRAL" or s1 == 0:
-                result["signal_strength"] = "NO SIGNAL — Step 1 Failed"
+                result["signal_strength"] = "NO SIGNAL — Trend not aligned"
                 return result
 
-            # Step 2
+            # ── Step 2: Momentum ──────────────────────────────────────────────
             s2, meta2 = self.step2_momentum(df_15m, direction)
-            result["step2_score"] = s2
-            result["rsi"]        = meta2["rsi"]
-            result["macd_dir"]   = meta2["macd_dir"]
-            result["vol_ratio"]  = meta2["vol_ratio"]
+            result.update({
+                "step2_score": s2,
+                "rsi":       meta2["rsi"],
+                "macd_dir":  meta2["macd_dir"],
+                "vol_ratio": meta2["vol_ratio"],
+            })
 
-            # Step 3
+            # ── Step 3: Options chain ─────────────────────────────────────────
             s3, meta3 = self.step3_options_chain(ce_data, pe_data, spot, direction, iv_rank)
             result["step3_score"] = s3
             result.update({k: meta3[k] for k in meta3})
 
-            # Step 4
+            # ── Step 4: Levels + time ─────────────────────────────────────────
             s4, in_window = self.step4_levels_time(spot, key_levels, current_time)
-            result["step4_score"]    = s4
-            result["in_trade_window"] = in_window
+            result.update({"step4_score": s4, "in_trade_window": in_window})
 
-            # Global bonus
+            # ── Global bias bonus ─────────────────────────────────────────────
             g_bonus = 0
-            if direction == "BUY"  and self.global_bias_score >= 5:
+            if direction == "BUY" and self.global_bias_score >= 5:
                 g_bonus = min(10, self.global_bias_score)
             elif direction == "SELL" and self.global_bias_score <= -5:
                 g_bonus = min(10, abs(self.global_bias_score))
@@ -669,41 +1056,36 @@ class Algo3Engine:
             total = s1 + s2 + s3 + s4 + g_bonus
             result["total_score"] = total
 
-            # Signal strength
+            # ── Signal classification ─────────────────────────────────────────
             threshold = self.buy_thresh if direction == "BUY" else self.sell_thresh
             if total >= threshold:
-                result["signal_strength"] = "STRONG SIGNAL"
-                result["action"]          = "EXECUTE"
-                result["confidence"]      = "HIGH"
+                result.update({"signal_strength": "STRONG SIGNAL", "action": "EXECUTE", "confidence": "HIGH"})
             elif total >= 70:
-                result["signal_strength"] = "GOOD SIGNAL"
-                result["action"]          = "EXECUTE"
-                result["confidence"]      = "MEDIUM"
+                result.update({"signal_strength": "GOOD SIGNAL", "action": "EXECUTE", "confidence": "MEDIUM"})
             elif total >= 55:
-                result["signal_strength"] = "WEAK SIGNAL"
-                result["action"]          = "ALERT_ONLY"
-                result["confidence"]      = "LOW"
+                result.update({"signal_strength": "WEAK SIGNAL", "action": "ALERT_ONLY", "confidence": "LOW"})
             else:
-                result["signal_strength"] = "NO SIGNAL"
-                result["action"]          = "WAIT"
-                result["confidence"]      = "LOW"
+                result.update({"signal_strength": "NO SIGNAL", "action": "WAIT", "confidence": "LOW"})
 
-            # Trade details
-            atm = meta3.get("atm_strike", 0.0)
-            if atm > 0 and result["action"] in ("EXECUTE", "ALERT_ONLY"):
-                trade = self.get_trade_details(direction, atm, ce_data, pe_data)
-                result.update(trade)
-
-            # Safety
-            if app_state:
-                safe, checks = self.run_safety_checks(app_state)
-            else:
-                safe, checks = False, [{"name": "State unavailable", "ok": False, "reason": "No app_state"}]
-            result["safety_clear"]  = safe
-            result["safety_checks"] = checks
-
-            # Telegram notification for actionable signals
+            # ── Trade setup (Greek-targeted, balance-aware) ───────────────────
             if result["action"] in ("EXECUTE", "ALERT_ONLY"):
+                cash  = float(acc.get("available_cash", 0.0))
+                setup = self.build_trade_setup(
+                    direction, ce_data, pe_data, spot, dte, iv_rank, cash
+                )
+                result.update(setup)
+
+            # ── Safety checks (upgraded — includes capital + DTE) ─────────────
+            safe, checks = self.run_safety_checks(
+                app_state or {},
+                account=acc,
+                entry_premium=float(result.get("entry_premium", 0.0)),
+                dte=dte,
+            )
+            result.update({"safety_clear": safe, "safety_checks": checks})
+
+            # ── Telegram ──────────────────────────────────────────────────────
+            if result["action"] in ("EXECUTE", "ALERT_ONLY") and result.get("trade_viable", False):
                 _send_algo3_alert(result)
 
         except Exception as e:
@@ -716,38 +1098,50 @@ class Algo3Engine:
 # ─── TELEGRAM HELPERS ─────────────────────────────────────────────────────────
 
 def _send_algo3_alert(signal: Dict[str, Any]):
-    """Fire Telegram alert for Algo 3 signal without emojis."""
+    """Fire Telegram alert for Algo 3 — no emojis, includes Greeks + account."""
     try:
         from modules.algo.telegram_bot import send_telegram_message
-        direction = signal.get("direction", "WAIT")
-        total     = signal.get("total_score", 0)
-        action    = signal.get("action", "WAIT")
-        premium   = signal.get("entry_premium", 0.0)
-        sl        = signal.get("sl_premium", 0.0)
-        t1        = signal.get("t1_premium", 0.0)
-        t2        = signal.get("t2_premium", 0.0)
-        strike    = signal.get("atm_strike", 0.0)
-        opt_type  = signal.get("option_type", "")
-        s1 = signal.get("step1_score", 0)
-        s2 = signal.get("step2_score", 0)
-        s3 = signal.get("step3_score", 0)
-        s4 = signal.get("step4_score", 0)
-        gb = signal.get("global_bonus", 0)
-
+        d   = signal.get("direction", "WAIT")
+        act = signal.get("action", "WAIT")
+        tot = signal.get("total_score", 0)
+        ss  = signal.get("signal_strength", "")
+        st  = signal.get("strike", signal.get("atm_strike", 0))
+        ot  = signal.get("option_type", "")
+        ep  = signal.get("entry_premium", 0)
+        sl  = signal.get("sl_premium", 0)
+        t1  = signal.get("t1_premium", 0)
+        t2  = signal.get("t2_premium", 0)
+        dt  = signal.get("delta", 0)
+        th  = signal.get("theta", 0)
+        gm  = signal.get("gamma", 0)
+        ve  = signal.get("vega", 0)
+        dte = signal.get("dte", 0)
+        lo  = signal.get("recommended_lots", 1)
+        qty = signal.get("quantity", LOT_SIZE)
+        ca  = signal.get("available_cash", 0)
+        tc  = signal.get("total_cost_est", 0)
+        er  = signal.get("expiry_reason", "")
+        sr  = signal.get("strike_reason", "")
+        s1  = signal.get("step1_score", 0)
+        s2  = signal.get("step2_score", 0)
+        s3  = signal.get("step3_score", 0)
+        s4  = signal.get("step4_score", 0)
+        gb  = signal.get("global_bonus", 0)
         msg = (
             f"<b>ALGO 3 — NIFTY OPTIONS ENGINE</b>\n"
-            f"Signal: <b>{direction} {action}</b>\n"
-            f"Score: {total}/110 | Strength: {signal.get('signal_strength', '')}\n\n"
-            f"Step 1 Trend: {s1}/25\n"
-            f"Step 2 Momentum: {s2}/25\n"
-            f"Step 3 Options: {s3}/25\n"
-            f"Step 4 Levels: {s4}/25\n"
-            f"Global Bonus: +{gb}\n\n"
-            f"Strike: {strike:.0f} {opt_type}\n"
-            f"Entry Premium: {premium}\n"
-            f"SL (40% drop): {sl}\n"
-            f"Target 1 (2x): {t1}\n"
-            f"Target 2 (3x): {t2}\n"
+            f"Signal: <b>{d} {act}</b> | Score: {tot}/110\n"
+            f"Strength: {ss}\n\n"
+            f"<b>TRADE SETUP</b>\n"
+            f"Strike: {st:.0f} {ot} | DTE: {dte}\n"
+            f"Entry: {ep} | SL: {sl} | T1: {t1} | T2: {t2}\n"
+            f"Lots: {lo} x {LOT_SIZE} = {qty} qty | Est Cost: {tc:.0f}\n\n"
+            f"<b>GREEKS</b>\n"
+            f"Delta: {dt:.3f} | Theta: {th:.3f} | Gamma: {gm:.4f} | Vega: {ve:.3f}\n"
+            f"Strike reason: {sr}\n\n"
+            f"<b>ACCOUNT</b>\n"
+            f"Available Cash: {ca:.0f}\n"
+            f"Expiry: {er}\n\n"
+            f"Steps: {s1}+{s2}+{s3}+{s4}+{gb} | "
             f"Time: {datetime.now().strftime('%H:%M:%S')}"
         )
         send_telegram_message(msg)

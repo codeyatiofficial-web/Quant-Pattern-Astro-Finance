@@ -3919,8 +3919,26 @@ def get_algo3_live_signal():
         except Exception:
             pass
 
-        # Options chain
-        ce_data, pe_data = engine.get_options_chain(spot)
+        # Account state (balance + positions from Kite)
+        account_state: dict = {}
+        try:
+            from modules.algo.algo3_engine import get_account_state
+            account_state = get_account_state(kite_instance)
+        except Exception as e:
+            logger.warning(f"Algo3 account state: {e}")
+
+        # Smart options chain (expiry intelligence + Greeks)
+        ce_data  = pd.DataFrame()
+        pe_data  = pd.DataFrame()
+        expiry_str    = ""
+        dte           = 7
+        expiry_reason = ""
+        try:
+            ce_data, pe_data, expiry_str, dte, expiry_reason = engine.get_options_chain_smart(spot, iv_rank)
+        except Exception as e:
+            logger.warning(f"Algo3 options chain smart: {e}")
+            # Legacy fallback
+            ce_data, pe_data = engine.get_options_chain(spot)
 
         # Key levels (use previous day high/low/close from 1h candle data)
         key_levels: dict = {}
@@ -3943,6 +3961,10 @@ def get_algo3_live_signal():
             key_levels=key_levels,
             current_time=current_time,
             iv_rank=iv_rank,
+            dte=dte,
+            expiry_str=expiry_str,
+            expiry_reason=expiry_reason,
+            account=account_state,
             app_state=app_state_dict
         )
 
@@ -3972,6 +3994,26 @@ def get_algo3_premarket_report():
         return {"success": True, "report": report}
     except Exception as e:
         return {"success": False, "report": f"Error: {e}"}
+
+
+@app.get("/api/algo3/account")
+def get_algo3_account():
+    """
+    Live account summary from Kite:
+      available_cash, used_margin, daily_pnl, open_positions,
+      has_open_nifty_option, margin_error
+    """
+    from modules.algo.algo3_engine import get_account_state
+    try:
+        from modules.kite_client import KiteDataClient
+        kdc = KiteDataClient()
+        if not kdc.is_authenticated():
+            return {"success": False, "data": {"margin_error": "Kite not authenticated"}}
+        state = get_account_state(kdc.kite)
+        return {"success": True, "data": state}
+    except Exception as e:
+        logger.error(f"Algo3 account endpoint: {e}")
+        return {"success": False, "data": {"margin_error": str(e)[:120]}}
 
 
 
