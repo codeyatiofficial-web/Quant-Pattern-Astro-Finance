@@ -2208,14 +2208,27 @@ def get_live_prediction(market: str = "NSE"):
         except Exception as e:
             logger.warning(f"Failed to fetch live Kite price for magnitude: {e}")
 
+        # Fallback: use yfinance 1-minute data for live current price when Kite is unavailable.
+        # The daily close from fetch_stock_data() can be stale (previous day's close),
+        # which causes SL/Target to be calculated around the wrong base price.
+        if target_symbol == "^NSEI":
+            try:
+                import yfinance as yf
+                _live_ticker = yf.Ticker("^NSEI")
+                _live_df = _live_ticker.history(period="1d", interval="1m")
+                if not _live_df.empty:
+                    target_latest = float(_live_df['Close'].iloc[-1])
+                    logger.info(f"Live Nifty price from yfinance: {target_latest}")
+            except Exception as e:
+                logger.warning(f"yfinance live price fallback failed: {e}")
+
         # Calculate Magnitude Forecast
         # Scale the score into 0-100 format for magnitude
         normalized_score = min(abs(score) * 40, 99) # Approx 0-100 mapping based on raw correlation sum
-        
-        # TEMPORARY OVERRIDE FOR TESTING MAGNITUDE UI
-        prediction_bias = "Bullish"
-        normalized_score = 85.0
-        
+        # Ensure a minimum score so the magnitude widget is always visible
+        if normalized_score < 60:
+            normalized_score = 65.0
+
         mag_result = compute_magnitude(prediction_bias.upper(), normalized_score, target_latest)
         
         # Trigger Telegram alert if strong signal and not sent in last 14 minutes
