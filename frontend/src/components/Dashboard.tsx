@@ -573,7 +573,7 @@ export default function Dashboard({ onAnalysisDone }: { onAnalysisDone: (data: a
             }}>
                 CONTACT US VIA EMAIL
             </a>
-            <a href="https://wa.me/9193112255" target="_blank" rel="noopener noreferrer" style={{
+            <a href="https://wa.me/919193112255" target="_blank" rel="noopener noreferrer" style={{
                 display: 'inline-block', padding: '10px 20px', background: '#22c55e', color: '#fff',
                 fontWeight: 700, borderRadius: 8, fontSize: 13, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: 0.5
             }}>
