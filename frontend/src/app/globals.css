@@ -352,6 +352,27 @@
     transform: none;
   }
 
+  /* Light-mode: white button with dark border + text */
+  :root .btn-primary {
+    background: #ffffff;
+    color: #111827;
+    border: 1.5px solid #111827;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  :root .btn-primary:hover {
+    background: #f3f4f6;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    filter: none;
+    transform: translateY(-1px);
+  }
+
+  :root .btn-primary:disabled {
+    opacity: 0.5;
+    border-color: #9ca3af;
+    color: #6b7280;
+  }
+
   .btn-upgrade-pro {
     background: #eab308;
     color: #0f172a;

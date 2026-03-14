@@ -229,7 +229,7 @@ export default function NakshatraAnalysis({ data, onAnalysisDone }: { data: any,
                         <button className="btn-primary" onClick={runAnalysis} disabled={analysing} style={{ minWidth: 220 }}>
                             {analysing
                                 ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Analyzing…</>
-                                : <> Load & Analyze Data <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,0.2)', borderRadius: 4, marginLeft: 6 }}>PRO</span></>
+                                : <> Load & Analyze Data <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(0,0,0,0.12)', borderRadius: 4, marginLeft: 6, color: 'inherit' }}>PRO</span></>
                             }
                         </button>
                         {status && (
@@ -373,7 +373,7 @@ export default function NakshatraAnalysis({ data, onAnalysisDone }: { data: any,
                     <button className="btn-primary" onClick={runAnalysis} disabled={analysing} style={{ minWidth: 220 }}>
                         {analysing
                             ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Analyzing…</>
-                            : <> Load & Analyze Data <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,0.2)', borderRadius: 4, marginLeft: 6 }}>PRO</span></>
+                            : <> Load & Analyze Data <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(0,0,0,0.12)', borderRadius: 4, marginLeft: 6, color: 'inherit' }}>PRO</span></>
                         }
                     </button>
                     {status && (
