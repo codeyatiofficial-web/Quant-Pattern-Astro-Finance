@@ -3697,3 +3697,245 @@ def toggle_algo(payload: dict):
     }
 
 
+@app.get("/api/algo/live-signal")
+def get_algo_live_signal():
+    """
+    Improved Algo Engine — 4-Component scoring system.
+      Component 1: Correlation Signal  (max 30 pts) — Nasdaq, SP500, USD/INR, Oil, Gold
+      Component 2: Global Bias Align   (max 25 pts) — pre-market global markets (cached)
+      Component 3: Technical           (max 25 pts) — RSI(14), MACD(12,26,9), VWAP
+      Component 4: Price Level + Time  (max 20 pts) — ATR momentum, round level, time window
+    Total 100 pts  |  >=75 STRONG  |  55-74 MODERATE  |  <55 WEAK/WAIT
+    SL  = Entry ± 0.8 × ATR(14 on 5m)
+    TGT = Entry ± 1.6 × ATR(14 on 5m)   →  1:2 R/R
+    """
+    import pandas as pd
+    import numpy as np
+    import yfinance as yf
+    from datetime import time as dtime
+
+    result = {
+        "direction": "WAIT",
+        "total_score": 0,
+        "comp1_correlation": 0,
+        "comp2_global_bias": 0,
+        "comp3_technical": 0,
+        "comp4_price_level": 0,
+        "entry_price": 0.0,
+        "target_price": 0.0,
+        "stop_loss": 0.0,
+        "atr": 25.0,
+        "rr_ratio": 2.0,
+        "confidence": "LOW",
+        "signal_strength": "WAIT",
+        "action": "WAIT",
+        "rsi": 0.0,
+        "macd_direction": "—",
+        "global_bias_score": 0,
+        "corr_score_raw": 0.0,
+        "timestamp": datetime.now().isoformat(),
+        "valid_until": (datetime.now() + pd.Timedelta(minutes=15)).isoformat()
+    }
+
+    try:
+        _mkt = globals()['market']
+        start_dt = (datetime.now() - pd.Timedelta(days=60)).strftime("%Y-%m-%d")
+
+        # ─── COMPONENT 1: CORRELATION SIGNAL (max 30 pts) ───────────────────────────
+        predictors = {"Nasdaq": "NQ=F", "SP500": "ES=F", "USD_INR": "INR=X", "Oil": "CL=F", "Gold": "GC=F"}
+        target_symbol = "^NSEI"
+        target_data = _mkt.fetch_stock_data(target_symbol, start_date=start_dt, market="NSE")
+        preds_data = {}
+        for name, sym in predictors.items():
+            df_p = _mkt.fetch_stock_data(sym, start_date=start_dt, market="Global")
+            if not df_p.empty:
+                df_p = df_p.set_index('date')
+                preds_data[name] = df_p['daily_return']
+
+        corr_score_raw = 0.0
+        corr_direction = "WAIT"
+        comp1 = 0
+
+        if not target_data.empty and preds_data:
+            target_ret = target_data.set_index('date')['daily_return']
+            combined = pd.DataFrame({target_symbol: target_ret})
+            for name, series in preds_data.items():
+                combined[name] = series
+            combined = combined.dropna()
+            if len(combined) >= 10:
+                correlations = {}
+                for name in preds_data:
+                    if name in combined.columns:
+                        c = combined[target_symbol].corr(combined[name])
+                        correlations[name] = c if not pd.isna(c) else 0.0
+                latest = combined.iloc[-1]
+                corr_score_raw = sum(float(latest.get(n, 0)) * c for n, c in correlations.items())
+                abs_csr = abs(corr_score_raw)
+                if abs_csr > 0.5: comp1 = 30
+                elif abs_csr > 0.3: comp1 = 20
+                elif abs_csr > 0.1: comp1 = 10
+                corr_direction = "BUY" if corr_score_raw > 0.1 else "SELL" if corr_score_raw < -0.1 else "WAIT"
+
+        result["comp1_correlation"] = comp1
+        result["corr_score_raw"] = round(corr_score_raw, 3)
+
+        # ─── COMPONENT 2: GLOBAL BIAS ALIGNMENT (max 25 pts) ────────────────────────
+        comp2 = 0
+        global_score = 0
+        try:
+            if hasattr(app.state, "algo"):
+                global_score = int(app.state.algo.get("global_bias", 0))
+        except Exception:
+            global_score = 0
+
+        if corr_direction != "WAIT":
+            direction_aligns = (
+                (corr_direction == "BUY" and global_score >= 0) or
+                (corr_direction == "SELL" and global_score <= 0)
+            )
+            abs_gs = abs(global_score)
+            if direction_aligns:
+                if abs_gs >= 15: comp2 = 25
+                elif abs_gs >= 5: comp2 = 15
+                elif abs_gs > 0: comp2 = 5
+            else:
+                comp2 = 0  # conflicting global bias — no credit
+
+        result["comp2_global_bias"] = comp2
+        result["global_bias_score"] = global_score
+
+        # ─── COMPONENT 3: TECHNICAL INDICATORS (max 25 pts) ─────────────────────────
+        comp3 = 0
+        rsi_val = 50.0
+        macd_dir = "—"
+        price_now = 0.0
+
+        try:
+            df15 = yf.Ticker("^NSEI").history(period="5d", interval="15m")
+            if not df15.empty and len(df15) >= 30:
+                close = df15['Close']
+
+                # RSI(14)
+                delta = close.diff()
+                gain = delta.clip(lower=0).rolling(14).mean()
+                loss = (-delta.clip(upper=0)).rolling(14).mean()
+                rs = gain / loss.replace(0, 1e-9)
+                rsi_series = 100 - (100 / (1 + rs))
+                rsi_val = round(float(rsi_series.iloc[-1]), 1)
+
+                # MACD(12,26,9) — histogram direction
+                ema12 = close.ewm(span=12, adjust=False).mean()
+                ema26 = close.ewm(span=26, adjust=False).mean()
+                macd_line = ema12 - ema26
+                hist = macd_line - macd_line.ewm(span=9, adjust=False).mean()
+                macd_dir = "UP" if float(hist.iloc[-1]) > float(hist.iloc[-2]) else "DOWN"
+
+                # VWAP (today's candles only)
+                today_df = df15[df15.index.date == df15.index[-1].date()]
+                if not today_df.empty and today_df['Volume'].sum() > 0:
+                    tp = (today_df['High'] + today_df['Low'] + today_df['Close']) / 3
+                    vwap = float((tp * today_df['Volume']).cumsum().iloc[-1] / today_df['Volume'].cumsum().iloc[-1])
+                else:
+                    vwap = float(close.iloc[-1])
+
+                price_now = float(close.iloc[-1])
+
+                if corr_direction == "BUY":
+                    if 40 <= rsi_val <= 65: comp3 += 10
+                    elif rsi_val < 35: comp3 += 8        # oversold bounce
+                    if macd_dir == "UP": comp3 += 8
+                    if price_now > vwap: comp3 += 7
+                elif corr_direction == "SELL":
+                    if 35 <= rsi_val <= 60: comp3 += 10
+                    elif rsi_val > 65: comp3 += 8         # overbought rejection
+                    if macd_dir == "DOWN": comp3 += 8
+                    if price_now < vwap: comp3 += 7
+
+        except Exception as te:
+            logger.warning(f"Technical score error: {te}")
+
+        result["comp3_technical"] = min(comp3, 25)
+        result["rsi"] = rsi_val
+        result["macd_direction"] = macd_dir
+
+        # ─── COMPONENT 4: PRICE LEVEL + TIME WINDOW (max 20 pts) ───────────────────
+        comp4 = 0
+        atr_val = 25.0
+        entry_price = price_now  # already set from 15m close
+
+        try:
+            df5 = yf.Ticker("^NSEI").history(period="2d", interval="5m")
+            if not df5.empty and len(df5) >= 15:
+                high5 = df5['High']
+                low5 = df5['Low']
+                pc5 = df5['Close'].shift(1)
+                tr5 = pd.concat([(high5 - low5), (high5 - pc5).abs(), (low5 - pc5).abs()], axis=1).max(axis=1)
+                atr_val = round(float(tr5.rolling(14).mean().iloc[-1]), 2)
+
+                if entry_price == 0.0:
+                    entry_price = float(df5['Close'].iloc[-1])
+
+                candle_range = float(df5['High'].iloc[-1] - df5['Low'].iloc[-1])
+                if candle_range > 1.2 * atr_val: comp4 += 10
+                elif candle_range > 0.7 * atr_val: comp4 += 5
+
+                # Proximity to nearest 50-point round level (±0.25%)
+                closest_50 = round(entry_price / 50) * 50
+                if abs(entry_price - closest_50) / entry_price * 100 <= 0.25:
+                    comp4 += 5
+
+                # Valid trading window (IST)
+                ct = dtime(datetime.now().hour, datetime.now().minute)
+                in_window = (
+                    dtime(9, 15) <= ct <= dtime(9, 50) or
+                    dtime(13, 0) <= ct <= dtime(13, 30) or
+                    dtime(14, 30) <= ct <= dtime(15, 15)
+                )
+                if in_window:
+                    comp4 += 5
+
+        except Exception as pe:
+            logger.warning(f"Price level score error: {pe}")
+
+        result["comp4_price_level"] = min(comp4, 20)
+        result["atr"] = atr_val
+
+        # ─── TOTAL & SIGNAL CLASSIFICATION ──────────────────────────────────────────
+        total = result["comp1_correlation"] + result["comp2_global_bias"] + result["comp3_technical"] + result["comp4_price_level"]
+        result["total_score"] = total
+
+        if corr_direction == "WAIT" or total < 40:
+            result.update({"direction": "WAIT", "signal_strength": "INSUFFICIENT", "action": "WAIT", "confidence": "LOW"})
+        elif total >= 75:
+            result.update({"direction": corr_direction, "signal_strength": "STRONG", "action": "EXECUTE", "confidence": "HIGH"})
+        elif total >= 55:
+            result.update({"direction": corr_direction, "signal_strength": "MODERATE", "action": "ALERT", "confidence": "MEDIUM"})
+        else:
+            result.update({"direction": corr_direction, "signal_strength": "WEAK", "action": "WATCH", "confidence": "LOW"})
+
+        # ─── ENTRY / SL / TARGET (ATR-based, 1:2 R/R) ───────────────────────────────
+        try:
+            if entry_price == 0.0:
+                ldf = yf.Ticker("^NSEI").history(period="1d", interval="1m")
+                entry_price = float(ldf['Close'].iloc[-1]) if not ldf.empty else 0.0
+
+            if entry_price > 0 and result["direction"] != "WAIT":
+                sl_dist  = round(atr_val * 0.8, 1)
+                tgt_dist = round(atr_val * 1.6, 1)
+                result["entry_price"] = round(entry_price, 1)
+                if result["direction"] == "BUY":
+                    result["stop_loss"]   = round(entry_price - sl_dist, 1)
+                    result["target_price"] = round(entry_price + tgt_dist, 1)
+                else:
+                    result["stop_loss"]   = round(entry_price + sl_dist, 1)
+                    result["target_price"] = round(entry_price - tgt_dist, 1)
+                result["rr_ratio"] = round(tgt_dist / sl_dist, 1) if sl_dist > 0 else 2.0
+
+        except Exception as ee:
+            logger.warning(f"Entry/SL calc error: {ee}")
+
+    except Exception as e:
+        logger.error(f"Algo live signal error: {e}")
+        result["signal_strength"] = "ERROR"
+
+    return {"success": True, "data": result}
