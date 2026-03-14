@@ -891,7 +891,7 @@
   }
 }
 
-/* ── Premium Website Button ──────────────────────────────── */
+/* ── Website Button ─────────────────────────────────────── */
 .website-btn {
   position: relative;
   display: inline-flex;
@@ -904,37 +904,23 @@
   letter-spacing: 0.3px;
   text-decoration: none;
   white-space: nowrap;
-  overflow: hidden;
-  color: #c4b5fd;
-  background: linear-gradient(135deg, rgba(88,28,235,0.18) 0%, rgba(99,102,241,0.12) 100%);
-  border: 1px solid rgba(139,92,246,0.45);
-  box-shadow: 0 0 10px rgba(139,92,246,0.2), inset 0 1px 0 rgba(255,255,255,0.06);
-  transition: all 0.25s ease;
+  color: #a5b4fc;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.35);
+  box-shadow: 0 0 10px rgba(99,102,241,0.15);
+  transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .website-btn:hover {
   color: #fff;
-  background: linear-gradient(135deg, rgba(109,40,217,0.35) 0%, rgba(99,102,241,0.28) 100%);
-  border-color: rgba(167,139,250,0.7);
-  box-shadow: 0 0 18px rgba(139,92,246,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+  background: rgba(99,102,241,0.25);
+  border-color: rgba(99,102,241,0.65);
+  box-shadow: 0 0 16px rgba(99,102,241,0.35);
   transform: translateY(-1px);
 }
 
-.website-btn-shine {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.13) 50%, transparent 60%);
-  background-size: 200% 100%;
-  background-position: -100% 0;
-  transition: background-position 0.55s ease;
-  pointer-events: none;
-}
-
-.website-btn:hover .website-btn-shine {
-  background-position: 200% 0;
-}
+.website-btn-shine { display: none; }
 
 /* ── Market Ticker Scrolling Strip ────────────── */
 .ticker-wrap {

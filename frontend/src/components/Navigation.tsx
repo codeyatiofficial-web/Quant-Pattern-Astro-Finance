@@ -167,7 +167,7 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
               <PlanStatusBadge />
               {isFree && (
                 <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro">
-                  ✨ Upgrade to Pro
+                  Upgrade to Pro
                 </button>
               )}
               {kiteConnected === true ? (
@@ -205,7 +205,7 @@ export default function Navigation({ activePage, onNavigate }: NavigationProps) 
               </a>
               {isFree && (
                 <button onClick={() => setShowUpgrade(true)} className="btn-upgrade-pro" style={{ padding: '4px 10px', fontSize: 11, animation: 'none' }}>
-                  ✨ Upgrade
+                  Upgrade
                 </button>
               )}
               {kiteConnected === false && (
