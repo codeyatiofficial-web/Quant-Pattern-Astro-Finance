@@ -22,6 +22,71 @@ function Chip({ label, color, bg }: { label: string; color: string; bg: string }
     );
 }
 
+// ─── SHARED: BALANCE-AWARE INSTRUMENT RECOMMENDATION CARD ─────────────────
+function InstrumentRecommendationCard({ rec }: { rec: any }) {
+    if (!rec) return null;
+    const itype   = rec.instrument_type ?? '';
+    const viable  = rec.viable ?? false;
+    const itColor = itype === 'FUTURES' ? '#f59e0b'
+                  : itype === 'OPTIONS'  ? '#06b6d4'
+                  : '#64748b';
+    const itBg    = itype === 'FUTURES' ? 'rgba(245,158,11,0.09)'
+                  : itype === 'OPTIONS'  ? 'rgba(6,182,212,0.09)'
+                  : 'rgba(100,116,139,0.07)';
+    const headline = itype === 'FUTURES' ? 'FUTURES' : itype === 'OPTIONS' ? 'OPTIONS' : 'NO TRADE';
+
+    return (
+        <div style={{ background: 'var(--bg-card)', border: `1px solid ${itColor}40`, borderRadius: 16, padding: '20px 24px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 14 }}>
+                RECOMMENDED INSTRUMENT
+            </div>
+
+            {/* Top row — type badge + symbol */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: itColor }}>{headline}</div>
+                {rec.instrument && itype && (
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 6, background: itBg, color: itColor, border: `1px solid ${itColor}30` }}>
+                        {rec.instrument}
+                    </span>
+                )}
+                {!viable && itype && (
+                    <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 5, background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
+                        INSUFFICIENT BALANCE
+                    </span>
+                )}
+            </div>
+
+            {/* Metric grid */}
+            {viable && itype && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    {[
+                        { label: 'LOTS',       val: `${rec.lots ?? 1} lot`,                                             color: 'var(--text-primary)' },
+                        { label: 'QTY',        val: `${rec.quantity ?? 75} units`,                                      color: 'var(--text-primary)' },
+                        itype === 'OPTIONS'
+                            ? { label: 'PREMIUM', val: `₹${Number(rec.premium ?? 0).toFixed(0)}`,                        color: itColor }
+                            : { label: 'MARGIN',  val: `₹${Number(rec.estimated_margin ?? 0).toLocaleString('en-IN')}`, color: itColor },
+                        { label: 'MAX LOSS',   val: `₹${Number(rec.max_loss ?? 0).toLocaleString('en-IN')}`,            color: '#ef4444' },
+                        { label: 'TGT PROFIT', val: `₹${Number(rec.target_profit ?? 0).toLocaleString('en-IN')}`,       color: '#22c55e' },
+                        { label: 'CASH AVAIL', val: `₹${Number(rec.available_cash ?? 0).toLocaleString('en-IN')}`,      color: '#4ade80' },
+                    ].map((item, idx) => (
+                        <div key={idx} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '11px 14px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.4, marginBottom: 3 }}>{item.label}</div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: item.color }}>{item.val}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Reason / explanation */}
+            {rec.reason && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6, borderTop: '1px solid var(--border-subtle)', paddingTop: 10 }}>
+                    {rec.reason}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── ALGO 2: CORRELATION ENGINE ────────────────────────────────────────────
 function Algo2CorrelationEngine() {
     const [cd, setCd] = useState<any>(null);
@@ -154,6 +219,13 @@ function Algo2CorrelationEngine() {
                                         <div style={{ fontSize: 15, fontWeight: 800, color: item.color }}>{item.val}</div>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* Balance-aware instrument recommendation */}
+                        {cd?.instrument_rec && dir2 !== 'NEUTRAL' && entry > 0 && (
+                            <div style={{ marginBottom: 14 }}>
+                                <InstrumentRecommendationCard rec={cd.instrument_rec} />
                             </div>
                         )}
 
@@ -684,6 +756,13 @@ export default function NiftyAlgoWidget() {
                                         <div style={{ fontSize: 16, fontWeight: 800, color: item.color }}>{item.val}</div>
                                     </div>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* Balance-aware instrument recommendation */}
+                        {sig?.instrument_rec && dir !== 'WAIT' && (sig?.entry_price ?? 0) > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <InstrumentRecommendationCard rec={sig.instrument_rec} />
                             </div>
                         )}
 

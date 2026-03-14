@@ -2257,7 +2257,56 @@ def get_live_prediction(market: str = "NSE"):
         
         # Merge the magnitude calculator outputs directly into response
         response.update(mag_result)
-        
+
+        # ─── BALANCE-AWARE INSTRUMENT RECOMMENDATION ─────────────────────────
+        try:
+            _spot_a2 = float(response.get("current_nifty", target_latest) or target_latest)
+            _dir_a2  = (
+                "BUY"  if prediction_bias == "Bullish" else
+                "SELL" if prediction_bias == "Bearish" else
+                "WAIT"
+            )
+            _kite_a2  = None
+            _cash_a2  = 0.0
+            _atr_a2   = float(response.get("atr", 25.0) or 25.0)
+            try:
+                from modules.kite_client import KiteDataClient as _KDC_A2
+                _kdc_a2 = _KDC_A2()
+                if _kdc_a2.is_authenticated():
+                    _kite_a2 = _kdc_a2.kite
+                    _margins_a2 = _kite_a2.margins()
+                    _cash_a2 = float(
+                        _margins_a2.get("equity", {})
+                        .get("available", {})
+                        .get("live_balance", 0) or 0
+                    )
+            except Exception:
+                pass
+
+            if _dir_a2 != "WAIT":
+                response["instrument_rec"] = _recommend_instrument(
+                    kite=_kite_a2,
+                    direction=_dir_a2,
+                    spot=_spot_a2,
+                    atr=_atr_a2,
+                    available_cash=_cash_a2,
+                )
+            else:
+                response["instrument_rec"] = {
+                    "instrument": "NONE",
+                    "instrument_type": "",
+                    "viable": False,
+                    "reason": "No directional signal — market neutral",
+                    "available_cash": _cash_a2,
+                }
+        except Exception as _ie2:
+            response["instrument_rec"] = {
+                "instrument": "NONE",
+                "instrument_type": "",
+                "viable": False,
+                "reason": str(_ie2)[:100],
+            }
+
         return response
     except Exception as e:
         logger.error(f"Live prediction error: {str(e)}")
@@ -4016,7 +4065,175 @@ def get_algo3_account():
         return {"success": False, "data": {"margin_error": str(e)[:120]}}
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# BALANCE-AWARE INSTRUMENT RECOMMENDATION  (shared by Algo 1 and Algo 2)
+# ══════════════════════════════════════════════════════════════════════════════
 
+def _recommend_instrument(
+    kite,
+    direction: str,
+    spot: float,
+    atr: float,
+    available_cash: float
+) -> dict:
+    """
+    Given a directional signal and live account balance, choose the best
+    Nifty instrument to trade:
+
+      Tier 1 — cash >= ₹80,000  → Nifty Futures (MIS, 1 lot = 75 units)
+               Strong leverage; suitable for score >= 75 signals
+      Tier 2 — cash >= ₹15,000  → ATM CE (BUY) or ATM PE (SELL) weekly option
+               Defined max-loss; suitable for any actionable signal
+      Tier 3 — cash < ₹15,000   → Cannot trade (insufficient capital)
+
+    Returns a dict with:
+      instrument, instrument_type, strike, option_type, premium,
+      lots, quantity, estimated_cost, estimated_margin,
+      max_loss, target_profit, viable, reason
+    """
+    LOT_SIZE       = 75
+    FUTURES_MARGIN = 80_000   # ₹80k minimum for Nifty MIS futures (1 lot)
+    OPTIONS_MIN    = 15_000   # ₹15k minimum for 1 lot ATM option
+
+    rec: dict = {
+        "instrument":       "NONE",
+        "instrument_type":  "",
+        "strike":           0.0,
+        "option_type":      "",
+        "premium":          0.0,
+        "lots":             0,
+        "lot_size":         LOT_SIZE,
+        "quantity":         0,
+        "estimated_cost":   0.0,
+        "estimated_margin": 0.0,
+        "max_loss":         0.0,
+        "target_profit":    0.0,
+        "available_cash":   round(available_cash, 0),
+        "viable":           False,
+        "reason":           "",
+    }
+
+    if direction in ("WAIT", "NEUTRAL", ""):
+        rec["reason"] = "No directional signal — waiting for setup"
+        return rec
+
+    atm = round(spot / 50) * 50 if spot > 0 else 0.0
+    opt_type = "CE" if direction == "BUY" else "PE"
+
+    # ── Determine tier ────────────────────────────────────────────────────────
+    if available_cash <= 0:
+        tier = "unknown"
+    elif available_cash >= FUTURES_MARGIN:
+        tier = "futures"
+    elif available_cash >= OPTIONS_MIN:
+        tier = "options"
+    else:
+        tier = "insufficient"
+
+    # Unknown balance (Kite not connected) → default to options estimate
+    if tier == "unknown":
+        tier = "options"
+
+    # ── Tier 1: Futures ───────────────────────────────────────────────────────
+    if tier == "futures":
+        lots = min(2, max(1, int(available_cash // FUTURES_MARGIN)))
+        qty  = lots * LOT_SIZE
+        sl_pts  = round(atr * 0.8, 1) if atr > 0 else 25.0
+        tgt_pts = round(atr * 1.6, 1) if atr > 0 else 50.0
+        rec.update({
+            "instrument":       "NIFTY FUT (MIS)",
+            "instrument_type":  "FUTURES",
+            "lots":             lots,
+            "quantity":         qty,
+            "estimated_margin": round(FUTURES_MARGIN * lots, 0),
+            "max_loss":         round(sl_pts  * qty, 0),
+            "target_profit":    round(tgt_pts * qty, 0),
+            "viable":           True,
+            "reason": (
+                f"Balance ₹{available_cash:.0f} supports futures. "
+                f"{lots} lot × ₹{FUTURES_MARGIN:.0f} margin = ₹{FUTURES_MARGIN*lots:.0f}. "
+                f"Risk ₹{round(sl_pts*qty,0):.0f} | Target ₹{round(tgt_pts*qty,0):.0f}"
+            ),
+        })
+        return rec
+
+    # ── Tier 2: Options ───────────────────────────────────────────────────────
+    if tier in ("options", "unknown"):
+        premium = 0.0
+        try:
+            if kite is not None:
+                from modules.kite_client import KiteDataClient
+                kdc = KiteDataClient()
+                instruments = kdc.get_instruments("NFO") or []
+                nifty_opts = [
+                    i for i in instruments
+                    if i.get("name", "").upper() == "NIFTY"
+                    and i.get("segment") == "NFO-OPT"
+                ]
+                expiries = sorted(set(
+                    str(i.get("expiry", ""))[:10]
+                    for i in nifty_opts if i.get("expiry")
+                ))
+                if expiries:
+                    expiry = expiries[0]
+                    for inst in nifty_opts:
+                        s = float(inst.get("strike", 0))
+                        if (abs(s - atm) < 1
+                                and str(inst.get("expiry", ""))[:10] == expiry
+                                and inst.get("instrument_type") == opt_type):
+                            sym = inst.get("tradingsymbol", "")
+                            q   = kite.quote([f"NFO:{sym}"])
+                            ltp = float(q.get(f"NFO:{sym}", {}).get("last_price", 0))
+                            if ltp > 0:
+                                premium = ltp
+                            break
+        except Exception as _e:
+            logger.debug(f"Instrument rec options fetch: {_e}")
+
+        if premium <= 0:
+            premium = 120.0   # fallback estimate
+
+        cost_per_lot = premium * LOT_SIZE * 1.10
+        if available_cash > 0:
+            lots = max(1, min(2, int((available_cash * 0.10) // cost_per_lot)))
+            if cost_per_lot > available_cash * 0.10:
+                lots = 1
+        else:
+            lots = 1
+
+        qty  = lots * LOT_SIZE
+        cost = round(premium * qty, 0)
+        rec.update({
+            "instrument":      f"NIFTY {atm:.0f} {opt_type} (WEEKLY)",
+            "instrument_type": "OPTIONS",
+            "strike":          float(atm),
+            "option_type":     opt_type,
+            "premium":         round(premium, 2),
+            "lots":            lots,
+            "quantity":        qty,
+            "estimated_cost":  cost,
+            "max_loss":        cost,        # defined risk = full premium paid
+            "target_profit":   round(premium * 2.0 * qty, 0),
+            "viable":          (available_cash <= 0 or available_cash >= OPTIONS_MIN),
+            "reason": (
+                f"Balance ₹{available_cash:.0f}: buy {lots} lot {atm:.0f}{opt_type} "
+                f"@ ₹{premium:.0f} = ₹{cost:.0f}. Max loss capped at premium paid."
+                if available_cash > 0 else
+                f"Balance unknown — estimate: {lots} lot {atm:.0f}{opt_type} "
+                f"@ ~₹{premium:.0f} ≈ ₹{cost:.0f}"
+            ),
+        })
+        return rec
+
+    # ── Tier 3: Insufficient ──────────────────────────────────────────────────
+    rec["reason"] = (
+        f"Insufficient balance ₹{available_cash:.0f}. "
+        f"Need ₹{OPTIONS_MIN:.0f}+ for options or ₹{FUTURES_MARGIN:.0f}+ for futures."
+    )
+    return rec
+
+
+@app.get("/api/algo/live-signal")
 def get_algo_live_signal():
     """
     Improved Algo Engine — 4-Component scoring system.
@@ -4252,6 +4469,48 @@ def get_algo_live_signal():
 
         except Exception as ee:
             logger.warning(f"Entry/SL calc error: {ee}")
+
+        # ─── BALANCE-AWARE INSTRUMENT RECOMMENDATION ─────────────────────────
+        try:
+            _kite_a1 = None
+            _cash_a1 = 0.0
+            try:
+                from modules.kite_client import KiteDataClient as _KDC_A1
+                _kdc_a1 = _KDC_A1()
+                if _kdc_a1.is_authenticated():
+                    _kite_a1 = _kdc_a1.kite
+                    _margins = _kite_a1.margins()
+                    _cash_a1 = float(
+                        _margins.get("equity", {})
+                        .get("available", {})
+                        .get("live_balance", 0) or 0
+                    )
+            except Exception:
+                pass
+
+            if result["direction"] != "WAIT" and result.get("entry_price", 0) > 0:
+                result["instrument_rec"] = _recommend_instrument(
+                    kite=_kite_a1,
+                    direction=result["direction"],
+                    spot=result["entry_price"],
+                    atr=result.get("atr", 25.0),
+                    available_cash=_cash_a1,
+                )
+            else:
+                result["instrument_rec"] = {
+                    "instrument": "NONE",
+                    "instrument_type": "",
+                    "viable": False,
+                    "reason": "No actionable signal — waiting for setup",
+                    "available_cash": _cash_a1,
+                }
+        except Exception as _ie:
+            result["instrument_rec"] = {
+                "instrument": "NONE",
+                "instrument_type": "",
+                "viable": False,
+                "reason": str(_ie)[:100],
+            }
 
     except Exception as e:
         logger.error(f"Algo live signal error: {e}")
