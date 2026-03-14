@@ -198,10 +198,6 @@ function Algo2CorrelationEngine() {
     );
 }
 
-        </div>
-    );
-}
-
 // ─── ALGO 3: NIFTY OPTIONS ENGINE ─────────────────────────────────────────────
 function Algo3OptionsEngine() {
     const [sig3, setSig3]         = useState<any>(null);
