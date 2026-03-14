@@ -326,45 +326,91 @@ def kite_callback_post(payload: dict):
 @app.get("/api/nifty50/candles")
 def get_nifty50_candles(count: int = 30, interval: str = "minute"):
     """
-    Fetch the last `count` candles for Nifty 50 via Kite API.
+    Fetch the last `count` candles for Nifty 50 via Kite API with Yahoo Finance fallback.
     Returns OHLC + volume data for the frontend candlestick chart.
     Supports intervals: minute, 3minute, 5minute, 15minute, 30minute, 60minute
     """
     try:
-        if not kite_client.is_authenticated():
-            raise HTTPException(status_code=401, detail="Kite API not connected. Please connect Kite first.")
+        # Try Kite API first
+        if kite_client.is_authenticated():
+            try:
+                # Calculate days_back dynamically based on interval
+                days_back = 1
+                if interval == "3minute": days_back = 2
+                elif interval == "5minute": days_back = 2
+                elif interval == "15minute": days_back = 3
+                elif interval == "30minute": days_back = 4
+                elif interval in ("60minute", "hour"): days_back = 8
 
-        # Calculate days_back dynamically based on interval to ensure we get enough candles
-        # Note: 'minute' data is usually available for ~60 days, '3minute' for ~100 days
-        # For a 60minute chart, getting 30 candles requires at least ~5 trading days. We ask for more just to be safe.
-        days_back = 1
-        if interval == "3minute": days_back = 2
-        elif interval == "5minute": days_back = 2
-        elif interval == "15minute": days_back = 3
-        elif interval == "30minute": days_back = 4
-        elif interval in ("60minute", "hour"): days_back = 8
+                df = kite_client.fetch_historical_data(
+                    symbol="^NSEI",
+                    interval=interval,
+                    days_back=days_back
+                )
 
-        df = kite_client.fetch_historical_data(
-            symbol="^NSEI",
-            interval=interval,
-            days_back=days_back
-        )
+                if not df.empty:
+                    # Take last `count` candles
+                    df = df.tail(count).reset_index(drop=True)
 
+                    candles = []
+                    for _, row in df.iterrows():
+                        candles.append({
+                            "time": row["datetime"].strftime("%H:%M") if interval != "day" else row["datetime"].strftime("%d %b"),
+                            "open": round(float(row["open"]), 2),
+                            "high": round(float(row["high"]), 2),
+                            "low": round(float(row["low"]), 2),
+                            "close": round(float(row["close"]), 2),
+                            "volume": int(row.get("volume", 0)),
+                        })
+
+                    last = candles[-1] if candles else {}
+                    first = candles[0] if candles else {}
+                    change = round(last.get("close", 0) - first.get("open", 0), 2) if candles else 0
+                    change_pct = round((change / first.get("open", 1)) * 100, 2) if candles and first.get("open", 0) else 0
+
+                    return {
+                        "success": True,
+                        "symbol": "NIFTY 50",
+                        "interval": interval,
+                        "count": len(candles),
+                        "candles": candles,
+                        "last_price": last.get("close", 0),
+                        "change": change,
+                        "change_pct": change_pct,
+                        "source": "kite"
+                    }
+            except Exception as e:
+                logger.warning(f"Kite API failed: {e}. Falling back to Yahoo Finance.")
+
+        # Fallback to Yahoo Finance for 5-minute intervals
+        logger.info("Using Yahoo Finance fallback for Nifty candles")
+        import yfinance as yf
+        
+        # Map intervals for yfinance
+        yf_interval = "1m" if interval == "minute" else "5m"
+        if interval in ["15minute"]: yf_interval = "15m"
+        elif interval in ["30minute"]: yf_interval = "30m"
+        elif interval in ["60minute", "hour"]: yf_interval = "1h"
+        
+        # Get data for last 2 days to ensure we have enough candles
+        ticker = yf.Ticker("^NSEI")
+        df = ticker.history(period="2d", interval=yf_interval)
+        
         if df.empty:
-            raise HTTPException(status_code=404, detail="No candle data available. Market may be closed.")
-
-        # Take last `count` candles
-        df = df.tail(count).reset_index(drop=True)
-
+            raise HTTPException(status_code=404, detail="No market data available")
+            
+        # Take last count candles
+        df = df.tail(count).reset_index()
+        
         candles = []
         for _, row in df.iterrows():
             candles.append({
-                "time": row["datetime"].strftime("%H:%M") if interval != "day" else row["datetime"].strftime("%d %b"),
-                "open": round(float(row["open"]), 2),
-                "high": round(float(row["high"]), 2),
-                "low": round(float(row["low"]), 2),
-                "close": round(float(row["close"]), 2),
-                "volume": int(row.get("volume", 0)),
+                "time": row["Datetime"].strftime("%H:%M") if interval != "day" else row["Datetime"].strftime("%d %b"),
+                "open": round(float(row["Open"]), 2),
+                "high": round(float(row["High"]), 2), 
+                "low": round(float(row["Low"]), 2),
+                "close": round(float(row["Close"]), 2),
+                "volume": int(row.get("Volume", 0)),
             })
 
         last = candles[-1] if candles else {}
@@ -372,18 +418,16 @@ def get_nifty50_candles(count: int = 30, interval: str = "minute"):
         change = round(last.get("close", 0) - first.get("open", 0), 2) if candles else 0
         change_pct = round((change / first.get("open", 1)) * 100, 2) if candles and first.get("open", 0) else 0
 
-        # Create a nice human readable interval string for the frontend if needed
-        interval_str = interval.replace('minute', 'min').capitalize()
-
         return {
             "success": True,
             "symbol": "NIFTY 50",
-            "interval": interval_str,
+            "interval": interval,
             "count": len(candles),
             "candles": candles,
             "last_price": last.get("close", 0),
             "change": change,
             "change_pct": change_pct,
+            "source": "yfinance"
         }
 
     except HTTPException:
