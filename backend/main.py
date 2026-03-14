@@ -3675,7 +3675,16 @@ async def startup_event():
         "pre_market_report": "Not generated yet.",
         "latest_signal": None,
         "is_active": False,
-        "is_active_algo2": False
+        "is_active_algo2": False,
+        "is_active_algo3": False,
+        "algo3": {
+            "latest_signal": None,
+            "pre_market_report": "Pre-market report updates at 9:00 AM IST.",
+            "trades_today": 0,
+            "daily_pnl": 0.0,
+            "has_open_position": False,
+            "signals_today": []
+        }
     }
     app.state.algo = algo_state
     
@@ -3753,7 +3762,219 @@ def toggle_algo2(payload: dict):
     }
 
 
-@app.get("/api/algo/live-signal")
+# ─── ALGO 3 ── NIFTY OPTIONS ENGINE ──────────────────────────────────────────
+
+@app.post("/api/algo3/toggle")
+def toggle_algo3(payload: dict):
+    """Toggles Algo 3 (Nifty Options Engine) on/off."""
+    if not hasattr(app.state, "algo"):
+        raise HTTPException(status_code=503, detail="Algo subsystem not initialized")
+
+    is_active = payload.get("is_active", False)
+    app.state.algo["is_active_algo3"] = is_active
+
+    state_str = "ON" if is_active else "OFF (PAUSED)"
+    logger.info(f"Algo 3 Options Engine Toggled: {state_str}")
+
+    try:
+        from modules.algo.telegram_bot import send_telegram_message
+        send_telegram_message(f"<b>Algo 3 Nifty Options Engine</b>\nStatus changed to: {state_str}")
+    except Exception as e:
+        logger.warning(f"Algo3 toggle telegram error: {e}")
+
+    return {
+        "success": True,
+        "is_active": is_active,
+        "message": f"Algo 3 execution is now {'active' if is_active else 'paused'}."
+    }
+
+
+@app.get("/api/algo3/live-signal")
+def get_algo3_live_signal():
+    """
+    Algo 3 — Nifty Options 4-Step Engine (110 pts max + 30-pt global bias).
+      Step 1: Trend Alignment   (25 pts) — Supertrend 15m+1h, EMA20>50 on 1h
+      Step 2: Momentum+Volume   (25 pts) — RSI(14), MACD(12,26,9), Volume ratio
+      Step 3: Options Chain     (25 pts) — PCR, Real MaxPain, ATM OI, IV rank
+      Step 4: Levels + Time     (25 pts) — Trade windows + key level proximity
+      Global Bonus              (+10 max) — direction aligns with global bias
+    Thresholds: 85=STRONG/EXECUTE | 70=GOOD/HALF | 55=WEAK/ALERT | <55=WAIT
+    Trade: ATM CE (BUY) or ATM PE (SELL), 1 lot=50, SL=40% drop, T1=2x, T2=3x
+    """
+    import pandas as pd
+    from datetime import time as dtime
+    from modules.algo.algo3_engine import (
+        Algo3Engine, calculate_iv_rank, calculate_gift_nifty_gap,
+        generate_algo3_premarket_report, generate_algo3_eod_report
+    )
+    from modules.algo.global_scoring import calculate_global_bias
+
+    # Default result shape
+    base = {
+        "direction": "WAIT",
+        "total_score": 0,
+        "step1_score": 0,
+        "step2_score": 0,
+        "step3_score": 0,
+        "step4_score": 0,
+        "global_bonus": 0,
+        "global_bias_score": 0,
+        "signal_strength": "NO SIGNAL",
+        "action": "WAIT",
+        "confidence": "LOW",
+        "in_trade_window": False,
+        "rsi": 0.0,
+        "macd_dir": "Flat",
+        "vol_ratio": 0.0,
+        "pcr": 1.0,
+        "max_pain": 0.0,
+        "iv_rank": 50.0,
+        "call_wall": 0.0,
+        "put_wall": 0.0,
+        "atm_strike": 0.0,
+        "option_type": "",
+        "entry_premium": 0.0,
+        "sl_premium": 0.0,
+        "t1_premium": 0.0,
+        "t2_premium": 0.0,
+        "lots": 1,
+        "safety_clear": False,
+        "safety_checks": [],
+        "pre_market_report": "",
+        "gift_nifty_gap": "",
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    try:
+        # Pull global bias from cached state or recalculate
+        global_bias_score = 0
+        global_bias_data  = {}
+        if hasattr(app.state, "algo"):
+            global_bias_score = int(app.state.algo.get("global_bias", 0))
+
+        # Gift Nifty gap
+        try:
+            gap_info = calculate_gift_nifty_gap()
+            base["gift_nifty_gap"] = gap_info.get("gap_label", "")
+        except Exception:
+            base["gift_nifty_gap"] = "Unavailable"
+
+        # Pre-market report (use cached if available)
+        if hasattr(app.state, "algo"):
+            pm = app.state.algo.get("algo3", {}).get("pre_market_report", "")
+            base["pre_market_report"] = pm or app.state.algo.get("pre_market_report", "")
+
+        base["global_bias_score"] = global_bias_score
+
+        # Get Kite client
+        kite_instance = None
+        try:
+            from modules.kite_client import KiteDataClient
+            kdc = KiteDataClient()
+            if kdc.is_authenticated():
+                kite_instance = kdc.kite
+        except Exception as e:
+            logger.warning(f"Algo3 kite init: {e}")
+
+        if kite_instance is None:
+            base["signal_strength"] = "Kite not authenticated"
+            return {"success": True, "data": base}
+
+        engine = Algo3Engine(kite=kite_instance, global_bias_score=global_bias_score)
+
+        # Spot price
+        spot = engine.get_nifty_spot()
+        if spot <= 0:
+            base["signal_strength"] = "Could not fetch Nifty spot price"
+            return {"success": True, "data": base}
+
+        # Fetch NIFTY 50 instrument token for historical candles
+        # token for ^NSEI equivalent in Kite: NSE:NIFTY 50 → need NFO futures or cash token
+        # Use yfinance fallback for OHLCV candles (Kite requires instrument token)
+        import yfinance as yf
+
+        def _yf_candles(period: str, interval: str) -> pd.DataFrame:
+            df = yf.download("^NSEI", period=period, interval=interval,
+                             progress=False, auto_adjust=True)
+            if df.empty:
+                return pd.DataFrame()
+            df = df.reset_index()
+            df.columns = [c.lower() for c in df.columns]
+            df.rename(columns={"datetime": "dt", "index": "dt"}, inplace=True)
+            # yfinance MultiIndex fix
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = ['_'.join(filter(None, c)) for c in df.columns]
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            return df.dropna(subset=['close'])
+
+        df_15m = _yf_candles("5d",  "15m")
+        df_1h  = _yf_candles("60d", "60m")
+
+        # IV rank
+        iv_rank = 50.0
+        try:
+            iv_rank = calculate_iv_rank("^NSEI")
+        except Exception:
+            pass
+
+        # Options chain
+        ce_data, pe_data = engine.get_options_chain(spot)
+
+        # Key levels (use previous day high/low/close from 1h candle data)
+        key_levels: dict = {}
+        if not df_1h.empty and len(df_1h) >= 2:
+            key_levels["prev_close"] = float(df_1h['close'].iloc[-2])
+            key_levels["vwap"] = float(
+                (df_1h['close'] * df_1h.get('volume', pd.Series([1]*len(df_1h)))).sum() /
+                max(df_1h.get('volume', pd.Series([1]*len(df_1h))).sum(), 1)
+            )
+
+        current_time = datetime.now().time()
+        app_state_dict = {"algo": app.state.algo} if hasattr(app.state, "algo") else {}
+
+        result = engine.evaluate(
+            df_15m=df_15m,
+            df_1h=df_1h,
+            ce_data=ce_data,
+            pe_data=pe_data,
+            spot=spot,
+            key_levels=key_levels,
+            current_time=current_time,
+            iv_rank=iv_rank,
+            app_state=app_state_dict
+        )
+
+        base.update(result)
+
+        # Cache latest signal in app state
+        if hasattr(app.state, "algo"):
+            app.state.algo["algo3"]["latest_signal"] = base.copy()
+
+    except Exception as e:
+        logger.error(f"Algo 3 live-signal error: {e}", exc_info=True)
+        base["signal_strength"] = f"Error: {str(e)[:120]}"
+
+    return {"success": True, "data": base}
+
+
+@app.get("/api/algo3/premarket-report")
+def get_algo3_premarket_report():
+    """Returns the latest pre-market report for Algo 3."""
+    from modules.algo.algo3_engine import generate_algo3_premarket_report
+    from modules.algo.global_scoring import calculate_global_bias
+    try:
+        bias = calculate_global_bias()
+        report = generate_algo3_premarket_report(bias)
+        if hasattr(app.state, "algo"):
+            app.state.algo["algo3"]["pre_market_report"] = report
+        return {"success": True, "report": report}
+    except Exception as e:
+        return {"success": False, "report": f"Error: {e}"}
+
+
+
 def get_algo_live_signal():
     """
     Improved Algo Engine — 4-Component scoring system.

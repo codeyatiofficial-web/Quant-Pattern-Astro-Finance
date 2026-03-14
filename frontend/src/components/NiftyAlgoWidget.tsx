@@ -198,6 +198,265 @@ function Algo2CorrelationEngine() {
     );
 }
 
+        </div>
+    );
+}
+
+// ─── ALGO 3: NIFTY OPTIONS ENGINE ─────────────────────────────────────────────
+function Algo3OptionsEngine() {
+    const [sig3, setSig3]         = useState<any>(null);
+    const [loading, setLoading]   = useState(true);
+    const [toggling, setToggling] = useState(false);
+    const [isActive, setIsActive] = useState(false);
+    const [countdown, setCountdown] = useState(60);
+
+    const fetchStatus3 = async () => {
+        try {
+            const r = await fetch('/api/algo/status');
+            if (r.ok) { const j = await r.json(); setIsActive(j.data?.is_active_algo3 ?? false); }
+        } catch (e) { console.error(e); }
+    };
+
+    const fetch3 = async () => {
+        setLoading(true);
+        try {
+            const r = await fetch('/api/algo3/live-signal');
+            if (r.ok) { const j = await r.json(); setSig3(j.data); }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); setCountdown(60); }
+    };
+
+    const toggle3 = async () => {
+        setToggling(true);
+        try {
+            const r = await fetch('/api/algo3/toggle', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: !isActive }),
+            });
+            if (r.ok) { const j = await r.json(); setIsActive(j.is_active); }
+        } catch (e) { console.error(e); }
+        finally { setToggling(false); }
+    };
+
+    useEffect(() => {
+        fetchStatus3();
+        fetch3();
+        const ri = setInterval(fetch3, 60000);
+        const ti = setInterval(() => setCountdown(c => c > 0 ? c - 1 : 0), 1000);
+        return () => { clearInterval(ri); clearInterval(ti); };
+    }, []);
+
+    // Derived colours
+    const dir3      = sig3?.direction ?? 'WAIT';
+    const dirColor3 = dir3 === 'BUY' ? '#4ade80' : dir3 === 'SELL' ? '#f87171' : '#94a3b8';
+    const total3    = sig3?.total_score ?? 0;
+    const confColor3 = sig3?.confidence === 'HIGH' ? '#4ade80' : sig3?.confidence === 'MEDIUM' ? '#fb923c' : '#94a3b8';
+    const globalScore3 = sig3?.global_bias_score ?? 0;
+    const biasColor3   = globalScore3 > 0 ? '#4ade80' : globalScore3 < 0 ? '#f87171' : '#94a3b8';
+
+    const steps3 = [
+        { label: 'TREND ALIGNMENT',    sub: 'Supertrend 15m+1h · EMA20>50', key: 'step1_score', max: 25, color: '#6366f1' },
+        { label: 'MOMENTUM + VOLUME',  sub: 'RSI14 · MACD(12,26,9) · Vol ratio', key: 'step2_score', max: 25, color: '#06b6d4' },
+        { label: 'OPTIONS CHAIN',      sub: 'PCR · MaxPain · ATM OI · IV rank', key: 'step3_score', max: 25, color: '#f59e0b' },
+        { label: 'LEVELS + TIME',      sub: 'Trade windows · Key level proximity', key: 'step4_score', max: 25, color: '#a78bfa' },
+    ];
+
+    const safetyChecks: Array<{name: string; ok: boolean; reason: string}> = sig3?.safety_checks ?? [];
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1 }}>ALGO 3</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border-subtle)' }} />
+            </div>
+
+            {/* Header */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '18px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                    <div>
+                        <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: 0.4 }}>NIFTY OPTIONS ENGINE</h3>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                            4-Step validation · 110 pts · Real MaxPain · PCR · IV Rank · ATM CE/PE
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 5, background: isActive ? 'rgba(74,222,128,0.10)' : 'rgba(148,163,184,0.08)', color: isActive ? '#4ade80' : '#94a3b8', border: `1px solid ${isActive ? 'rgba(74,222,128,0.22)' : 'rgba(148,163,184,0.15)'}` }}>
+                            {isActive ? 'LIVE' : 'PAUSED'}
+                        </span>
+                        <button onClick={toggle3} disabled={toggling}
+                            style={{ padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: toggling ? 'not-allowed' : 'pointer', background: isActive ? 'rgba(248,113,113,0.10)' : 'rgba(74,222,128,0.10)', color: isActive ? '#f87171' : '#4ade80', border: `1px solid ${isActive ? 'rgba(248,113,113,0.20)' : 'rgba(74,222,128,0.20)'}` }}>
+                            {toggling ? '...' : isActive ? 'Pause Algo 3' : 'Start Algo 3'}
+                        </button>
+                        <button onClick={fetch3}
+                            style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                            Refresh
+                        </button>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{countdown}s</span>
+                    </div>
+                </div>
+            </div>
+
+            {loading ? (
+                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                    Running 4-step analysis...
+                </div>
+            ) : (
+                <>
+                    {/* Signal Card */}
+                    <div style={{ background: 'var(--bg-card)', border: `1px solid ${dirColor3}40`, borderRadius: 16, padding: '22px 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 18 }}>
+                            <div>
+                                <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 5 }}>ALGO 3 SIGNAL</div>
+                                <div style={{ fontSize: 34, fontWeight: 900, color: dirColor3, letterSpacing: 1, lineHeight: 1 }}>{dir3}</div>
+                                <div style={{ fontSize: 11, color: confColor3, marginTop: 5, fontWeight: 700 }}>
+                                    {sig3?.signal_strength ?? 'NO SIGNAL'} — {sig3?.confidence ?? 'LOW'} CONFIDENCE
+                                </div>
+                                {sig3?.in_trade_window && (
+                                    <div style={{ fontSize: 10, color: '#4ade80', marginTop: 4, fontWeight: 600 }}>IN VALID TRADE WINDOW</div>
+                                )}
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: 30, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>
+                                    {total3}
+                                    <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 400 }}>/110</span>
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>Total Score</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                                    Global Bonus: <strong style={{ color: biasColor3 }}>+{sig3?.global_bonus ?? 0}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Total score bar */}
+                        <Bar value={total3} max={110} color={dirColor3} />
+                        <div style={{ display: 'flex', gap: 16, marginTop: 7, fontSize: 10 }}>
+                            <span style={{ color: '#94a3b8' }}>0–54 WAIT</span>
+                            <span style={{ color: '#fb923c' }}>55–69 WEAK</span>
+                            <span style={{ color: '#06b6d4' }}>70–84 GOOD</span>
+                            <span style={{ color: '#4ade80' }}>85–110 STRONG</span>
+                        </div>
+                    </div>
+
+                    {/* Trade Details — Entry / SL / T1 / T2 */}
+                    {dir3 !== 'WAIT' && (sig3?.entry_premium ?? 0) > 0 && (
+                        <div style={{ background: 'var(--bg-card)', border: `1px solid ${dirColor3}35`, borderRadius: 16, padding: '20px 24px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 14 }}>TRADE SETUP</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 14 }}>
+                                {[
+                                    { label: `ATM ${sig3?.option_type ?? ''} STRIKE`, val: sig3?.atm_strike?.toFixed(0) ?? '—', color: 'var(--text-primary)' },
+                                    { label: 'ENTRY PREMIUM',  val: `${sig3?.entry_premium ?? '—'}`,  color: 'var(--text-primary)' },
+                                    { label: 'SL (40% DROP)',  val: `${sig3?.sl_premium ?? '—'}`,      color: '#f87171' },
+                                    { label: 'TARGET 1 (2x)', val: `${sig3?.t1_premium ?? '—'}`,      color: '#4ade80' },
+                                    { label: 'TARGET 2 (3x)', val: `${sig3?.t2_premium ?? '—'}`,      color: '#4ade80' },
+                                    { label: 'LOT SIZE',      val: `${sig3?.lot_size ?? 50} units`,   color: 'var(--text-muted)' },
+                                ].map(item => (
+                                    <div key={item.label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.4, marginBottom: 4 }}>{item.label}</div>
+                                        <div style={{ fontSize: 15, fontWeight: 800, color: item.color }}>{item.val}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                                Force-exit at 3:10 PM · Max 2 lots · ATM strike rounded to nearest 50
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step Breakdown */}
+                    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '20px 24px' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 14 }}>4-STEP SCORE BREAKDOWN</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                            {steps3.map(step => {
+                                const sc = sig3?.[step.key] ?? 0;
+                                const scColor = sc >= step.max * 0.7 ? '#4ade80' : sc >= step.max * 0.4 ? '#fb923c' : '#94a3b8';
+                                return (
+                                    <div key={step.key} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border-subtle)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: step.color, letterSpacing: 0.4 }}>{step.label}</div>
+                                            <div style={{ fontSize: 14, fontWeight: 800, color: scColor }}>{sc}/{step.max}</div>
+                                        </div>
+                                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{step.sub}</div>
+                                        <Bar value={sc} max={step.max} color={step.color} />
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Options chain meta */}
+                        {(sig3?.pcr ?? 0) > 0 && (
+                            <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                {[
+                                    { label: 'PCR',       val: (sig3?.pcr ?? 0).toFixed(2) },
+                                    { label: 'MAX PAIN',  val: sig3?.max_pain?.toFixed(0) ?? '—' },
+                                    { label: 'IV RANK',   val: `${sig3?.iv_rank?.toFixed(0) ?? 50}%` },
+                                    { label: 'CALL WALL', val: sig3?.call_wall?.toFixed(0) ?? '—' },
+                                    { label: 'PUT WALL',  val: sig3?.put_wall?.toFixed(0) ?? '—' },
+                                    { label: 'RSI',       val: sig3?.rsi?.toFixed(1) ?? '—' },
+                                ].map(item => (
+                                    <div key={item.label} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 14px', border: '1px solid var(--border-subtle)', flex: '1 0 80px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.4 }}>{item.label}</div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{item.val}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Global Bias */}
+                    <div style={{ background: 'var(--bg-card)', border: `1px solid ${biasColor3}30`, borderRadius: 16, padding: '18px 24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8 }}>GLOBAL MARKET BIAS</div>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: biasColor3 }}>{globalScore3 >= 0 ? '+' : ''}{globalScore3}/30</div>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: biasColor3, marginBottom: 6 }}>
+                            {globalScore3 >= 15 ? 'STRONG BULLISH' : globalScore3 >= 5 ? 'MILD BULLISH' : globalScore3 <= -15 ? 'STRONG BEARISH' : globalScore3 <= -5 ? 'MILD BEARISH' : 'NEUTRAL'}
+                        </div>
+                        <Bar value={Math.abs(globalScore3)} max={30} color={biasColor3} />
+                        {sig3?.gift_nifty_gap && (
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                                Gift Nifty: {sig3.gift_nifty_gap}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Safety System */}
+                    {safetyChecks.length > 0 && (
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '20px 24px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.8, marginBottom: 12 }}>
+                                SAFETY SYSTEM — {sig3?.safety_clear ? 'ALL CLEAR' : 'BLOCKED'}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {safetyChecks.map((check: {name: string; ok: boolean; reason: string}, i: number) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: check.ok ? '#4ade80' : '#f87171', flexShrink: 0 }} />
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: check.ok ? 'var(--text-primary)' : '#f87171', flex: 1 }}>{check.name}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{check.reason}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Pre-Market Report */}
+                    {sig3?.pre_market_report && (
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 16, padding: '20px 24px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, letterSpacing: 0.8 }}>
+                                ALGO 3 PRE-MARKET REPORT
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                                {sig3.pre_market_report}
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
 export default function NiftyAlgoWidget() {
     const [status, setStatus] = useState<any>(null);
     const [sig, setSig] = useState<any>(null);
@@ -426,6 +685,9 @@ export default function NiftyAlgoWidget() {
 
             {/* ── ALGO 2 ──────────────────────────────────────────────────────────── */}
             <Algo2CorrelationEngine />
+
+            {/* ── ALGO 3 ──────────────────────────────────────────────────────────── */}
+            <Algo3OptionsEngine />
 
         </div>
     );
