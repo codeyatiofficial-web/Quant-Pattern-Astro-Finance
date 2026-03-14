@@ -122,6 +122,10 @@ function NiftyCandleChart() {
                 allHighs.push(signalData.stop_loss);
                 allLows.push(signalData.stop_loss);
             }
+            if (signalData.current_nifty) {
+                allHighs.push(signalData.current_nifty);
+                allLows.push(signalData.current_nifty);
+            }
         }
         
         const maxPrice = Math.max(...allHighs);
@@ -249,8 +253,26 @@ function NiftyCandleChart() {
                 ctx.font = '10px monospace';
                 ctx.fillText('🛑 SL', W - padding.right - 35, slY + 12);
             }
-            
-            // 4) Signal Arrow above/below current candle
+
+            // 4) Entry Line (current_nifty — where the signal was triggered)
+            const entryPrice = signalData.current_nifty || signalData.target?.current_price;
+            if (entryPrice) {
+                const entryY = toY(entryPrice);
+                ctx.setLineDash([3, 4]);
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.7)'; // Slate/white dashed
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, entryY);
+                ctx.lineTo(W - padding.right, entryY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
+                ctx.font = '10px monospace';
+                ctx.fillText('⚡ ENTRY', W - padding.right - 52, entryY - 4);
+            }
+
+            // 5) Signal Arrow above/below current candle
             ctx.font = '18px Arial';
             if (isBuy) {
                 ctx.fillText('⬆️', currentX - 9, toY(candles[candles.length - 1].low) + 20);
@@ -382,7 +404,13 @@ function NiftyCandleChart() {
                                     </span>
                                 </div>
                                 <div style={{ height: 1, background: '#334155', margin: '2px 0' }} />
-                                
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                                    <span style={{ color: '#cbd5e1' }}>Entry</span>
+                                    <span style={{ color: '#e2e8f0', fontWeight: 700 }}>
+                                        {signalData.current_nifty ? signalData.current_nifty.toFixed(1) : signalData.target?.current_price?.toFixed(1) ?? '—'}
+                                    </span>
+                                </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                                     <span style={{ color: '#cbd5e1' }}>Target</span>
                                     <span style={{ color: '#f8fafc', fontWeight: 700 }}>{signalData.target_price.toFixed(1)}</span>
