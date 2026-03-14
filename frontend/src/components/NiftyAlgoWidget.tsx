@@ -104,6 +104,24 @@ export default function NiftyAlgoWidget() {
                     Chat on WhatsApp
                 </a>
             </div>
+
+            {/* Closing tagline */}
+            <div style={{
+                marginTop: 20,
+                textAlign: 'center',
+                padding: '16px 24px',
+                borderTop: '1px solid var(--border-subtle)',
+            }}>
+                <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: 0.5 }}>
+                    No stress.&nbsp;
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: '#4ade80', letterSpacing: 0.5 }}>
+                    No screen time.&nbsp;
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: 0.5 }}>
+                    Just results. 🚀
+                </span>
+            </div>
         </div>
     );
 }
